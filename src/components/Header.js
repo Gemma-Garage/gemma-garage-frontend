@@ -86,7 +86,7 @@ const Header = () => {
             target="_blank" 
             rel="noopener noreferrer" 
             sx={{ color: 'white', textDecoration: 'underline' }}>         
-            GSoC 2025 
+             GSoC 2025 
             </Link>
           </Typography>
         </Box>
