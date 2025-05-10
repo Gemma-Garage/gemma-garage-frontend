@@ -15,4 +15,4 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_GEMMA_GARAGE}}'
           channelId: live
-          projectId: gemma_garage
+          projectId: gemma-garage
