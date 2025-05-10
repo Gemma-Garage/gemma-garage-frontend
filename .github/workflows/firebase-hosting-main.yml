@@ -1,3 +1,4 @@
+#deploy frontend to firebase when pushing to main
 name: Deploy to production
 'on':
   push:
