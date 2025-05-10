@@ -1,6 +1,6 @@
 // Header.js
 import React from "react";
-import { AppBar, Toolbar, Typography, Button, Box, useMediaQuery, IconButton } from "@mui/material";
+import { AppBar, Toolbar, Typography, Link, Button, Box, useMediaQuery, IconButton } from "@mui/material";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import DiamondIcon from '@mui/icons-material/Diamond';
@@ -80,7 +80,14 @@ const Header = () => {
               textAlign: 'center'
             }}
           >
-            The go-to place for fine-tuning your LLMs 🤖
+            The go-to place for fine-tuning your LLMs 🤖 - now part of 
+            <Link 
+            href="https://summerofcode.withgoogle.com/programs/2025/projects/yT16LTpy" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            sx={{ color: 'white', textDecoration: 'underline' }}>         
+            GSoC 2025 
+            </Link>
           </Typography>
         </Box>
       </AppBar>
