@@ -5,6 +5,7 @@ import {
   Typography, 
   Paper, 
   CircularProgress,
+  Link,
   Chip
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
@@ -118,7 +119,7 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) =>
             <Typography variant="body2">{uploadStatus}</Typography>
           </Box>
         )}
-        
+
         <Typography variant="body2">
             No dataset? Use sample {" "}
             <Link 
