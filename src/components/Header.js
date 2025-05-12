@@ -80,13 +80,13 @@ const Header = () => {
               textAlign: 'center'
             }}
           >
-            The go-to place for fine-tuning your LLMs 🤖 - now part of 
+            The go-to place for fine-tuning your LLMs 🤖 - now part of{' '} 
             <Link 
             href="https://summerofcode.withgoogle.com/programs/2025/projects/yT16LTpy" 
             target="_blank" 
             rel="noopener noreferrer" 
             sx={{ color: 'white', textDecoration: 'underline' }}>         
-             GSoC 2025 
+            GSoC 2025 
             </Link>
           </Typography>
         </Box>
