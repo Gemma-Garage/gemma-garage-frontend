@@ -118,8 +118,21 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) =>
             <Typography variant="body2">{uploadStatus}</Typography>
           </Box>
         )}
+        
+        <Typography variant="body2">
+            No dataset? Use sample {" "}
+            <Link 
+              href="https://drive.google.com/file/d/1EhLdwp54qjkNUBJCfOOEHwZIxB9TVpiB/view?usp=sharing" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              sx={{ fontWeight: "medium", color: "#0277bd", textDecoration: "underline" }}
+            >
+              dataset
+            </Link>
+      </Typography>
       </Box>
     </Paper>
+    
   );
 };
 
