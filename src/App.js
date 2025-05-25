@@ -123,34 +123,47 @@ function App() {
         const receivedData = JSON.parse(event.data);
 
         if (Array.isArray(receivedData)) {
-          // Assumes receivedData is an array of loss objects like [{timestamp: "...", loss: ...}, ...]
-          const newLossPoints = receivedData.map(point => ({
-            time: point.timestamp ? new Date(point.timestamp).toLocaleTimeString() : "Timestamp N/A", // Use backend timestamp or indicate if not available
-            loss: point.loss
-          }));
-          setLossData((prevData) => [...prevData, ...newLossPoints]);
-        } else if (receivedData.loss) {
-          // Fallback for single loss point for compatibility or other messages
+          const newLossPoints = receivedData
+            .map(point => {
+              // Ensure loss is a number and point is a valid object
+              if (point && typeof point.loss === 'number') {
+                return {
+                  time: point.timestamp ? new Date(point.timestamp).toLocaleTimeString() : "Timestamp N/A",
+                  loss: point.loss
+                };
+              }
+              console.warn("Skipping invalid point in array:", point);
+              return null; 
+            })
+            .filter(point => point !== null); // Remove nulls (invalid points)
+
+          if (newLossPoints.length > 0) {
+            setLossData((prevData) => [...prevData, ...newLossPoints]);
+          }
+        } else if (receivedData && typeof receivedData.loss === 'number') { // Ensure loss is a number
           setLossData((prevData) => [
             ...prevData,
-            // Use backend timestamp if available for single loss point, otherwise indicate N/A
-            { time: receivedData.timestamp ? new Date(receivedData.timestamp).toLocaleTimeString() : "Timestamp N/A", loss: receivedData.loss },
+            {
+              time: receivedData.timestamp ? new Date(receivedData.timestamp).toLocaleTimeString() : "Timestamp N/A",
+              loss: receivedData.loss
+            },
           ]);
-        } else if (receivedData.status) {
+        } else if (receivedData && receivedData.status) {
           setWsStatus(receivedData.status);
           if (receivedData.weights_url) {
             setWeightsUrl(receivedData.weights_url);
           }
-          // More specific status handling can be added here
           if (receivedData.status && receivedData.status.toLowerCase().includes("complete")) {
             setWsStatus("Fine-tuning complete. Weights ready for download.");
           }
-        } else if (receivedData["test connection"]) {
-          console.log("Backend response:", receivedData);
+        } else if (receivedData && receivedData["test connection"]) {
+          console.log("Backend response (test connection):", receivedData);
+        } else {
+          // Log messages that don't match any known structure
+          console.log("Received unhandled WebSocket message:", receivedData);
         }
-        // Consider adding an else clause to log unrecognized message formats
       } catch (e) {
-        console.error("Error parsing or processing WebSocket message:", e);
+        console.error("Error parsing or processing WebSocket message:", e, "Raw data:", event.data);
       }
     };
 
