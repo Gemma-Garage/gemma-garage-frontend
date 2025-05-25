@@ -6,6 +6,7 @@ import FinetuneControl from "./components/FinetuneControl";
 import LossGraph from "./components/LossGraph";
 import Sidebar from "./components/Sidebar";
 import TestLLM from "./components/TestLLM";
+import DatasetPreview from "./components/DatasetPreview";
 import "./style/App.css";
 
 // Import our API endpoints
@@ -202,6 +203,10 @@ function App() {
           onFileChange={handleFileChange}
           uploadStatus={uploadStatus}
           onUpload={uploadDataset}
+        />
+        <DatasetPreview 
+          datasetFile={datasetFile}
+          dataset_path={datasetFile ? datasetFile.name : null}
         />
         <TrainingParameters
           modelName={modelName}
