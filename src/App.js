@@ -119,22 +119,37 @@ function App() {
 
     ws.current.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data);
-        // Update loss graph if a loss datapoint is received
-        if (message.loss) {
+        const receivedData = JSON.parse(event.data);
+
+        if (Array.isArray(receivedData)) {
+          // Assumes receivedData is an array of loss objects like [{timestamp: "...", loss: ...}, ...]
+          const newLossPoints = receivedData.map(point => ({
+            time: point.timestamp ? new Date(point.timestamp).toLocaleTimeString() : "Timestamp N/A", // Use backend timestamp or indicate if not available
+            loss: point.loss
+          }));
+          setLossData((prevData) => [...prevData, ...newLossPoints]);
+        } else if (receivedData.loss) {
+          // Fallback for single loss point for compatibility or other messages
           setLossData((prevData) => [
             ...prevData,
-            { time: new Date().toLocaleTimeString(), loss: message.loss },
+            // Use backend timestamp if available for single loss point, otherwise indicate N/A
+            { time: receivedData.timestamp ? new Date(receivedData.timestamp).toLocaleTimeString() : "Timestamp N/A", loss: receivedData.loss },
           ]);
-        } else if (message.status) {
-          setWsStatus(message.status);
-          setWeightsUrl(message.weights_url);
-          setWsStatus("Fine-tuning complete. Weights ready for download.");
-        } else if (message["test connection"]) {
-          console.log("Backend response:", message);
+        } else if (receivedData.status) {
+          setWsStatus(receivedData.status);
+          if (receivedData.weights_url) {
+            setWeightsUrl(receivedData.weights_url);
+          }
+          // More specific status handling can be added here
+          if (receivedData.status && receivedData.status.toLowerCase().includes("complete")) {
+            setWsStatus("Fine-tuning complete. Weights ready for download.");
+          }
+        } else if (receivedData["test connection"]) {
+          console.log("Backend response:", receivedData);
         }
+        // Consider adding an else clause to log unrecognized message formats
       } catch (e) {
-        console.error("Error parsing message", e);
+        console.error("Error parsing or processing WebSocket message:", e);
       }
     };
 
