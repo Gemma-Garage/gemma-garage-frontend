@@ -141,8 +141,9 @@ function App() {
                 .filter(point => point !== null);
 
               if (newLossPoints.length > 0) {
-                setLossData((prevData) => [...prevData, ...newLossPoints]);
+                setLossData(newLossPoints); // Replace old data
               }
+              // Removed: else { setLossData([]); } - Do not clear if newLossPoints is empty
             } else {
               console.warn("Parsed loss_values was not an array:", lossArray);
             }
@@ -164,11 +165,11 @@ function App() {
             .filter(point => point !== null);
 
           if (newLossPoints.length > 0) {
-            setLossData((prevData) => [...prevData, ...newLossPoints]);
+            setLossData(newLossPoints); // Replace old data
           }
+          // Removed: else { setLossData([]); } - Do not clear if newLossPoints is empty
         } else if (receivedData && typeof receivedData.loss === 'number') { // Single loss point
-          setLossData((prevData) => [
-            ...prevData,
+          setLossData([ // Replace old data with the single new point
             {
               time: receivedData.timestamp ? new Date(receivedData.timestamp).toLocaleTimeString() : "Timestamp N/A",
               loss: receivedData.loss
