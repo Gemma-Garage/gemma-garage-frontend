@@ -122,25 +122,51 @@ function App() {
       try {
         const receivedData = JSON.parse(event.data);
 
-        if (Array.isArray(receivedData)) {
+        // Check if the message has a 'loss_values' key containing a JSON string
+        if (receivedData && typeof receivedData.loss_values === 'string') {
+          try {
+            const lossArray = JSON.parse(receivedData.loss_values);
+            if (Array.isArray(lossArray)) {
+              const newLossPoints = lossArray
+                .map(point => {
+                  if (point && typeof point.loss === 'number') {
+                    return {
+                      time: point.timestamp ? new Date(point.timestamp).toLocaleTimeString() : "Timestamp N/A",
+                      loss: point.loss
+                    };
+                  }
+                  console.warn("Skipping invalid point in loss_values array:", point);
+                  return null;
+                })
+                .filter(point => point !== null);
+
+              if (newLossPoints.length > 0) {
+                setLossData((prevData) => [...prevData, ...newLossPoints]);
+              }
+            } else {
+              console.warn("Parsed loss_values was not an array:", lossArray);
+            }
+          } catch (e) {
+            console.error("Error parsing loss_values string:", e, "String was:", receivedData.loss_values);
+          }
+        } else if (Array.isArray(receivedData)) { // Direct array of losses
           const newLossPoints = receivedData
             .map(point => {
-              // Ensure loss is a number and point is a valid object
               if (point && typeof point.loss === 'number') {
                 return {
                   time: point.timestamp ? new Date(point.timestamp).toLocaleTimeString() : "Timestamp N/A",
                   loss: point.loss
                 };
               }
-              console.warn("Skipping invalid point in array:", point);
-              return null; 
+              console.warn("Skipping invalid point in direct array:", point);
+              return null;
             })
-            .filter(point => point !== null); // Remove nulls (invalid points)
+            .filter(point => point !== null);
 
           if (newLossPoints.length > 0) {
             setLossData((prevData) => [...prevData, ...newLossPoints]);
           }
-        } else if (receivedData && typeof receivedData.loss === 'number') { // Ensure loss is a number
+        } else if (receivedData && typeof receivedData.loss === 'number') { // Single loss point
           setLossData((prevData) => [
             ...prevData,
             {
@@ -159,7 +185,6 @@ function App() {
         } else if (receivedData && receivedData["test connection"]) {
           console.log("Backend response (test connection):", receivedData);
         } else {
-          // Log messages that don't match any known structure
           console.log("Received unhandled WebSocket message:", receivedData);
         }
       } catch (e) {
