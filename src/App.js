@@ -120,6 +120,7 @@ function App() {
 
   // Fetch logs periodically
   const pollLogs = async (requestId, sinceTimestamp) => {
+    let processedNewPoints = []; // Initialize processedNewPoints
     try {
       let url = `${API_BASE_URL}/finetune/logs/${requestId}`;
       if (sinceTimestamp) {
@@ -142,7 +143,8 @@ function App() {
       const data = await response.json();
       
       if (data.loss_values && Array.isArray(data.loss_values)) {
-        const processedNewPoints = data.loss_values
+        // The existing definition of processedNewPoints will now assign to the outer-scoped variable
+        processedNewPoints = data.loss_values
           .map(point => {
             if (point && typeof point.loss === 'number' && point.timestamp) { // Ensure timestamp and loss are valid
               return {
@@ -176,10 +178,10 @@ function App() {
       
       if (data.latest_timestamp) {
         setLastLogTimestamp(data.latest_timestamp);
-      } else if (processedNewPoints && processedNewPoints.length > 0) {
-        // Fallback: if backend doesn't send latest_timestamp, use the last one from the current batch
+      } else if (processedNewPoints.length > 0) { // Check length directly, as it's initialized
+        // Fallback: if backend doesn\'t send latest_timestamp, use the last one from the current batch
         // Ensure data is sorted by timestamp if relying on this
-        // The backend's extract_loss_from_logs already sorts, so this should be safe.
+        // The backend\'s extract_loss_from_logs already sorts, so this should be safe.
         setLastLogTimestamp(processedNewPoints[processedNewPoints.length - 1].rawTimestamp);
       }
       
