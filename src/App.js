@@ -309,44 +309,60 @@ function App() {
 
   // downloadWeights function remains largely the same, ensure API_BASE_URL is used.
   const downloadWeights = async () => {
-    if (!weightsUrl) return; // weightsUrl needs to be set by a log message or another mechanism
-    // For now, this part is less relevant as log polling doesn't directly set weightsUrl.
-    // This would typically be set when training is "complete" and backend provides the path.
-    // Let's assume a log message might eventually contain this.
-    // Or, a separate endpoint `/status/{request_id}` could provide it.
-    // For now, keeping it as is, but its trigger is unclear in the new flow.
-    // A log message like "status: complete, weights_url: ..." would be needed.
-    // Or the backend could push this information to the frontend via a dedicated endpoint.
-    setTrainingStatus("Preparing download..."); // User feedback
+    // weightsUrl is now the GCS directory path, set when training completes.
+    // currentRequestId is also available and should be used.
+    if (!currentRequestId) {
+      setTrainingStatus("Error: No request ID found for download.");
+      console.error("Download weights called without a currentRequestId.");
+      return;
+    }
+
+    setTrainingStatus("Preparing download links for model artifacts..."); // User feedback
     try {
-      console.log("Downloading weights from", weightsUrl);
-      // This endpoint might need to change if weights are now tied to a request_id
-      // For example: /download/weights/{request_id}
-      // Or the backend /logs endpoint could return a weights_path when complete.
-      // Assuming the old /download/download_weights still works if weightsUrl is a full path.
+      console.log("Requesting download links for request_id:", currentRequestId);
+      
       const response = await fetch(`${API_BASE_URL}/download/download_weights`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ weights_path: weightsUrl }), // This payload might need adjustment
+        // Send request_id to the backend
+        body: JSON.stringify({ request_id: currentRequestId }), 
       });
+
       if (!response.ok) {
-        const errorData = await response.json();
-        setTrainingStatus(`Download failed: ${errorData.detail || "File not available"}`);
-        throw new Error(errorData.detail || "File not available");
+        const errorData = await response.json().catch(() => ({ detail: "Unknown server error" }));
+        setTrainingStatus(`Download failed: ${errorData.detail || "Could not retrieve file links"}`);
+        throw new Error(errorData.detail || "Could not retrieve file links from server");
       }
-      const data = await response.json();
-      const link = document.createElement("a");
-      link.href = data.download_link;
-      link.download = "fine_tuned_weights.pth"; 
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTrainingStatus("Weights downloaded.");
+      
+      const data = await response.json(); // Expect { files: [{ filename: "...", download_url: "..." }, ...] }
+      
+      if (data.files && Array.isArray(data.files) && data.files.length > 0) {
+        setTrainingStatus(`Starting download of ${data.files.length} model files...`);
+        data.files.forEach((file, index) => {
+          // Optional: Add a small delay for each download if needed, though browsers usually handle this.
+          // setTimeout(() => {
+            const link = document.createElement("a");
+            link.href = file.download_url; // This is the GCS signed URL for the specific file
+            link.download = file.filename; // Use the filename from the backend for the download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            console.log(`Download initiated for: ${file.filename}`);
+          // }, index * 1000); // Example: 1-second delay between downloads
+        });
+        setTrainingStatus("All model file downloads initiated.");
+      } else if (data.files && data.files.length === 0) {
+        setTrainingStatus("No model files found for download at the GCS location.");
+        console.warn("Backend returned an empty list of files for download for request_id:", currentRequestId);
+      } else {
+        setTrainingStatus("Download failed: Invalid response from server or no files found.");
+        throw new Error("Invalid response from server: 'files' array not found or empty.");
+      }
     } catch (error) {
-      console.error("Error downloading file", error);
-      setTrainingStatus(`Error downloading weights: ${error.message}`);
+      console.error("Error downloading model artifacts:", error);
+      setTrainingStatus(`Error downloading model artifacts: ${error.message}`);
     }
   };
   
