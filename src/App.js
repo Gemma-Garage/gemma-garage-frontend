@@ -43,13 +43,13 @@ function App() {
   const [epochs, setEpochs] = useState(1);
   const [learningRate, setLearningRate] = useState(0.0002);
   const [loraRank, setLoraRank] = useState(4);
-  const [trainingStatus, setTrainingStatus] = useState(""); // Renamed from wsStatus
+  const [trainingStatus, setTrainingStatus] = useState("");
   const [lossData, setLossData] = useState([]);
   const [weightsUrl, setWeightsUrl] = useState(null);
-  // const ws = useRef(null); // WebSocket no longer used
   const [currentRequestId, setCurrentRequestId] = useState(null);
   const [lastLogTimestamp, setLastLogTimestamp] = useState(null);
-  const pollingIntervalRef = useRef(null); // To store interval ID for cleanup
+  const pollingIntervalRef = useRef(null);
+  const [progress, setProgress] = useState({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // New state for progress
 
   // Handle file changes
   const handleFileChange = (e) => {
@@ -120,17 +120,16 @@ function App() {
 
   // Fetch logs periodically
   const pollLogs = async (requestId, sinceTimestamp) => {
-    let processedNewPoints = []; // Initialize processedNewPoints
+    let processedNewPoints = [];
     try {
       let url = `${API_BASE_URL}/finetune/logs/${requestId}`;
       if (sinceTimestamp) {
-        // Ensure the timestamp is properly URI encoded, especially if it contains '+'
         url += `?since=${encodeURIComponent(sinceTimestamp)}`;
       }
       
       const response = await fetch(url);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: response.statusText })); // Graceful error parsing
+        const errorData = await response.json().catch(() => ({ detail: response.statusText }));
         console.error("Error fetching logs:", errorData.detail || response.statusText);
         setTrainingStatus(`Error fetching logs: ${errorData.detail || response.statusText}`);
         if (response.status === 404) {
@@ -141,62 +140,83 @@ function App() {
       }
 
       const data = await response.json();
-      
+      let latestStatusMessage = trainingStatus; // Keep current status unless a new one is found
+      let trainingCompleted = false;
+      let newWeightsUrl = weightsUrl;
+
       if (data.loss_values && Array.isArray(data.loss_values)) {
-        // The existing definition of processedNewPoints will now assign to the outer-scoped variable
         processedNewPoints = data.loss_values
           .map(point => {
-            if (point && typeof point.loss === 'number' && point.timestamp) { // Ensure timestamp and loss are valid
+            if (point && typeof point.loss === 'number' && point.timestamp) {
               return {
-                time: new Date(point.timestamp).toLocaleTimeString(), // Formatted for display
+                time: new Date(point.timestamp).toLocaleTimeString(),
                 loss: point.loss,
-                rawTimestamp: point.timestamp // Keep the original ISO string for uniqueness
+                rawTimestamp: point.timestamp
               };
             }
-            console.warn("Skipping invalid log point:", point);
-            return null;
+            // Process status and progress messages
+            if (point && point.status_message) {
+                latestStatusMessage = point.status_message;
+                if (point.current_step !== undefined && point.total_steps !== undefined) {
+                    setProgress({
+                        current_step: point.current_step,
+                        total_steps: point.total_steps,
+                        current_epoch: point.current_epoch !== undefined ? point.current_epoch : progress.current_epoch, // Use existing if not present
+                        total_epochs: point.total_epochs !== undefined ? point.total_epochs : progress.total_epochs, // Use existing if not present
+                    });
+                }
+            }
+            if (point && point.status === 'complete') {
+                trainingCompleted = true;
+                latestStatusMessage = point.status_message || "Training complete! Processing final results...";
+                if (point.weights_url) {
+                    newWeightsUrl = point.weights_url;
+                }
+            }
+            // Log other non-loss messages for debugging or general status
+            if (point && point.message && typeof point.loss === 'undefined') {
+                console.log("Log message:", point.message, point);
+            }
+
+            return null; // Return null for non-loss points or already processed status points
           })
           .filter(point => point !== null);
 
         if (processedNewPoints.length > 0) {
           setLossData(prevLossData => {
-            // Use a Set of existing rawTimestamps for robust duplicate checking
             const existingRawTimestamps = new Set(prevLossData.map(p => p.rawTimestamp));
-            
             const uniqueNewPointsToPlot = processedNewPoints.filter(p => !existingRawTimestamps.has(p.rawTimestamp));
-            
             if (uniqueNewPointsToPlot.length > 0) {
-                // Sort all points by rawTimestamp before returning, ensuring chronological order for the graph
                 const combinedData = [...prevLossData, ...uniqueNewPointsToPlot];
                 combinedData.sort((a, b) => new Date(a.rawTimestamp) - new Date(b.rawTimestamp));
                 return combinedData;
             }
-            return prevLossData; // No new unique points, return previous state to avoid re-render
+            return prevLossData;
           });
         }
       }
       
+      setTrainingStatus(latestStatusMessage); // Update with the most recent status message
+
       if (data.latest_timestamp) {
         setLastLogTimestamp(data.latest_timestamp);
-      } else if (processedNewPoints.length > 0) { // Check length directly, as it's initialized
-        // Fallback: if backend doesn\'t send latest_timestamp, use the last one from the current batch
-        // Ensure data is sorted by timestamp if relying on this
-        // The backend\'s extract_loss_from_logs already sorts, so this should be safe.
+      } else if (processedNewPoints.length > 0 && processedNewPoints[processedNewPoints.length - 1].rawTimestamp) {
         setLastLogTimestamp(processedNewPoints[processedNewPoints.length - 1].rawTimestamp);
+      } else if (data.loss_values && data.loss_values.length > 0) {
+        // Fallback if only non-loss messages were processed
+        const lastLogEntry = data.loss_values[data.loss_values.length - 1];
+        if (lastLogEntry && lastLogEntry.timestamp) {
+            setLastLogTimestamp(lastLogEntry.timestamp);
+        }
       }
       
-      setTrainingStatus("Training in progress... Logs updated."); 
-
-      // Check for a completion message or condition if defined by the backend
-      // For example, if a log entry contains { "status": "complete", "weights_url": "..." }
-      if (data.loss_values && data.loss_values.some(log => log.status === 'complete' || log.message?.includes('Training complete'))) {
-        setTrainingStatus("Training complete! Processing final results...");
+      if (trainingCompleted) {
         stopPollingLogs();
-        // Potentially extract weights_url if provided in such a message
-        const completionLog = data.loss_values.find(log => log.status === 'complete' || log.message?.includes('Training complete'));
-        if (completionLog && completionLog.weights_url) {
-          setWeightsUrl(completionLog.weights_url);
+        if (newWeightsUrl) {
+          setWeightsUrl(newWeightsUrl);
           setTrainingStatus("Training complete! Weights ready for download.");
+        } else {
+          setTrainingStatus("Training complete! Awaiting finalization.");
         }
       }
 
@@ -230,6 +250,7 @@ function App() {
     setLossData([]); // Clear previous loss data
     setLastLogTimestamp(null); // Reset last log timestamp
     setCurrentRequestId(null); // Reset request ID
+    setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
     stopPollingLogs(); // Clear any existing polling interval
 
     const payload = {
@@ -381,7 +402,6 @@ function App() {
         />
         <DatasetPreview 
           datasetFile={datasetFile}
-          // dataset_path prop might need adjustment if it expects a full path vs filename
           dataset_path={datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null}
         />
         <TrainingParameters
@@ -394,8 +414,11 @@ function App() {
           onLearningRateChange={setLearningRate}
           onLoraRankChange={setLoraRank}
         />
-        {/* Changed wsStatus to trainingStatus */}
-        <FinetuneControl onStart={startFinetuning} wsStatus={trainingStatus} /> 
+        <FinetuneControl 
+            onStart={startFinetuning} 
+            wsStatus={trainingStatus} 
+            progress={progress} // Pass progress state
+        /> 
         <LossGraph lossData={lossData} />
         
         {/* Use MUI for Download Weights button */}

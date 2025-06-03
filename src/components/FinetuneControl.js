@@ -6,12 +6,13 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  AlertTitle
+  AlertTitle,
+  LinearProgress // Import LinearProgress
 } from "@mui/material";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import "../style/assets.css";
 
-const FinetuneControl = ({ onStart, wsStatus }) => {
+const FinetuneControl = ({ onStart, wsStatus, progress }) => { // Add progress prop
   const [loading, setLoading] = useState(false);
 
   const handleStartFineTuning = () => {
@@ -23,10 +24,25 @@ const FinetuneControl = ({ onStart, wsStatus }) => {
 
   // Reset loading state when fine-tuning completes
   React.useEffect(() => {
-    if (wsStatus && wsStatus.includes("complete")) {
+    if (wsStatus && (wsStatus.toLowerCase().includes("complete") || wsStatus.toLowerCase().includes("error"))) {
       setLoading(false);
     }
   }, [wsStatus]);
+
+  // Calculate overall progress percentage
+  const calculateOverallProgress = () => {
+    if (!progress || !progress.total_steps || progress.total_steps === 0) {
+      return 0;
+    }
+    // Simple progress: current_step / total_steps
+    // More advanced: consider epochs if steps reset per epoch
+    // const epochProgress = progress.current_epoch / progress.total_epochs;
+    // const stepProgressInEpoch = progress.current_step / progress.total_steps_in_epoch; // Needs total_steps_in_epoch
+    // For now, using global step count if available and meaningful
+    return (progress.current_step / progress.total_steps) * 100;
+  };
+
+  const overallProgressPercentage = calculateOverallProgress();
 
   return (
     <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
@@ -55,13 +71,23 @@ const FinetuneControl = ({ onStart, wsStatus }) => {
           )}
         </Button>
         
+        {/* Progress Bar */} 
+        {loading && progress && progress.total_steps > 0 && (
+          <Box sx={{ width: '100%', mt: 1, mb: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {`Epoch: ${progress.current_epoch + 1}/${progress.total_epochs} | Step: ${progress.current_step}/${progress.total_steps}`}
+            </Typography>
+            <LinearProgress variant="determinate" value={overallProgressPercentage} />
+          </Box>
+        )}
+
         {wsStatus && (
           <Alert 
-            severity={wsStatus.includes("error") ? "error" : wsStatus.includes("complete") ? "success" : "info"}
+            severity={wsStatus.toLowerCase().includes("error") ? "error" : wsStatus.toLowerCase().includes("complete") ? "success" : "info"}
             sx={{ width: "100%" }}
           >
             <AlertTitle>
-              {wsStatus.includes("error") ? "Error" : wsStatus.includes("complete") ? "Success" : "Status"}
+              {wsStatus.toLowerCase().includes("error") ? "Error" : wsStatus.toLowerCase().includes("complete") ? "Success" : "Status"}
             </AlertTitle>
             {wsStatus}
           </Alert>
