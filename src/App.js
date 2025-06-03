@@ -120,7 +120,7 @@ function App() {
 
   // Fetch logs periodically
   const pollLogs = async (requestId, sinceTimestamp) => {
-    let processedNewPoints = [];
+    // let processedNewPoints = []; // This will be populated specifically with loss data points
     try {
       let url = `${API_BASE_URL}/finetune/logs/${requestId}`;
       if (sinceTimestamp) {
@@ -140,52 +140,57 @@ function App() {
       }
 
       const data = await response.json();
-      let latestStatusMessage = trainingStatus; // Keep current status unless a new one is found
+      let latestStatusMessage = trainingStatus; 
       let trainingCompleted = false;
       let newWeightsUrl = weightsUrl;
+      const newLossPointsForGraph = []; // Collect only loss data points here
 
       if (data.loss_values && Array.isArray(data.loss_values)) {
-        processedNewPoints = data.loss_values
-          .map(point => {
-            if (point && typeof point.loss === 'number' && point.timestamp) {
-              return {
-                time: new Date(point.timestamp).toLocaleTimeString(),
-                loss: point.loss,
-                rawTimestamp: point.timestamp
-              };
-            }
-            // Process status and progress messages
+        data.loss_values.forEach(point => { // Iterate with forEach, map is not needed here for its return value
+            // Process status and progress messages first
             if (point && point.status_message) {
                 latestStatusMessage = point.status_message;
+                // Update progress if relevant fields are present
                 if (point.current_step !== undefined && point.total_steps !== undefined) {
-                    setProgress({
+                    setProgress(prevProgress => ({ // Use functional update for safety if setProgress is batched
                         current_step: point.current_step,
                         total_steps: point.total_steps,
-                        current_epoch: point.current_epoch !== undefined ? point.current_epoch : progress.current_epoch, // Use existing if not present
-                        total_epochs: point.total_epochs !== undefined ? point.total_epochs : progress.total_epochs, // Use existing if not present
-                    });
+                        current_epoch: point.current_epoch !== undefined ? point.current_epoch : prevProgress.current_epoch,
+                        total_epochs: point.total_epochs !== undefined ? point.total_epochs : prevProgress.total_epochs,
+                    }));
                 }
             }
+
+            // Check for training completion
             if (point && point.status === 'complete') {
                 trainingCompleted = true;
+                // Update status message if completion log has one, otherwise use a default
                 latestStatusMessage = point.status_message || "Training complete! Processing final results...";
                 if (point.weights_url) {
                     newWeightsUrl = point.weights_url;
                 }
             }
-            // Log other non-loss messages for debugging or general status
-            if (point && point.message && typeof point.loss === 'undefined') {
-                console.log("Log message:", point.message, point);
+
+            // Check for loss data specifically for the graph
+            if (point && typeof point.loss === 'number' && point.timestamp) {
+              newLossPointsForGraph.push({
+                time: new Date(point.timestamp).toLocaleTimeString(),
+                loss: point.loss,
+                rawTimestamp: point.timestamp
+              });
             }
+            
+            // Log other general messages if they exist and are not loss/status specific
+            // This helps in debugging what kind of messages are coming through
+            if (point && point.message && typeof point.loss === 'undefined' && !point.status_message && point.status !== 'complete') {
+                console.log("General log message:", point.message, point);
+            }
+        });
 
-            return null; // Return null for non-loss points or already processed status points
-          })
-          .filter(point => point !== null);
-
-        if (processedNewPoints.length > 0) {
+        if (newLossPointsForGraph.length > 0) {
           setLossData(prevLossData => {
             const existingRawTimestamps = new Set(prevLossData.map(p => p.rawTimestamp));
-            const uniqueNewPointsToPlot = processedNewPoints.filter(p => !existingRawTimestamps.has(p.rawTimestamp));
+            const uniqueNewPointsToPlot = newLossPointsForGraph.filter(p => !existingRawTimestamps.has(p.rawTimestamp));
             if (uniqueNewPointsToPlot.length > 0) {
                 const combinedData = [...prevLossData, ...uniqueNewPointsToPlot];
                 combinedData.sort((a, b) => new Date(a.rawTimestamp) - new Date(b.rawTimestamp));
@@ -196,14 +201,15 @@ function App() {
         }
       }
       
-      setTrainingStatus(latestStatusMessage); // Update with the most recent status message
+      setTrainingStatus(latestStatusMessage);
 
       if (data.latest_timestamp) {
         setLastLogTimestamp(data.latest_timestamp);
-      } else if (processedNewPoints.length > 0 && processedNewPoints[processedNewPoints.length - 1].rawTimestamp) {
-        setLastLogTimestamp(processedNewPoints[processedNewPoints.length - 1].rawTimestamp);
+      } else if (newLossPointsForGraph.length > 0 && newLossPointsForGraph[newLossPointsForGraph.length - 1].rawTimestamp) {
+        // If no explicit latest_timestamp, try to get from the last loss point
+        setLastLogTimestamp(newLossPointsForGraph[newLossPointsForGraph.length - 1].rawTimestamp);
       } else if (data.loss_values && data.loss_values.length > 0) {
-        // Fallback if only non-loss messages were processed
+        // Fallback: if no loss points but other messages came, use the timestamp of the last message
         const lastLogEntry = data.loss_values[data.loss_values.length - 1];
         if (lastLogEntry && lastLogEntry.timestamp) {
             setLastLogTimestamp(lastLogEntry.timestamp);
@@ -214,10 +220,9 @@ function App() {
         stopPollingLogs();
         if (newWeightsUrl) {
           setWeightsUrl(newWeightsUrl);
-          setTrainingStatus("Training complete! Weights ready for download.");
-        } else {
-          setTrainingStatus("Training complete! Awaiting finalization.");
+          // The status message for completion is already set in the loop
         }
+        // setTrainingStatus is already called with latestStatusMessage which would be the completion message
       }
 
     } catch (error) {
