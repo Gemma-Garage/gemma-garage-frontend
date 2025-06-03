@@ -150,14 +150,31 @@ function App() {
             // Process status and progress messages first
             if (point && point.status_message) {
                 latestStatusMessage = point.status_message;
-                // Update progress if relevant fields are present
-                if (point.current_step !== undefined && point.total_steps !== undefined) {
-                    setProgress(prevProgress => ({ // Use functional update for safety if setProgress is batched
-                        current_step: point.current_step,
-                        total_steps: point.total_steps,
-                        current_epoch: point.current_epoch !== undefined ? point.current_epoch : prevProgress.current_epoch,
-                        total_epochs: point.total_epochs !== undefined ? point.total_epochs : prevProgress.total_epochs,
-                    }));
+                
+                // Update progress if any relevant fields are present
+                const hasProgressInfo = point.current_step !== undefined ||
+                                        point.total_steps !== undefined ||
+                                        point.current_epoch !== undefined ||
+                                        point.total_epochs !== undefined;
+
+                if (hasProgressInfo) {
+                    setProgress(prevProgress => {
+                        const newProg = { ...prevProgress }; // Create a mutable copy
+
+                        if (point.current_step !== undefined) {
+                            newProg.current_step = point.current_step;
+                        }
+                        if (point.total_steps !== undefined) {
+                            newProg.total_steps = point.total_steps;
+                        }
+                        if (point.current_epoch !== undefined) {
+                            newProg.current_epoch = point.current_epoch;
+                        }
+                        if (point.total_epochs !== undefined) {
+                            newProg.total_epochs = point.total_epochs;
+                        }
+                        return newProg;
+                    });
                 }
             }
 
