@@ -11,195 +11,169 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Tabs,
   Tab,
   Alert,
-  Divider,
+  TextField, // Added TextField
 } from "@mui/material";
 import { API_BASE_URL } from "../api";
 
 const DatasetPreview = ({ datasetFile, dataset_path }) => {
   const [previewData, setPreviewData] = useState([]);
-  const [augmentedData, setAugmentedData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [augmentationType, setAugmentationType] = useState("keyboard");
-  const [augmenting, setAugmenting] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [totalEntries, setTotalEntries] = useState(0);
-  const [augmentedFilePath, setAugmentedFilePath] = useState(null);
+  
+  // New state for Gemma-based augmentation
+  const [fineTuningTaskPrompt, setFineTuningTaskPrompt] = useState("");
+  const [isAugmenting, setIsAugmenting] = useState(false);
+  const [augmentedDataPreview, setAugmentedDataPreview] = useState([]);
+  const [augmentedDatasetGCSPath, setAugmentedDatasetGCSPath] = useState(null);
+  const [errorAugmenting, setErrorAugmenting] = useState(null);
+  const [totalAugmentedEntries, setTotalAugmentedEntries] = useState(0);
 
-  // Debug log to check what's received
-  console.log("DatasetPreview received path:", dataset_path);
+
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
     if (dataset_path) {
-      loadPreview();
+      loadOriginalDatasetPreview();
+      // Reset augmentation states if original dataset changes
+      setAugmentedDataPreview([]);
+      setAugmentedDatasetGCSPath(null);
+      setErrorAugmenting(null);
+      setFineTuningTaskPrompt("");
+      setTotalAugmentedEntries(0);
     }
   }, [dataset_path]);
 
-  useEffect(() => {
-    if (augmentedFilePath) {
-      console.log("augmentedFilePath changed, loading data:", augmentedFilePath);
-      //loadAugmentedData();
-    }
-  }, [augmentedFilePath]);
-
-  const loadPreview = async () => {
+  const loadOriginalDatasetPreview = async () => {
     if (!dataset_path) return;
     
-    setLoading(true);
+    setLoadingPreview(true);
     try {
-      console.log("Loading preview for file:", dataset_path);
       const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(dataset_path)}`);
       if (response.ok) {
         const data = await response.json();
-        console.log("Preview data received:", data);
-        
-        if (data.full_count) {
+        if (data.preview && data.full_count !== undefined) {
+          setPreviewData(data.preview);
           setTotalEntries(data.full_count);
-          setPreviewData(data.preview || []);
-        } else {
+        } else if (Array.isArray(data)) { // Fallback for older endpoint version
           setPreviewData(data.slice(0, 5)); 
           setTotalEntries(data.length);
-        }
-        
-        // if (augmentedFilePath) {
-        //   //loadAugmentedData();
-        // }
-      } else {
-        console.error("Error loading preview: Server returned", response.status);
-      }
-    } catch (error) {
-      console.error("Error loading preview:", error);
-    }
-    setLoading(false);
-  };
-
-  const loadAugmentedData = async () => {
-    if (!augmentedFilePath) return;
-    
-    console.log("Loading augmented data from:", augmentedFilePath);
-    try {
-      const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(augmentedFilePath)}`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Augmented data received:", data);
-        
-        if (data.preview && data.preview.length > 0) {
-          console.log("Setting augmented data from preview, length:", data.preview.length);
-          setAugmentedData(data.preview);
-        } else if (Array.isArray(data) && data.length > 0) {
-          console.log("Setting augmented data from array, length:", data.length);
-          setAugmentedData(data.slice(0, 5));
         } else {
-          console.warn("Received empty or invalid augmented data");
-          setAugmentedData([]);
+          setPreviewData([]);
+          setTotalEntries(0);
+          console.warn("Unexpected preview data format for original dataset:", data);
         }
-        
-        setActiveTab(1);
       } else {
-        console.error("Error loading augmented data: Server returned", response.status);
+        console.error("Error loading original dataset preview: Server returned", response.status);
+        setPreviewData([]);
+        setTotalEntries(0);
       }
     } catch (error) {
-      console.error("Error loading augmented data:", error);
+      console.error("Error loading original dataset preview:", error);
+      setPreviewData([]);
+      setTotalEntries(0);
     }
+    setLoadingPreview(false);
   };
 
-  const handleAugment = async () => {
-    if (!dataset_path) {
-      alert("Please upload a dataset first");
+  const handleGenerateAugmentedDataset = async () => {
+    if (!dataset_path || !fineTuningTaskPrompt.trim()) {
+      setErrorAugmenting("Please ensure a dataset is uploaded and a task prompt is provided.");
       return;
     }
 
-    setAugmenting(true);
+    setIsAugmenting(true);
+    setErrorAugmenting(null);
+    setAugmentedDataPreview([]);
+    setAugmentedDatasetGCSPath(null);
+    setTotalAugmentedEntries(0);
+
     try {
-      console.log("Augmenting file:", dataset_path);
-      const response = await fetch(`${API_BASE_URL}/dataset/augment`, {
+      const response = await fetch(`${API_BASE_URL}/dataset/augment-gemma`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          augmentation_type: augmentationType,
-          dataset_path: dataset_path,
-          preserve_format: {
-            enabled: true,
-            patterns: ["Instruction:", "Input:", "Output:"]
-          }
+          dataset_gcs_path: dataset_path,
+          fine_tuning_task_prompt: fineTuningTaskPrompt,
+          // model_choice: "gemini-1.5-flash", // Can be added later if needed
+          // num_examples_to_generate: 50, // Can be added later
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error augmenting dataset");
+        const errorData = await response.json().catch(() => ({ detail: "Error augmenting dataset. Server response not JSON." }));
+        throw new Error(errorData.detail || `Error augmenting dataset. Status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log("Augmentation response:", data);
-
-      if(data.augmented_data) {
-        setAugmentedData(data.augmented_data.preview);
-        setActiveTab(1);
-      }
       
-      if (data.file_location) {
-        console.log("Setting augmented file path:", data.file_location);
-        setAugmentedFilePath(data.file_location);
-        
-        //alert("Dataset augmented successfully!");
+      if (data.preview_augmented_data && data.augmented_dataset_gcs_path) {
+        setAugmentedDataPreview(data.preview_augmented_data.preview || []);
+        setTotalAugmentedEntries(data.preview_augmented_data.full_count || (data.preview_augmented_data.preview || []).length);
+        setAugmentedDatasetGCSPath(data.augmented_dataset_gcs_path);
+        setActiveTab(1); // Switch to augmented data tab
       } else {
-        alert("Dataset augmented but couldn't retrieve results. Please check the console for errors.");
+        console.error("Augmentation response missing expected fields:", data);
+        setErrorAugmenting("Augmentation completed but response format is unexpected.");
       }
       
     } catch (error) {
-      console.error("Error augmenting dataset:", error);
-      alert("Error augmenting dataset: " + error.message);
+      console.error("Error generating augmented dataset:", error);
+      setErrorAugmenting(error.message || "An unknown error occurred during augmentation.");
     }
-    setAugmenting(false);
+    setIsAugmenting(false);
   };
   
   const handleTabChange = (event, newValue) => {
-    console.log("Tab changed to:", newValue);
-    if (newValue === 1 && augmentedFilePath && augmentedData.length === 0) {
-      console.log("Switching to augmented tab but no data loaded, loading now...");
-      // loadAugmentedData();
-    } else {
-      setActiveTab(newValue);
-    }
+    setActiveTab(newValue);
   };
 
-  const renderDataTable = (data) => {
+  const renderDataTableInternal = (data, isLoading, type) => {
+    const displayData = Array.isArray(data) ? data : [];
+    
+    // Determine headers dynamically from the first item, assuming consistent structure
+    let headers = [];
+    if (displayData.length > 0) {
+        headers = Object.keys(displayData[0]);
+    } else if (type === "original" && previewData.length > 0) {
+        headers = Object.keys(previewData[0]);
+    } else if (type === "augmented" && augmentedDataPreview.length > 0) {
+        headers = Object.keys(augmentedDataPreview[0]);
+    }
+
+
     return (
       <TableContainer>
-        <Table>
+        <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Text</TableCell>
-              {data.length > 0 && data[0]?.label && <TableCell>Label</TableCell>}
+              {headers.map(header => <TableCell key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableCell>)}
+              {headers.length === 0 && !isLoading && <TableCell>Data</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
-            {loading ? (
+            {isLoading ? (
               <TableRow>
-                <TableCell colSpan={2} align="center">
+                <TableCell colSpan={headers.length || 1} align="center">
                   <CircularProgress />
                 </TableCell>
               </TableRow>
-            ) : data.length === 0 ? (
+            ) : displayData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={2} align="center">
-                  No data available.
+                <TableCell colSpan={headers.length || 1} align="center">
+                  No data available{type === "augmented" ? " for augmentation preview" : ""}.
+                  {type === "augmented" && !augmentedDatasetGCSPath && !isAugmenting && " Generate augmented data to see a preview."}
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((row, index) => (
+              displayData.map((row, index) => (
                 <TableRow key={index}>
-                  <TableCell>{row.text}</TableCell>
-                  {row.label && <TableCell>{row.label}</TableCell>}
+                  {headers.map(header => <TableCell key={`${index}-${header}`}>{typeof row[header] === 'object' ? JSON.stringify(row[header]) : row[header]}</TableCell>)}
+                  {headers.length === 0 && <TableCell>{typeof row === 'object' ? JSON.stringify(row) : row}</TableCell>}
                 </TableRow>
               ))
             )}
@@ -212,44 +186,55 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
   return (
     <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
       <Typography variant="h5" gutterBottom className="sessionName">
-        Dataset Preview {datasetFile ? `(${datasetFile.name})` : ""}
+        Dataset Preview & Augmentation {datasetFile ? `(${datasetFile.name})` : ""}
       </Typography>
 
-      {dataset_path ? (
+      {!dataset_path ? (
+        <Typography variant="body1" align="center" sx={{ py: 3 }}>
+          Please upload a dataset to see the preview and augmentation options.
+        </Typography>
+      ) : (
         <>
-          <Box sx={{ mb: 3 }}>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Augmentation Type</InputLabel>
-              <Select
-                value={augmentationType}
-                onChange={(e) => setAugmentationType(e.target.value)}
-                label="Augmentation Type"
-              >
-                <MenuItem value="keyboard">Keyboard Augmentation</MenuItem>
-                <MenuItem value="random_word">Random Word Augmentation</MenuItem>
-                {/* <MenuItem value="spelling">Spelling Augmentation</MenuItem>
-                <MenuItem value="synonym">Synonym Augmentation</MenuItem> */}
-              </Select>
-            </FormControl>
-
+          <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: '4px' }}>
+            <Typography variant="h6" gutterBottom sx={{ color: '#6200ee' }}>
+              Data Augmentation with Gemma
+            </Typography>
+            <TextField
+              fullWidth
+              label="Describe the fine-tuning task for the model"
+              placeholder="e.g., A chatbot that answers questions about marine biology based on provided text."
+              multiline
+              rows={3}
+              value={fineTuningTaskPrompt}
+              onChange={(e) => setFineTuningTaskPrompt(e.target.value)}
+              sx={{ mb: 2, mt: 1 }}
+              disabled={isAugmenting}
+              variant="outlined"
+            />
             <Button
               variant="contained"
-              onClick={handleAugment}
-              disabled={augmenting || !dataset_path}
+              onClick={handleGenerateAugmentedDataset}
+              disabled={isAugmenting || !dataset_path || !fineTuningTaskPrompt.trim()}
               sx={{
                 backgroundColor: "#6200ee",
                 "&:hover": { backgroundColor: "#3700b3" },
+                "&:disabled": { backgroundColor: "#e0e0e0" },
+                mb: 1, // Adjusted margin
+                mr: 1, // Added margin for spacing if other buttons are added
               }}
             >
-              {augmenting ? <CircularProgress size={24} /> : "Augment Dataset"}
+              {isAugmenting ? <CircularProgress size={24} sx={{ color: "white"}} /> : "Generate Augmented Dataset"}
             </Button>
+            {errorAugmenting && (
+              <Alert severity="error" sx={{ mt: 2 }}>{errorAugmenting}</Alert>
+            )}
+            {augmentedDatasetGCSPath && !errorAugmenting && (
+              <Alert severity="success" sx={{ mt: 2 }}>
+                Augmented dataset generated! Path: <strong>{augmentedDatasetGCSPath}</strong>
+                {totalAugmentedEntries > 0 && ` (Previewing ${augmentedDataPreview.length} of ${totalAugmentedEntries} entries)`}
+              </Alert>
+            )}
           </Box>
-          
-          {totalEntries > 5 && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Showing only the first 5 entries out of {totalEntries} total entries.
-            </Alert>
-          )}
           
           <Box sx={{ width: '100%' }}>
             <Tabs 
@@ -259,43 +244,50 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
             >
               <Tab label="Original Dataset" />
               <Tab 
-                label="Augmented Dataset" 
-                disabled={!augmentedFilePath}
+                label="Augmented Dataset Preview" 
+                disabled={!augmentedDatasetGCSPath && augmentedDataPreview.length === 0}
               />
             </Tabs>
             
             <Box sx={{ mt: 2 }}>
-              {activeTab === 0 ? (
+              {activeTab === 0 && (
                 <>
                   <Typography variant="subtitle1" gutterBottom>
-                    Original Dataset Preview
+                    Original Dataset Preview (First {previewData.length} of {totalEntries} entries)
                   </Typography>
-                  {renderDataTable(previewData)}
+                  {totalEntries > previewData.length && previewData.length > 0 && (
+                    <Alert severity="info" sx={{ mb: 1 }}>
+                      Showing the first {previewData.length} entries of {totalEntries} total.
+                    </Alert>
+                  )}
+                  {renderDataTableInternal(previewData, loadingPreview, "original")}
                 </>
-              ) : (
+              )}
+              {activeTab === 1 && (
                 <>
                   <Typography variant="subtitle1" gutterBottom>
-                    Augmented Dataset Preview
+                    Augmented Dataset Preview 
+                    {augmentedDatasetGCSPath && ` (from ${augmentedDatasetGCSPath})`}
+                    {totalAugmentedEntries > 0 && ` - Showing first ${augmentedDataPreview.length} of ${totalAugmentedEntries} generated entries`}
                   </Typography>
-                  {augmentedData.length > 0 ? (
-                    renderDataTable(augmentedData)
-                  ) : (
-                    <Box display="flex" justifyContent="center" alignItems="center" p={3}>
-                      <CircularProgress />
-                      <Typography variant="body2" sx={{ ml: 2 }}>
-                        Loading augmented data...
-                      </Typography>
-                    </Box>
+                  {/* This alert is now part of the success message above or covered by other conditions */}
+                  {/* {totalAugmentedEntries > augmentedDataPreview.length && augmentedDataPreview.length > 0 && (
+                     <Alert severity=\"info\" sx={{ mb: 1 }}>
+                      Showing the first {augmentedDataPreview.length} entries of {totalAugmentedEntries} total generated.
+                    </Alert>
+                  )} */}
+                  {renderDataTableInternal(augmentedDataPreview, isAugmenting, "augmented")}
+                  {!isAugmenting && augmentedDataPreview.length === 0 && augmentedDatasetGCSPath && !errorAugmenting && (
+                    <Alert severity="warning" sx={{mt: 1}}>Preview data is empty, but an augmented dataset path exists. The generated dataset might be empty or generation resulted in no valid examples for preview.</Alert>
+                  )}
+                   {!isAugmenting && augmentedDataPreview.length === 0 && !augmentedDatasetGCSPath && !errorAugmenting && (
+                    <Alert severity="info" sx={{mt: 1}}>No augmented data generated or previewed yet. Use the 'Generate Augmented Dataset' feature above.</Alert>
                   )}
                 </>
               )}
             </Box>
           </Box>
         </>
-      ) : (
-        <Typography variant="body1" align="center" sx={{ py: 3 }}>
-          Please upload a dataset to see the preview and augmentation options.
-        </Typography>
       )}
     </Paper>
   );
