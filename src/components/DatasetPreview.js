@@ -99,9 +99,16 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
         body: JSON.stringify({
           dataset_gcs_path: dataset_path,
           fine_tuning_task_prompt: fineTuningTaskPrompt,
-          // model_choice: "gemini-1.5-flash", // Can be added later if needed
-          // num_examples_to_generate: 50, // Can be added later
+          model_choice: "gemini-1.5-flash", // Can be added later if needed
+          num_examples_to_generate: 50, // Can be added later
         }),
+      });
+      
+      console.log("Augmentation request sent to server:", {
+        dataset_gcs_path: dataset_path,
+        fine_tuning_task_prompt: fineTuningTaskPrompt,
+        model_choice: "gemini-1.5-flash",
+        num_examples_to_generate: 50,
       });
 
       if (!response.ok) {
