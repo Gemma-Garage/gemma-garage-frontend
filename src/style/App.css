@@ -16,11 +16,11 @@ body {
 }
 
 .main-content {
-  display: flex;
+  /* display: flex;
   flex-direction: row;
   align-items: flex-start;
-  justify-content: flex-start;
-  padding: 20px;
+  justify-content: flex-start; */
+  padding: 10px;
 }
 
 /* Sidebar Styling */
