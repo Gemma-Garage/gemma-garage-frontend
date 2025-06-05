@@ -11,8 +11,6 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
-  Tabs,
-  Tab,
   Alert,
   TextField, // Added TextField
 } from "@mui/material";
@@ -31,8 +29,6 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
   const [errorAugmenting, setErrorAugmenting] = useState(null);
   const [totalAugmentedEntries, setTotalAugmentedEntries] = useState(0);
 
-
-  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
     if (dataset_path) {
@@ -122,7 +118,7 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
         setAugmentedDataPreview(data.preview_augmented_data.preview || []);
         setTotalAugmentedEntries(data.preview_augmented_data.full_count || (data.preview_augmented_data.preview || []).length);
         setAugmentedDatasetGCSPath(data.augmented_dataset_gcs_path);
-        setActiveTab(1); // Switch to augmented data tab
+        // setActiveTab(1); // Switch to augmented data tab
       } else {
         console.error("Augmentation response missing expected fields:", data);
         setErrorAugmenting("Augmentation completed but response format is unexpected.");
@@ -135,10 +131,6 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
     setIsAugmenting(false);
   };
   
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
-
   const renderDataTableInternal = (data, isLoading, type) => {
     const displayData = Array.isArray(data) ? data : [];
     
@@ -243,57 +235,29 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
             )}
           </Box>
           
-          <Box sx={{ width: '100%' }}>
-            <Tabs 
-              value={activeTab} 
-              onChange={handleTabChange}
-              sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
-            >
-              <Tab label="Original Dataset" />
-              <Tab 
-                label="Augmented Dataset Preview" 
-                disabled={!augmentedDatasetGCSPath && augmentedDataPreview.length === 0}
-              />
-            </Tabs>
-            
-            <Box sx={{ mt: 2 }}>
-              {activeTab === 0 && (
-                <>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Original Dataset Preview (First {previewData.length} of {totalEntries} entries)
-                  </Typography>
-                  {totalEntries > previewData.length && previewData.length > 0 && (
-                    <Alert severity="info" sx={{ mb: 1 }}>
-                      Showing the first {previewData.length} entries of {totalEntries} total.
-                    </Alert>
-                  )}
-                  {renderDataTableInternal(previewData, loadingPreview, "original")}
-                </>
-              )}
-              {activeTab === 1 && (
-                <>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Augmented Dataset Preview 
-                    {augmentedDatasetGCSPath && ` (from ${augmentedDatasetGCSPath})`}
-                    {totalAugmentedEntries > 0 && ` - Showing first ${augmentedDataPreview.length} of ${totalAugmentedEntries} generated entries`}
-                  </Typography>
-                  {/* This alert is now part of the success message above or covered by other conditions */}
-                  {/* {totalAugmentedEntries > augmentedDataPreview.length && augmentedDataPreview.length > 0 && (
-                     <Alert severity=\"info\" sx={{ mb: 1 }}>
-                      Showing the first {augmentedDataPreview.length} entries of {totalAugmentedEntries} total generated.
-                    </Alert>
-                  )} */}
-                  {renderDataTableInternal(augmentedDataPreview, isAugmenting, "augmented")}
-                  {!isAugmenting && augmentedDataPreview.length === 0 && augmentedDatasetGCSPath && !errorAugmenting && (
-                    <Alert severity="warning" sx={{mt: 1}}>Preview data is empty, but an augmented dataset path exists. The generated dataset might be empty or generation resulted in no valid examples for preview.</Alert>
-                  )}
-                   {!isAugmenting && augmentedDataPreview.length === 0 && !augmentedDatasetGCSPath && !errorAugmenting && (
-                    <Alert severity="info" sx={{mt: 1}}>No augmented data generated or previewed yet. Use the 'Generate Augmented Dataset' feature above.</Alert>
-                  )}
-                </>
-              )}
+          {/* Original Dataset Preview */}
+          {previewData.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Original Dataset Preview (Showing {previewData.length} of {totalEntries} entries)
+              </Typography>
+              <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                {renderDataTableInternal(previewData, loadingPreview, 'original')}
+              </TableContainer>
             </Box>
-          </Box>
+          )}
+          {/* Augmented Dataset Preview */}
+          {augmentedDataPreview.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Augmented Dataset Preview {augmentedDatasetGCSPath && `(from ${augmentedDatasetGCSPath})`}
+              </Typography>
+              <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                {renderDataTableInternal(augmentedDataPreview, isAugmenting, 'augmented')}
+              </TableContainer>
+            </Box>
+          )}
+          {/* Additional info or alerts can be added here if needed */}
         </>
       )}
     </Paper>
