@@ -13,6 +13,8 @@ import {
   CircularProgress,
   Alert,
   TextField, // Added TextField
+  Tabs,
+  Tab,
 } from "@mui/material";
 import { API_BASE_URL } from "../api";
 
@@ -28,6 +30,7 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
   const [augmentedDatasetGCSPath, setAugmentedDatasetGCSPath] = useState(null);
   const [errorAugmenting, setErrorAugmenting] = useState(null);
   const [totalAugmentedEntries, setTotalAugmentedEntries] = useState(0);
+  const [activeTab, setActiveTab] = useState(0); // New state for active tab
 
 
   useEffect(() => {
@@ -182,6 +185,14 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
     );
   };
 
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+    // Auto-load original dataset preview when tab is changed to "Original Dataset"
+    if (newValue === 0 && !loadingPreview && previewData.length === 0) {
+      loadOriginalDatasetPreview();
+    }
+  };
+
   return (
     <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
       <Typography variant="h5" gutterBottom className="sessionName">
@@ -196,7 +207,7 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
         <>
           <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: '4px' }}>
             <Typography variant="h6" gutterBottom sx={{ color: '#6200ee' }}>
-              Data Augmentation with Gemma
+              Data Augmentation with Gemini
             </Typography>
             <TextField
               fullWidth
@@ -235,28 +246,43 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
             )}
           </Box>
           
-          {/* Original Dataset Preview */}
-          {previewData.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Original Dataset Preview (Showing {previewData.length} of {totalEntries} entries)
-              </Typography>
-              <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                {renderDataTableInternal(previewData, loadingPreview, 'original')}
-              </TableContainer>
+          <Box sx={{ width: '100%' }}>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+            >
+              <Tab label="Original Dataset" />
+              <Tab label="Augmented Dataset Preview" disabled={!augmentedDatasetGCSPath && augmentedDataPreview.length === 0} />
+            </Tabs>
+            <Box sx={{ mt: 2 }}>
+              {activeTab === 0 && (
+                <>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Original Dataset Preview (First {previewData.length} of {totalEntries} entries)
+                  </Typography>
+                  {totalEntries > previewData.length && previewData.length > 0 && (
+                    <Alert severity="info" sx={{ mb: 1 }}>
+                      Showing the first {previewData.length} entries of {totalEntries} total.
+                    </Alert>
+                  )}
+                  <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                    {renderDataTableInternal(previewData, loadingPreview, 'original')}
+                  </TableContainer>
+                </>
+              )}
+              {activeTab === 1 && (
+                <>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Augmented Dataset Preview {augmentedDatasetGCSPath && `(from ${augmentedDatasetGCSPath})`}
+                  </Typography>
+                  <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                    {renderDataTableInternal(augmentedDataPreview, isAugmenting, 'augmented')}
+                  </TableContainer>
+                </>
+              )}
             </Box>
-          )}
-          {/* Augmented Dataset Preview */}
-          {augmentedDataPreview.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Augmented Dataset Preview {augmentedDatasetGCSPath && `(from ${augmentedDatasetGCSPath})`}
-              </Typography>
-              <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                {renderDataTableInternal(augmentedDataPreview, isAugmenting, 'augmented')}
-              </TableContainer>
-            </Box>
-          )}
+          </Box>
           {/* Additional info or alerts can be added here if needed */}
         </>
       )}
