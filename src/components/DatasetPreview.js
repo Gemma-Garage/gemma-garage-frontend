@@ -55,10 +55,10 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
       if (response.ok) {
         const data = await response.json();
         if (data.preview && data.full_count !== undefined) {
-          setPreviewData(data.preview);
+          setPreviewData(data.preview);            // use full preview batch
           setTotalEntries(data.full_count);
-        } else if (Array.isArray(data)) { // Fallback for older endpoint version
-          setPreviewData(data.slice(0, 5)); 
+        } else if (Array.isArray(data)) { // Fallback
+          setPreviewData(data);             // show all fetched items for scrolling
           setTotalEntries(data.length);
         } else {
           setPreviewData([]);
@@ -154,8 +154,8 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
 
 
     return (
-      <TableContainer>
-        <Table size="small">
+      <TableContainer sx={{ maxHeight: 400, overflow: 'auto' }}>
+         <Table size="small">
           <TableHead>
             <TableRow>
               {headers.map(header => <TableCell key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableCell>)}
