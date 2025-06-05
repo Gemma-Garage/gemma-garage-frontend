@@ -22,13 +22,20 @@ const Header = () => {
   const isSmallScreen = useMediaQuery('(max-width:600px)');
 
   return (
-    <ThemeProvider theme={theme}>
-      <AppBar position="static" sx={{ 
+    <ThemeProvider theme={theme}>      <AppBar position="static" sx={{ 
         backgroundColor: '#6200ee', 
-        marginBottom: 2,
+        marginBottom: 0,
+        marginTop: 0,
+        marginLeft: 0,
+        marginRight: 0,
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
       }}>
-        <Toolbar sx={{ justifyContent: 'space-between' }}>
+        <Toolbar sx={{ 
+          justifyContent: 'space-between',
+          paddingLeft: 0,
+          paddingRight: 0,
+          paddingTop: 0
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <DiamondIcon sx={{ mr: 1 }} />
             <Typography 
@@ -43,7 +50,7 @@ const Header = () => {
           <Box>
             <Button 
               color="inherit" 
-              href="https://github.com/Lucas-Fernandes-Martins/llm-garage" 
+              href="https://github.com/Gemma-Garage/" 
               target="_blank"
               rel="noopener noreferrer"
               startIcon={isSmallScreen ? null : <GitHubIcon />}
@@ -63,10 +70,9 @@ const Header = () => {
             </Button>
           </Box>
         </Toolbar>
-        
-        <Box sx={{ 
+          <Box sx={{ 
           backgroundColor: '#3700b3', 
-          padding: '4px 16px',
+          padding: '4px 0px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center' 
