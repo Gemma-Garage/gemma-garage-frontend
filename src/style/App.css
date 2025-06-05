@@ -15,14 +15,6 @@ body {
   padding: 0px;
 }
 
-.main-content {
-  /* display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: flex-start; */
-  padding: 10px;
-}
-
 /* Sidebar Styling */
 .sidebar {
   width: 250px;
