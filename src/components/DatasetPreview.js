@@ -50,6 +50,7 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
     
     setLoadingPreview(true);
     try {
+      console.log("Loading original dataset preview from:", encodeURIComponent(dataset_path));
       const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(dataset_path)}`);
       if (response.ok) {
         const data = await response.json();
