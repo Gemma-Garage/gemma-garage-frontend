@@ -414,8 +414,8 @@ function App() {
   return (
     <div className="container">
       {/* <Sidebar /> */}
+       <Header />
       <div className="main-content">
-        <Header />
         <UploadDataset
           datasetFile={datasetFile}
           onFileChange={handleFileChange}
