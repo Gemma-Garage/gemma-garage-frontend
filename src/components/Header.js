@@ -22,20 +22,13 @@ const Header = () => {
   const isSmallScreen = useMediaQuery('(max-width:600px)');
 
   return (
-    <ThemeProvider theme={theme}>      <AppBar position="static" sx={{ 
+    <ThemeProvider theme={theme}>
+      <AppBar position="static" sx={{ 
         backgroundColor: '#6200ee', 
-        marginBottom: 0,
-        marginTop: 0,
-        marginLeft: 0,
-        marginRight: 0,
+        marginBottom: 2,
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
       }}>
-        <Toolbar sx={{ 
-          justifyContent: 'space-between',
-          paddingLeft: 0,
-          paddingRight: 0,
-          paddingTop: 0
-        }}>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <DiamondIcon sx={{ mr: 1 }} />
             <Typography 
@@ -70,9 +63,10 @@ const Header = () => {
             </Button>
           </Box>
         </Toolbar>
-          <Box sx={{ 
+        
+        <Box sx={{ 
           backgroundColor: '#3700b3', 
-          padding: '4px 0px',
+          padding: '4px 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center' 
