@@ -7,6 +7,7 @@ import LossGraph from "./components/LossGraph";
 import Sidebar from "./components/Sidebar";
 import TestLLM from "./components/TestLLM";
 import DatasetPreview from "./components/DatasetPreview";
+import Footer from "./components/Footer";
 import "./style/App.css";
 
 // Import our API endpoints
@@ -466,6 +467,7 @@ function App() {
         <TestLLM />
       </div>
     </div>
+    <Footer/>
   </div>
   );
 }
