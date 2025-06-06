@@ -412,10 +412,11 @@ function App() {
   
 
   return (
+    <div>
+      <Header />
     <div className="container">
       {/* <Sidebar /> */}
       <div className="main-content">
-        <Header />
         <UploadDataset
           datasetFile={datasetFile}
           onFileChange={handleFileChange}
@@ -465,6 +466,7 @@ function App() {
         <TestLLM />
       </div>
     </div>
+  </div>
   );
 }
 
