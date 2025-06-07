@@ -193,7 +193,7 @@ function App() {
             if (point && typeof point.loss === 'number' && point.timestamp) {
               newLossPointsForGraph.push({
                 time: new Date(point.timestamp).toLocaleTimeString(),
-                loss: point.loss,
+                loss: point.train_loss,
                 rawTimestamp: point.timestamp
               });
             }
