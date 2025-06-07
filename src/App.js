@@ -127,8 +127,9 @@ function App() {
       if (sinceTimestamp) {
         url += `?since=${encodeURIComponent(sinceTimestamp)}`;
       }
-      
+    
       const response = await fetch(url);
+      console.log("Polling logs from:", url);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: response.statusText }));
         console.error("Error fetching logs:", errorData.detail || response.statusText);
