@@ -55,14 +55,14 @@ const LossGraph = ({ lossData }) => {
   }, [lossData, showAllPoints]);
   
   // Generate simplified time labels (e.g., "0s", "10s", "20s" instead of full timestamps)
-  const timeLabels = useMemo(() => {
+  const epochLabels = useMemo(() => {
     if (!processedData.length) return [];
     
     // For shorter datasets, use the last part of the timestamp (e.g., ":45" from "12:30:45")
     if (processedData.length < 20) {
       return processedData.map((d, i) => {
-        const timeParts = d.time.split(':');
-        return timeParts[timeParts.length - 1] + 's';
+        const epochLabels = d.epoch;
+        return epochLabels;
       });
     }
     
@@ -142,7 +142,7 @@ const LossGraph = ({ lossData }) => {
           callback: function(value, index) {
             // Only show a subset of labels to prevent overcrowding
             if (processedData.length <= 10 || index % Math.ceil(processedData.length / 10) === 0) {
-              return timeLabels[index];
+              return epochLabels[index];
             }
             return '';
           }
@@ -179,7 +179,7 @@ const LossGraph = ({ lossData }) => {
 
   const chartData = useMemo(() => ({
     // Use simple labels for x-axis to save space
-    labels: timeLabels,
+    labels: epochLabels,
     datasets: [
       {
         label: "Training Loss",
@@ -199,7 +199,7 @@ const LossGraph = ({ lossData }) => {
         tension: 0.3,
       },
     ],
-  }), [processedData, timeLabels]);
+  }), [processedData, epochLabels]);
 
   return (
     <ThemeProvider theme={theme}>

@@ -170,7 +170,7 @@ function App() {
                             newProg.total_steps = point.total_steps;
                         }
                         if (point.current_epoch !== undefined) {
-                            newProg.current_epoch = point.current_epoch;
+                            newProg.current_epoch = point.epoch;
                         }
                         if (point.total_epochs !== undefined) {
                             newProg.total_epochs = point.total_epochs;
@@ -191,8 +191,9 @@ function App() {
             }
 
             // Check for loss data specifically for the graph
-            if (point && typeof point.train_loss === 'number' && point.timestamp) {
+            if (point && typeof point.train_loss === 'number' && point.epoch) {
               newLossPointsForGraph.push({
+                epoch: point.epoch,
                 time: new Date(point.timestamp).toLocaleTimeString(),
                 loss: point.train_loss,
                 rawTimestamp: point.timestamp
