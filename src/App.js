@@ -191,7 +191,7 @@ function App() {
             }
 
             // Check for loss data specifically for the graph
-            if (point && typeof point.loss === 'number' && point.timestamp) {
+            if (point && typeof point.train_loss === 'number' && point.timestamp) {
               newLossPointsForGraph.push({
                 time: new Date(point.timestamp).toLocaleTimeString(),
                 loss: point.train_loss,
