@@ -285,7 +285,7 @@ function App() {
       learning_rate: learningRate,
       lora_rank: loraRank,
     };
-
+    console.log("Starting fine-tuning with payload:", payload);
     try {
       const response = await fetch(`${API_BASE_URL}/finetune/train`, {
         method: "POST",

@@ -122,7 +122,7 @@ const LossGraph = ({ lossData }) => {
       x: { 
         title: { 
           display: true, 
-          text: "Data Points",
+          text: "Epochs",
           font: {
             size: 14,
             weight: 'bold'
