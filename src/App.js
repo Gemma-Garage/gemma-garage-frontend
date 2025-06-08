@@ -193,7 +193,7 @@ function App() {
             // Check for loss data specifically for the graph
             if (point && typeof point.train_loss === 'number' && point.epoch) {
               newLossPointsForGraph.push({
-                epoch: point.epoch,
+                current_epoch: point.current_epoch,
                 time: new Date(point.timestamp).toLocaleTimeString(),
                 loss: point.train_loss,
                 rawTimestamp: point.timestamp

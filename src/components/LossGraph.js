@@ -61,7 +61,7 @@ const LossGraph = ({ lossData }) => {
     // For shorter datasets, use the last part of the timestamp (e.g., ":45" from "12:30:45")
     if (processedData.length < 20) {
       return processedData.map((d, i) => {
-        const epochLabels = d.epoch;
+        const epochLabels = d.current_epoch;
         return epochLabels;
       });
     }
