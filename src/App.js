@@ -191,11 +191,11 @@ function App() {
             }
 
             // Check for loss data specifically for the graph
-            if (point && typeof point.train_loss === 'number' && point.epoch) {
+            if (point && typeof point.loss === 'number' && point.current_epoch) {
               newLossPointsForGraph.push({
                 current_epoch: point.current_epoch,
                 time: new Date(point.timestamp).toLocaleTimeString(),
-                loss: point.train_loss,
+                loss: point.loss,
                 rawTimestamp: point.timestamp
               });
             }
