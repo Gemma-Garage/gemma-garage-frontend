@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react"; // Removed useRef
 import { 
   Paper, 
   Typography, 
@@ -10,12 +10,13 @@ import {
   FormLabel
 } from "@mui/material";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import Select from "react-select";
+// Select component might not be needed if model is determined by requestId
+// import Select from "react-select"; 
 import SendIcon from "@mui/icons-material/Send";
-import { WS_BASE_URL } from "../api"; // Define this as your WebSocket base URL (e.g., ws://localhost:8000)
+import { callPredictEndpoint } from "../api"; // Import the HTTP call function
 import "../style/assets.css";
 
-// Custom theme to match the color scheme
+// Custom theme (can remain as is)
 const theme = createTheme({
   palette: {
     primary: {
@@ -27,89 +28,47 @@ const theme = createTheme({
   },
 });
 
-// Custom styles for react-select
-const selectStyles = {
-  control: (provided) => ({
-    ...provided,
-    borderRadius: "4px",
-    borderColor: "#ccc",
-    boxShadow: "none",
-    "&:hover": {
-      borderColor: "#6200ee"
-    },
-    padding: "2px",
-    minHeight: "56px"
-  }),
-  option: (provided, state) => ({
-    ...provided,
-    backgroundColor: state.isSelected ? "#6200ee" : state.isFocused ? "#f0e6ff" : null,
-    color: state.isSelected ? "white" : "#333",
-    "&:hover": {
-      backgroundColor: state.isSelected ? "#6200ee" : "#f0e6ff"
-    }
-  }),
-  menu: (provided) => ({
-    ...provided,
-    borderRadius: "4px",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
-  })
-};
+// Custom styles for react-select (can be removed if Select is not used)
+// const selectStyles = { ... };
 
-const modelOptions = [
-  { value: "google/gemma-3-1b-pt", label: "google/gemma-3-1b-pt" },
-  { value: "google/gemma-3-1b-it", label: "google/gemma-3-1b-it" },
-  { value: "google/gemma-3-4b-pt", label: "google/gemma-3-4b-pt" },
-  { value: "google/gemma-3-4b-it", label: "google/gemma-3-4b-it" },
-  { value: "google/gemma-2b", label: "google/gemma-2b" },
-  { value: "google/gemma-2-2b-it", label: "google/gemma-2-2b-it" }
-];
+// modelOptions might not be needed if model is determined by requestId
+// const modelOptions = [ ... ];
 
-const TestLLMWebSocket = () => {
+const TestLLM = ({ currentRequestId }) => { // Accept currentRequestId as a prop
   const [prompt, setPrompt] = useState("");
-  const [modelName, setModelName] = useState("google/gemma-3-1b-it");
-  // Hardcoded weights path
-  const weightsPath = "./weights/weights.pth";
   const [response, setResponse] = useState("");
   const [loading, setLoading] = useState(false);
-  const wsRef = useRef(null);
+  
+  // The request ID to use will now come from the prop
+  // If no currentRequestId is passed, the input field will be empty and button potentially disabled.
 
-  const handleTest = () => {
+  const handleTest = async () => {
     if (!prompt.trim()) {
       alert("Please enter a prompt.");
       return;
     }
+    if (!currentRequestId) { // Check if currentRequestId is available
+      alert("Request ID is missing. Please ensure a model has been trained and selected.");
+      return;
+    }
     setLoading(true);
+    setResponse(""); 
 
-    // Establish a new WebSocket connection
-    const ws = new WebSocket(`${WS_BASE_URL}/inference/ws/test_llm`);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      // Send the test parameters as JSON
-      ws.send(JSON.stringify({ prompt, model_name: modelName, weights_path: weightsPath }));
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.error) {
-        setResponse(`Error: ${data.error}`);
-      } else if (data.response) {
+    try {
+      const data = await callPredictEndpoint(prompt, currentRequestId); // Use currentRequestId
+      if (data.response) {
         setResponse(data.response);
+      } else if (data.error) {
+        setResponse(`Error: ${data.error}`);
+      } else {
+        setResponse("Received an unexpected response format.");
       }
+    } catch (error) {
+      console.error("API call error", error);
+      setResponse(`API call error: ${error.message}`);
+    } finally {
       setLoading(false);
-      ws.close();
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error", error);
-      setResponse("WebSocket error occurred");
-      setLoading(false);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket connection closed");
-      setLoading(false);
-    };
+    }
   };
 
   return (
@@ -122,15 +81,14 @@ const TestLLMWebSocket = () => {
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
           <FormControl fullWidth>
             <FormLabel sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
-              Model Name
+              Request ID (Model to Test)
             </FormLabel>
-            <Select
-              value={modelOptions.find((option) => option.value === modelName)}
-              onChange={(option) => setModelName(option.value)}
-              options={modelOptions}
-              styles={selectStyles}
-              isClearable={false}
-              isSearchable={true}
+            <TextField
+              value={currentRequestId || ""} // Display the currentRequestId from props
+              disabled // Typically, this would be non-editable here, as it's derived from training
+              variant="outlined"
+              fullWidth
+              helperText="This ID specifies the trained model to use for inference."
             />
           </FormControl>
           
@@ -153,7 +111,7 @@ const TestLLMWebSocket = () => {
             variant="contained"
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
             onClick={handleTest}
-            disabled={loading}
+            disabled={loading || !currentRequestId} // Disable if loading or no currentRequestId
             sx={{ 
               backgroundColor: "#6200ee", 
               "&:hover": { backgroundColor: "#3700b3" },
@@ -185,4 +143,4 @@ const TestLLMWebSocket = () => {
   );
 };
 
-export default TestLLMWebSocket;
+export default TestLLM;
