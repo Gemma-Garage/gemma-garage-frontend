@@ -13,7 +13,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 // Select component might not be needed if model is determined by requestId
 // import Select from "react-select"; 
 import SendIcon from "@mui/icons-material/Send";
-import { callPredictEndpoint } from "../api"; // Import the HTTP call function
+import { API_BASE_URL } from "../api"; // Import API_BASE_URL
 import "../style/assets.css";
 
 // Custom theme (can remain as is)
@@ -55,7 +55,22 @@ const TestLLM = ({ currentRequestId }) => { // Accept currentRequestId as a prop
     setResponse(""); 
 
     try {
-      const data = await callPredictEndpoint(prompt, currentRequestId); // Use currentRequestId
+      // const data = await callPredictEndpoint(prompt, currentRequestId); // Use currentRequestId
+      const predictResponse = await fetch(`${API_BASE_URL}/inference/predict`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: prompt, request_id: currentRequestId }),
+      });
+
+      if (!predictResponse.ok) {
+        const errorBody = await predictResponse.text();
+        throw new Error(`API call failed with status ${predictResponse.status}: ${errorBody}`);
+      }
+      
+      const data = await predictResponse.json();
+
       if (data.response) {
         setResponse(data.response);
       } else if (data.error) {
