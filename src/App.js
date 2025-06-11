@@ -8,6 +8,9 @@ import Sidebar from "./components/Sidebar";
 import TestLLM from "./components/TestLLM";
 import DatasetPreview from "./components/DatasetPreview";
 import Footer from "./components/Footer";
+import AuthPage from "./components/AuthPage"; // Import AuthPage
+import { auth } from "./firebase"; // Import Firebase auth
+import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
 import "./style/App.css";
 import "./firebase"
 
@@ -25,7 +28,7 @@ import {
   Legend,
 } from "chart.js";
 
-import { Paper, Typography, Button } from "@mui/material";
+import { Paper, Typography, Button, Box, CircularProgress } from "@mui/material";
 import GetAppIcon from "@mui/icons-material/GetApp";
 
 ChartJS.register(
@@ -52,6 +55,18 @@ function App() {
   const [lastLogTimestamp, setLastLogTimestamp] = useState(null);
   const pollingIntervalRef = useRef(null);
   const [progress, setProgress] = useState({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // New state for progress
+  const [currentUser, setCurrentUser] = useState(null); // State for current user
+  const [loadingAuth, setLoadingAuth] = useState(true); // State for auth loading
+
+  // Listen to Firebase auth state changes
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setLoadingAuth(false);
+    });
+    return () => unsubscribe(); // Cleanup subscription on unmount
+  }, []);
+
 
   // Handle file changes
   const handleFileChange = (e) => {
@@ -353,6 +368,18 @@ function App() {
     };
   }, []);
 
+  if (loadingAuth) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress /> 
+        <Typography sx={{ ml: 2 }}>Loading...</Typography>
+      </Box>
+    ); // Or any other loading indicator
+  }
+
+  if (!currentUser) {
+    return <AuthPage />;
+  }
 
   // downloadWeights function remains largely the same, ensure API_BASE_URL is used.
   const downloadWeights = async () => {
@@ -417,7 +444,7 @@ function App() {
 
   return (
     <div>
-      <Header />
+      <Header currentUser={currentUser} auth={auth} /> {/* Pass currentUser and auth to Header */}
     <div className="container">
       {/* <Sidebar /> */}
       <div className="main-content">
