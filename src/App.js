@@ -466,7 +466,7 @@ function App() {
             </Button>
           </Paper>
         )}
-        <TestLLM currentRequestId={currentRequestId} />
+        <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
       </div>
     </div>
     <Footer/>

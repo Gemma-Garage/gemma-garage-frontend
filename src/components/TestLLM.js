@@ -34,7 +34,7 @@ const theme = createTheme({
 // modelOptions might not be needed if model is determined by requestId
 // const modelOptions = [ ... ];
 
-const TestLLM = ({ currentRequestId }) => { // Accept currentRequestId as a prop
+const TestLLM = ({ currentRequestId, currentBaseModel }) => { // Accept currentRequestId and currentBaseModel as props
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,6 +51,10 @@ const TestLLM = ({ currentRequestId }) => { // Accept currentRequestId as a prop
       alert("Request ID is missing. Please ensure a model has been trained and selected.");
       return;
     }
+    if (!currentBaseModel) { // Check if currentBaseModel is available
+      alert("Base model is missing. Please ensure a model has been trained and selected.");
+      return;
+    }
     setLoading(true);
     setResponse(""); 
 
@@ -61,7 +65,11 @@ const TestLLM = ({ currentRequestId }) => { // Accept currentRequestId as a prop
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: prompt, request_id: currentRequestId }),
+        body: JSON.stringify({ 
+          prompt: prompt, 
+          request_id: currentRequestId, 
+          base_model: currentBaseModel 
+        }),
       });
 
       if (!predictResponse.ok) {
@@ -106,6 +114,19 @@ const TestLLM = ({ currentRequestId }) => { // Accept currentRequestId as a prop
               helperText="This ID specifies the trained model to use for inference."
             />
           </FormControl>
+
+          <FormControl fullWidth>
+            <FormLabel sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
+              Base Model
+            </FormLabel>
+            <TextField
+              value={currentBaseModel || ""} // Display the currentBaseModel from props
+              disabled // Typically, this would be non-editable here
+              variant="outlined"
+              fullWidth
+              helperText="The base model used for this fine-tuned version."
+            />
+          </FormControl>
           
           <FormControl fullWidth>
             <FormLabel sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
@@ -126,7 +147,7 @@ const TestLLM = ({ currentRequestId }) => { // Accept currentRequestId as a prop
             variant="contained"
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
             onClick={handleTest}
-            disabled={loading || !currentRequestId} // Disable if loading or no currentRequestId
+            disabled={loading || !currentRequestId || !currentBaseModel} // Disable if loading or no currentRequestId or no currentBaseModel
             sx={{ 
               backgroundColor: "#6200ee", 
               "&:hover": { backgroundColor: "#3700b3" },
