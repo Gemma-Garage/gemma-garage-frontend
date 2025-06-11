@@ -13,7 +13,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 // Select component might not be needed if model is determined by requestId
 // import Select from "react-select"; 
 import SendIcon from "@mui/icons-material/Send";
-import { API_BASE_URL } from "../api"; // Import API_BASE_URL
+import { API_INFERENCE_BASE_URL } from "../api"; // Import API_INFERENCE_BASE_URL
 import "../style/assets.css";
 
 // Custom theme (can remain as is)
@@ -56,7 +56,7 @@ const TestLLM = ({ currentRequestId }) => { // Accept currentRequestId as a prop
 
     try {
       // const data = await callPredictEndpoint(prompt, currentRequestId); // Use currentRequestId
-      const predictResponse = await fetch(`${API_BASE_URL}/inference/predict`, {
+      const predictResponse = await fetch(`${API_INFERENCE_BASE_URL}/inference/predict`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
