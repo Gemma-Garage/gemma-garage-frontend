@@ -9,6 +9,7 @@ import TestLLM from "./components/TestLLM";
 import DatasetPreview from "./components/DatasetPreview";
 import Footer from "./components/Footer";
 import "./style/App.css";
+import "./firebase"
 
 // Import our API endpoints
 import { API_BASE_URL } from "./api";
