@@ -232,44 +232,76 @@ function App() {
     }
   };
 
-  const uploadDataset = async () => {
-    if (!datasetFile) {
-      alert("Please select a file.");
+  const uploadDataset = async (file) => {
+    if (!file) {
+      console.error("No file selected");
+      // Optionally, update UI to show error
       return;
     }
-    
+
     const formData = new FormData();
-    formData.append("file", datasetFile);
+    formData.append("file", file);
 
     try {
-      setUploadStatus("Uploading...");
-      setTrainableDatasetName(null);
       const response = await fetch(`${API_BASE_URL}/dataset/upload`, {
         method: "POST",
         body: formData,
+        // Headers might be needed depending on backend setup, e.g., for auth
+        // headers: {
+        //   // 'Authorization': `Bearer ${token}`, // If using token auth
+        // },
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error uploading file");
-      }
-      
-      const data = await response.json();
-      const fileExt = datasetFile.name.split('.').pop().toLowerCase();
-      let readyFileName;
 
-      readyFileName = data.file_location.split('/').pop();
-      
-      if (fileExt === 'pdf') {
-        setUploadStatus(`PDF processed. Trainable dataset: ${readyFileName}`);
-      } else {
-        setUploadStatus(`Dataset uploaded: ${readyFileName}. Ready for training.`);
+      if (!response.ok) {
+        // Try to get error message from backend
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // If response is not JSON, use status text
+          errorData = { message: response.statusText };
+        }
+        throw new Error(
+          `HTTP error! status: ${response.status}, Message: ${
+            errorData.detail || errorData.message || "Unknown error"
+          }`
+        );
       }
-      setTrainableDatasetName(readyFileName);
+
+      const data = await response.json(); // Correctly parse the JSON response
+
+      console.log("Dataset uploaded successfully:", data);
+      // Assuming the backend returns { file_location: 'gs://...' }
+      // Update state or perform actions with data.file_location
+      if (data.file_location) {
+        setSelectedDatasetFile(file); // Keep the local file for preview for now
+        // Or, if you want to store the GCS path:
+        // setUploadedDatasetPath(data.file_location);
+        // Trigger a preview based on the new GCS path if DatasetPreview is adapted for it
+        // fetchPreview(data.file_location); // You'd need to implement fetchPreview
+        console.log("File uploaded to:", data.file_location);
+
+        // If the project is selected, update the project document in Firestore
+        if (selectedProject) {
+          const projectRef = doc(db, "users", currentUser.uid, "projects", selectedProject.id);
+          await updateDoc(projectRef, {
+            dataset_gcs_path: data.file_location, // Save the GCS path
+            dataset_filename: file.name, // Optionally, save the original filename
+            updatedAt: serverTimestamp(),
+          });
+          console.log("Project document updated with dataset GCS path.");
+          // Refresh project data if necessary
+          // fetchProjects(); 
+        }
+
+
+      } else {
+        console.error("File location not found in response:", data);
+        // Optionally, update UI to show error
+      }
     } catch (error) {
-      console.error("Error uploading file", error);
-      setUploadStatus("Error: " + error.message);
-      setTrainableDatasetName(null);
+      console.error("Error uploading dataset:", error);
+      // Optionally, update UI to show error message, e.g., error.message
     }
   };
 
