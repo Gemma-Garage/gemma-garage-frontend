@@ -1,21 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import Header from "./components/Header";
-import UploadDataset from "./components/UploadDataset";
-import TrainingParameters from "./components/TrainingParameters";
-import FinetuneControl from "./components/FinetuneControl";
-import LossGraph from "./components/LossGraph";
-import Sidebar from "./components/Sidebar";
-import TestLLM from "./components/TestLLM";
-import DatasetPreview from "./components/DatasetPreview";
-import Footer from "./components/Footer";
-import AuthPage from "./components/AuthPage"; // Import AuthPage
-import ProjectDashboard from "./components/ProjectDashboard"; // ADDED
-import CreateProjectDialog from "./components/CreateProjectDialog"; // ADDED
-import { auth } from "./firebase"; // Import Firebase auth
-import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
-import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from "firebase/firestore"; // Re-enabled Firestore imports
-import { db } from './firebase'; // Re-enabled db import
-import "./style/App.css";
+import { Box, Button, CircularProgress, Paper, Typography } from "@mui/material";
+import GetAppIcon from "@mui/icons-material/GetApp";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from "firebase/firestore";
+import { db } from "./firebase";
+import { auth } from "./firebase";
 
 // Import our API endpoints
 import { API_BASE_URL } from "./api";
@@ -31,25 +20,19 @@ import {
   Legend,
 } from "chart.js";
 
-import { Paper, Typography, Button, Box, CircularProgress } from "@mui/material";
-import GetAppIcon from "@mui/icons-material/GetApp";
-
-const createInitialUser = async () => {
-  console.log("Creating initial user in Firestore...");
-  try {
-    // Ensure db is correctly initialized and imported, and user has permissions
-    await addDoc(collection(db, "users"), {
-      name: "Alice",
-      age: 25,
-      email: "alice@example.com"
-    });
-    console.log("User added successfully!");
-  } catch (e) {
-    console.error("Error adding user: ", e);
-  }
-};
-
-// createInitialUser(); // Removed call from here to prevent execution on module load before auth
+import Header from "./components/Header";
+import UploadDataset from "./components/UploadDataset";
+import TrainingParameters from "./components/TrainingParameters";
+import FinetuneControl from "./components/FinetuneControl";
+import LossGraph from "./components/LossGraph";
+import Sidebar from "./components/Sidebar";
+import TestLLM from "./components/TestLLM";
+import DatasetPreview from "./components/DatasetPreview";
+import Footer from "./components/Footer";
+import AuthPage from "./components/AuthPage";
+import ProjectDashboard from "./components/ProjectDashboard";
+import CreateProjectDialog from "./components/CreateProjectDialog";
+import "./style/App.css";
 
 ChartJS.register(
   CategoryScale,
@@ -74,28 +57,24 @@ function App() {
   const [currentRequestId, setCurrentRequestId] = useState(null);
   const [lastLogTimestamp, setLastLogTimestamp] = useState(null);
   const pollingIntervalRef = useRef(null);
-  const [progress, setProgress] = useState({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // New state for progress
-  const [currentUser, setCurrentUser] = useState(null); // State for current user
-  const [loadingAuth, setLoadingAuth] = useState(true); // State for auth loading
-  const [isUserSetupComplete, setIsUserSetupComplete] = useState(false); // New state for user setup completion
-  // ADDED state for project management
+  const [progress, setProgress] = useState({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [isUserSetupComplete, setIsUserSetupComplete] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState(null); // Will no longer be populated by Firestore
-  const [selectedProjectData, setSelectedProjectData] = useState(null); // Will no longer be populated by Firestore
-  const [trainableDatasetName, setTrainableDatasetName] = useState(null); // Ensure this line is present
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [selectedProjectData, setSelectedProjectData] = useState(null);
+  const [trainableDatasetName, setTrainableDatasetName] = useState(null);
 
-
-  // Listen to Firebase auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setIsUserSetupComplete(false); // Reset on any auth state change initially
+      setIsUserSetupComplete(false);
       if (user) {
         setCurrentUser(user);
         console.log("[AUTH_STATE_CHANGE] User signed in:", user.uid);
         console.log("[AUTH_STATE_CHANGE] Firestore 'db' instance:", db);
 
         try {
-          // --- Check/create user document ---
           console.log("[USER_DOC_LOGIC] Attempting to get/create user document for:", user.uid);
           const userDocRef = doc(db, "users", user.uid);
           const userDocSnap = await getDoc(userDocRef);
@@ -109,24 +88,22 @@ function App() {
           } else {
             console.log("[USER_DOC_LOGIC] User document already exists for:", user.uid, userDocSnap.data());
           }
-          setIsUserSetupComplete(true); // Firestore setup successful
+          setIsUserSetupComplete(true);
         } catch (e) {
           console.error("[FIRESTORE_CATCH_BLOCK] Caught something in onAuthStateChanged user setup!");
           console.error("[FIRESTORE_CATCH_BLOCK] Error object:", e);
           console.error("[FIRESTORE_CATCH_BLOCK] Error message:", e.message);
           console.error("[FIRESTORE_CATCH_BLOCK] Error code:", e.code);
           console.error("[FIRESTORE_CATCH_BLOCK] Error name:", e.name);
-          setIsUserSetupComplete(false); // Firestore setup failed
+          setIsUserSetupComplete(false);
         } finally {
-          setLoadingAuth(false); // Auth flow (including initial setup attempt) is complete
+          setLoadingAuth(false);
         }
       } else {
-        // User is signed out
         console.log("[AUTH_STATE_CHANGE] User signed out.");
         setCurrentUser(null);
         setSelectedProjectId(null);
         setSelectedProjectData(null);
-        // Also reset other app states if necessary
         setDatasetFile(null);
         setUploadStatus("");
         setTrainableDatasetName(null);
@@ -144,10 +121,9 @@ function App() {
         setIsUserSetupComplete(false);
       }
     });
-    return () => unsubscribe(); // Cleanup subscription on unmount
-  }, []); // Empty dependency array is correct for onAuthStateChanged
+    return () => unsubscribe();
+  }, []);
 
-  // ADDED: Handlers for Create Project Dialog
   const handleCreateProjectOpen = () => {
     setShowCreateProjectDialog(true);
   };
@@ -168,7 +144,7 @@ function App() {
         userId: currentUser.uid,
         createdAt: serverTimestamp(),
         requestId: null,
-        baseModel: modelName, // Uses current global modelName or could be a default from settings
+        baseModel: modelName,
         weightsUrl: null,
         lastTrainedAt: null,
         epochs: parseInt(epochs, 10),
@@ -177,15 +153,13 @@ function App() {
         trainingStatusMessage: "Project created. Ready for training."
       });
       console.log("Project created successfully with ID:", newProjectRef.id, " Name:", projectName);
-      handleCreateProjectClose(); // Close dialog after creation
-      // Optionally, select the newly created project or refresh the project list
+      handleCreateProjectClose();
     } catch (error) {
       console.error("Error creating project:", error);
       alert("Failed to create project: " + error.message);
     }
   };
   
-  // ADDED: Handler for selecting a project
   const handleProjectSelect = async (projectId) => {
     if (!currentUser || !projectId) {
       setSelectedProjectId(null);
@@ -194,7 +168,7 @@ function App() {
       return;
     }
     
-    setLoadingAuth(true); 
+    setLoadingAuth(true);
     try {
       const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
       const projectDocSnap = await getDoc(projectDocRef);
@@ -204,12 +178,10 @@ function App() {
         setSelectedProjectData(projectData);
         setSelectedProjectId(projectId);
 
-        // Reset general app states to default or project-specific values
         setDatasetFile(null); 
         setUploadStatus("");
-        setTrainableDatasetName(null); 
+        setTrainableDatasetName(projectData.trainableDatasetName || null); // Load if saved
         
-        // Load parameters from project if they exist, otherwise use current or default
         setEpochs(projectData.epochs || epochs); 
         setLearningRate(projectData.learningRate || learningRate);
         setLoraRank(projectData.loraRank || loraRank);
@@ -244,16 +216,12 @@ function App() {
     }
   };
 
-
-  // Handle file changes
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Reset any previous upload status
       setUploadStatus("");
-      setTrainableDatasetName(null); // ADDED: Reset trainable name when new file is selected
+      setTrainableDatasetName(null);
       
-      // Validate file type
       const fileExt = file.name.split('.').pop().toLowerCase();
       if (!['json', 'csv', 'pdf'].includes(fileExt)) {
         alert("Please upload a JSON, CSV, or PDF file.");
@@ -264,7 +232,6 @@ function App() {
     }
   };
 
-  // Upload dataset using the API endpoint
   const uploadDataset = async () => {
     if (!datasetFile) {
       alert("Please select a file.");
@@ -276,7 +243,7 @@ function App() {
 
     try {
       setUploadStatus("Uploading...");
-      setTrainableDatasetName(null); // Reset before new upload attempt
+      setTrainableDatasetName(null);
       const response = await fetch(`${API_BASE_URL}/dataset/upload`, {
         method: "POST",
         body: formData,
@@ -287,11 +254,10 @@ function App() {
         throw new Error(errorData.detail || "Error uploading file");
       }
       
-      const data = await response.json(); // from /dataset/upload
+      const data = await response.json();
       const fileExt = datasetFile.name.split('.').pop().toLowerCase();
       let readyFileName;
 
-      // Regardless of PDF or other, the backend now returns file_location of the ready-to-use file.
       readyFileName = data.file_location.split('/').pop();
       
       if (fileExt === 'pdf') {
@@ -299,15 +265,14 @@ function App() {
       } else {
         setUploadStatus(`Dataset uploaded: ${readyFileName}. Ready for training.`);
       }
-      setTrainableDatasetName(readyFileName); // Set the trainable name
+      setTrainableDatasetName(readyFileName);
     } catch (error) {
       console.error("Error uploading file", error);
       setUploadStatus("Error: " + error.message);
-      setTrainableDatasetName(null); // Reset on error
+      setTrainableDatasetName(null);
     }
   };
 
-  // Stop polling for logs
   const stopPollingLogs = () => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -316,9 +281,7 @@ function App() {
     }
   };
 
-  // Fetch logs periodically
   const pollLogs = async (requestId, sinceTimestamp) => {
-    // let processedNewPoints = []; // This will be populated specifically with loss data points
     try {
       let url = `${API_BASE_URL}/finetune/logs/${requestId}`;
       if (sinceTimestamp) {
@@ -342,24 +305,21 @@ function App() {
       let latestStatusMessage = trainingStatus; 
       let trainingCompleted = false;
       let newWeightsUrl = weightsUrl;
-      const newLossPointsForGraph = []; // Collect only loss data points here
+      const newLossPointsForGraph = [];
 
       if (data.loss_values && Array.isArray(data.loss_values)) {
-        // CHANGED to for...of loop to allow await inside for Firestore updates
         for (const point of data.loss_values) { 
-            // Process status and progress messages first
             if (point && point.status_message) {
                 latestStatusMessage = point.status_message;
                 
-                // Update progress if any relevant fields are present
                 const hasProgressInfo = point.current_step !== undefined ||
                                         point.total_steps !== undefined ||
-                                        point.current_epoch !== undefined || // Corrected: was point.epoch
+                                        point.current_epoch !== undefined ||
                                         point.total_epochs !== undefined;
 
                 if (hasProgressInfo) {
                     setProgress(prevProgress => {
-                        const newProg = { ...prevProgress }; // Create a mutable copy
+                        const newProg = { ...prevProgress }; 
 
                         if (point.current_step !== undefined) {
                             newProg.current_step = point.current_step;
@@ -367,8 +327,8 @@ function App() {
                         if (point.total_steps !== undefined) {
                             newProg.total_steps = point.total_steps;
                         }
-                        if (point.current_epoch !== undefined) { // Check current_epoch from point
-                            newProg.current_epoch = point.current_epoch; // Use point.current_epoch
+                        if (point.current_epoch !== undefined) {
+                            newProg.current_epoch = point.current_epoch;
                         }
                         if (point.total_epochs !== undefined) {
                             newProg.total_epochs = point.total_epochs;
@@ -378,14 +338,12 @@ function App() {
                 }
             }
 
-            // Check for training completion
             if (point && point.status === 'complete') {
                 trainingCompleted = true;
                 latestStatusMessage = point.status_message || "Training complete. Model saved.";
                 newWeightsUrl = point.weights_url || null; 
                 console.log("Training complete, weights URL:", newWeightsUrl);
                 
-                // ADDED: Update Firestore project document
                 if (selectedProjectId && currentUser && currentRequestId === requestId) { 
                   const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
                   try {
@@ -393,7 +351,6 @@ function App() {
                       weightsUrl: newWeightsUrl, 
                       lastTrainedAt: serverTimestamp(),
                       trainingStatusMessage: latestStatusMessage,
-                      // Optionally save final loss data or other metrics here
                     });
                     console.log("Project updated in Firestore with training completion details:", selectedProjectId);
                   } catch (error) {
@@ -402,7 +359,6 @@ function App() {
                 }
             }
             
-            // Process loss data for the graph
             if (point && typeof point.loss === 'number' && point.current_epoch) {
               newLossPointsForGraph.push({
                 current_epoch: point.current_epoch,
@@ -415,9 +371,8 @@ function App() {
             if (point && point.message && typeof point.loss === 'undefined' && !point.status_message && point.status !== 'complete') {
                 console.log("General log message:", point.message, point);
             }
-        } // Corrected closing brace for the for...of loop body
+        } 
         
-        // The following code is now correctly placed *after* the for...of loop
         if (newLossPointsForGraph.length > 0) {
           setLossData(prevLossData => {
             const existingRawTimestamps = new Set(prevLossData.map(p => p.rawTimestamp));
@@ -437,10 +392,8 @@ function App() {
       if (data.latest_timestamp) {
         setLastLogTimestamp(data.latest_timestamp);
       } else if (newLossPointsForGraph.length > 0 && newLossPointsForGraph[newLossPointsForGraph.length - 1].rawTimestamp) {
-        // If no explicit latest_timestamp, try to get from the last loss point
         setLastLogTimestamp(newLossPointsForGraph[newLossPointsForGraph.length - 1].rawTimestamp);
       } else if (data.loss_values && data.loss_values.length > 0) {
-        // Fallback: if no loss points but other messages came, use the timestamp of the last message
         const lastLogEntry = data.loss_values[data.loss_values.length - 1];
         if (lastLogEntry && lastLogEntry.timestamp) {
             setLastLogTimestamp(lastLogEntry.timestamp);
@@ -451,9 +404,7 @@ function App() {
         stopPollingLogs();
         if (newWeightsUrl) {
           setWeightsUrl(newWeightsUrl);
-          // The status message for completion is already set in the loop
         }
-        // setTrainingStatus is already called with latestStatusMessage which would be the completion message
       }
 
     } catch (error) {
@@ -462,24 +413,22 @@ function App() {
     }
   };
 
-
-  // Start finetuning using the API endpoint
   const submitFinetuningJob = async () => {
-    if (!trainableDatasetName) { // MODIFIED: Check trainableDatasetName state
+    if (!trainableDatasetName) { 
       alert("Please upload and process a dataset first. The 'trainableDatasetName' is missing.");
       return;
     }
 
     setTrainingStatus("Submitting training job...");
-    setLossData([]); // Clear previous loss data
-    setLastLogTimestamp(null); // Reset last log timestamp
-    setCurrentRequestId(null); // Reset request ID
-    setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
-    stopPollingLogs(); // Clear any existing polling interval
+    setLossData([]);
+    setLastLogTimestamp(null);
+    setCurrentRequestId(null);
+    setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
+    stopPollingLogs();
 
     const payload = {
       model_name: modelName,
-      dataset_path: trainableDatasetName, // MODIFIED: Use trainableDatasetName state
+      dataset_path: trainableDatasetName,
       epochs: epochs,
       learning_rate: learningRate,
       lora_rank: loraRank,
@@ -502,27 +451,26 @@ function App() {
       const data = await response.json();
       setTrainingStatus(`Training job submitted. Request ID: ${data.request_id}. Polling for logs...`);
       setCurrentRequestId(data.request_id);
-      setLastLogTimestamp(null); // Reset last log timestamp for the new job
-      setLossData([]); // Clear previous loss data
-      setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
+      setLastLogTimestamp(null);
+      setLossData([]);
+      setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
       setTrainingStatus(`Training in progress... Request ID: ${data.request_id}`);
-      setWeightsUrl(null); // Clear any previous weights URL
+      setWeightsUrl(null);
 
-      // Update Firestore with the new requestId for the current project
       if (selectedProjectId && currentUser) {
         const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
         try {
           await updateDoc(projectDocRef, {
             requestId: data.request_id,
             baseModel: modelName,
-            lastTrainedAt: serverTimestamp(), // Mark as last activity
+            lastTrainedAt: serverTimestamp(),
             trainingStatusMessage: `Training initiated with ID: ${data.request_id}`,
-            weightsUrl: null, // Reset weights URL for new training
+            weightsUrl: null,
             epochs: parseInt(epochs, 10),
             learningRate: parseFloat(learningRate),
             loraRank: parseInt(loraRank, 10),
-            // Clear any previous loss data if stored in project doc
-            // lossData: [], 
+            trainableDatasetName: trainableDatasetName,
+            lossData: [],
           });
           console.log("Project updated in Firestore with new training job ID:", data.request_id);
         } catch (error) {
@@ -530,35 +478,18 @@ function App() {
         }
       }
 
-      // Start polling
       pollingIntervalRef.current = setInterval(() => {
-        // Pass currentRequestId and lastLogTimestamp to pollLogs
-        // Need to use a function form of setState or refs if pollLogs itself is not recreated with these values
-        // For simplicity, pollLogs will fetch these from state directly if they are updated correctly.
-        // However, setInterval captures the initial state. A better way is to pass them or use a ref.
-        
-        // Correct way to ensure pollLogs gets the latest state:
-        // Wrap the pollLogs call in a function that reads the latest state
-        // Or, ensure pollLogs is part of the component and has access to up-to-date state
-        // For now, we'll rely on pollLogs accessing the state, but this can be tricky with setInterval.
-        // A common pattern is to use a ref for the values or clear and set a new interval.
-        
-        // Let's pass them directly to ensure correctness
-        // Need to get the latest values, not the ones captured at setInterval creation.
-        // This is a common pitfall. We'll use a functional update or ref for `lastLogTimestamp` inside `pollLogs`
-        // or ensure `pollLogs` is redefined if `lastLogTimestamp` changes.
-        // For now, let's assume `pollLogs` correctly fetches the state, but this might need adjustment.
         setCurrentRequestId(currentId => {
           setLastLogTimestamp(currentTimestamp => {
-            if (currentId) { // Only poll if we have a request ID
+            if (currentId) {
                  pollLogs(currentId, currentTimestamp);
             }
-            return currentTimestamp; // No change to timestamp here, pollLogs updates it
+            return currentTimestamp;
           });
-          return currentId; // No change to ID here
+          return currentId;
         });
 
-      }, 5000); // Poll every 5 seconds
+      }, 5000);
 
     } catch (error) {
       console.error("Error starting fine-tuning:", error);
@@ -567,14 +498,12 @@ function App() {
     }
   };
   
-  // Effect to clean up polling on component unmount
   React.useEffect(() => {
     return () => {
       stopPollingLogs();
     };
   }, []);
 
-  // Conditional Rendering Logic
   if (loadingAuth) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -588,8 +517,7 @@ function App() {
     return <AuthPage />;
   }
 
-  // If currentUser exists, but initial Firestore setup isn't complete yet
-  if (!isUserSetupComplete) {
+  if (!isUserSetupComplete) { 
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
@@ -598,9 +526,7 @@ function App() {
     );
   }
 
-  // If currentUser exists AND user setup is complete:
   if (!selectedProjectId) {
-    // Show the dashboard
     return (
       <>
         <Header currentUser={currentUser} auth={auth} />
@@ -619,7 +545,6 @@ function App() {
     );
   }
 
-  // Main application view (Project Detail View)
   return (
     <div className="App">
       <Header currentUser={currentUser} auth={auth} />
@@ -635,20 +560,19 @@ function App() {
         <Button variant="outlined" onClick={() => {
           setSelectedProjectId(null); 
           setSelectedProjectData(null);
-          // Reset states to default when going back to dashboard
           setDatasetFile(null);
           setUploadStatus("");
-          setTrainableDatasetName(null); // ADDED: Reset trainable dataset name
-          setModelName("google/gemma-3-1b-pt"); // Reset model name
-          setEpochs(1); // Reset epochs
-          setLearningRate(0.0002); // Reset learning rate
-          setLoraRank(4); // Reset lora rank
-          setTrainingStatus(""); // Reset training status
-          setLossData([]); // Clear loss data
-          setWeightsUrl(null); // Clear weights URL
-          setCurrentRequestId(null); // Clear current request ID
-          setLastLogTimestamp(null); // Clear last log timestamp
-          setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
+          setTrainableDatasetName(null);
+          setModelName("google/gemma-3-1b-pt");
+          setEpochs(1);
+          setLearningRate(0.0002);
+          setLoraRank(4);
+          setTrainingStatus("");
+          setLossData([]);
+          setWeightsUrl(null);
+          setCurrentRequestId(null);
+          setLastLogTimestamp(null);
+          setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
         }}>
           Back to Dashboard
         </Button>
@@ -673,14 +597,14 @@ function App() {
             setLearningRate={setLearningRate}
             loraRank={loraRank}
             setLoraRank={setLoraRank}
-            disabled={!!currentRequestId && trainingStatus.includes("in progress")} // Disable if training active
+            disabled={!!currentRequestId && trainingStatus.includes("in progress")}
           />
           <FinetuneControl
             onFinetune={submitFinetuningJob}
             status={trainingStatus}
             weightsUrl={weightsUrl}
             currentRequestId={currentRequestId}
-            disabled={!trainableDatasetName || (!!currentRequestId && trainingStatus.includes("in progress"))} // MODIFIED: Check trainableDatasetName
+            disabled={!trainableDatasetName || (!!currentRequestId && trainingStatus.includes("in progress"))}
           />
           {lossData.length > 0 && (
             <Paper elevation={2} sx={{ padding: 2, marginTop: 2 }}>
@@ -708,8 +632,8 @@ function App() {
                 variant="contained"
                 color="success"
                 href={weightsUrl}
-                download="model_weights.zip" // Suggest a filename for download
-                target="_blank" // Open in new tab, though download attribute might override
+                download="model_weights.zip"
+                target="_blank"
                 rel="noopener noreferrer"
                 startIcon={<GetAppIcon />}
                 sx={{ marginTop: 1 }}
@@ -721,8 +645,8 @@ function App() {
         </div>
         <div className="test-llm-section">
           <TestLLM 
-            currentModelName={currentRequestId || "default_model_name_if_no_request_id"} // Pass request ID or a default
-            currentBaseModel={modelName} // Pass the base model name
+            currentModelName={currentRequestId || "default_model_name_if_no_request_id"}
+            currentBaseModel={modelName}
           />
         </div>
       </div>
