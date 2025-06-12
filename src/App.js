@@ -105,11 +105,12 @@ function App() {
             console.log("[USER_DOC_LOGIC] User document already exists for:", user.uid, userDocSnap.data());
           }
           setIsUserSetupComplete(true); // Firestore setup successful
-        } catch (error) {
-          console.error("[FIRESTORE_ERROR] Error during Firestore operation in onAuthStateChanged:", error.message);
-          if (error.code) console.error("[FIRESTORE_ERROR] Error Code:", error.code);
-          if (error.name) console.error("[FIRESTORE_ERROR] Error Name:", error.name);
-          console.error("[FIRESTORE_ERROR] Full error object:", error);
+        } catch (e) { // Changed variable name to 'e'
+          console.error("[FIRESTORE_CATCH_BLOCK] Caught something in onAuthStateChanged!");
+          console.error("[FIRESTORE_CATCH_BLOCK] Error object:", e);
+          if (e && e.message) console.error("[FIRESTORE_CATCH_BLOCK] Error message:", e.message);
+          if (e && e.code) console.error("[FIRESTORE_CATCH_BLOCK] Error code:", e.code);
+          if (e && e.name) console.error("[FIRESTORE_CATCH_BLOCK] Error name:", e.name);
           setIsUserSetupComplete(false); // Firestore setup failed
         } finally {
           setLoadingAuth(false); // Auth flow (including initial setup attempt) is complete
