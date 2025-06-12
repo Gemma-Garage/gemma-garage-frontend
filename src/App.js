@@ -274,16 +274,16 @@ function App() {
       // Assuming the backend returns { file_location: 'gs://...' }
       // Update state or perform actions with data.file_location
       if (data.file_location) {
-        setDatasetFile(file); // Keep the local file for preview for now
+        setDatasetFile(file); // Corrected: Use setDatasetFile
         // Or, if you want to store the GCS path:
         // setUploadedDatasetPath(data.file_location);
         // Trigger a preview based on the new GCS path if DatasetPreview is adapted for it
-        // fetchPreview(data.file_location); // You\'d need to implement fetchPreview
+        // fetchPreview(data.file_location); // You\\\'d need to implement fetchPreview
         console.log("File uploaded to:", data.file_location);
 
         // If the project is selected, update the project document in Firestore
-        if (selectedProjectData && selectedProjectId && currentUser) { // Check currentUser as well for safety
-          const projectRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
+        if (selectedProjectData && selectedProjectId && currentUser) { // Corrected: Use selectedProjectData and selectedProjectId
+          const projectRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId); // Corrected: Use selectedProjectId
           await updateDoc(projectRef, {
             dataset_gcs_path: data.file_location, // Save the GCS path
             dataset_filename: file.name, // Optionally, save the original filename
