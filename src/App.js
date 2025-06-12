@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Header from "./components/Header";
 import UploadDataset from "./components/UploadDataset";
 import TrainingParameters from "./components/TrainingParameters";
@@ -60,6 +60,7 @@ function App() {
   const [progress, setProgress] = useState({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // New state for progress
   const [currentUser, setCurrentUser] = useState(null); // State for current user
   const [loadingAuth, setLoadingAuth] = useState(true); // State for auth loading
+  const [isUserSetupComplete, setIsUserSetupComplete] = useState(false); // New state for user setup completion
   // ADDED state for project management
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
@@ -68,29 +69,28 @@ function App() {
 
 
   // Listen to Firebase auth state changes
-  React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => { // Made async
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsUserSetupComplete(false); // Reset on any auth state change initially
       if (user) {
         setCurrentUser(user);
         console.log("[AUTH_STATE_CHANGE] User signed in:", user.uid);
-        console.log("[AUTH_STATE_CHANGE] Firestore 'db' instance:", db); // Log the db instance
+        console.log("[AUTH_STATE_CHANGE] Firestore 'db' instance:", db);
 
         try {
-          // --- Test Firestore Read ---
-          console.log("[FIRESTORE_TEST] Attempting test read from 'test_collection/test_doc'");
-          const testDocRef = doc(db, "test_collection", "test_doc_user_" + user.uid); // Make it user-specific to avoid collisions if multiple users test
+          // --- Test Firestore Read/Write ---
+          console.log("[FIRESTORE_TEST] Attempting test read from 'test_collection/test_doc_user_" + user.uid + "'");
+          const testDocRef = doc(db, "test_collection", "test_doc_user_" + user.uid);
           const testDocSnap = await getDoc(testDocRef);
           if (testDocSnap.exists()) {
             console.log("[FIRESTORE_TEST] Test read successful. Document data:", testDocSnap.data());
           } else {
-            console.log("[FIRESTORE_TEST] Test read successful. Document 'test_collection/test_doc_user_" + user.uid + "' does not exist (this is OK for the test).");
-            // Optionally, try to write to it to test write permissions
+            console.log("[FIRESTORE_TEST] Test read successful. Document 'test_collection/test_doc_user_" + user.uid + "' does not exist.");
             await setDoc(testDocRef, { testField: "hello world from " + user.uid, user: user.email, timestamp: serverTimestamp() });
             console.log("[FIRESTORE_TEST] Test write successful to 'test_collection/test_doc_user_" + user.uid + "'. Check Firestore console.");
           }
-          // --- End Test Firestore Read ---
 
-          // Check/create user document in Firestore (Original Logic)
+          // --- Check/create user document ---
           console.log("[USER_DOC_LOGIC] Attempting to get/create user document for:", user.uid);
           const userDocRef = doc(db, "users", user.uid);
           const userDocSnap = await getDoc(userDocRef);
@@ -99,30 +99,31 @@ function App() {
             await setDoc(userDocRef, {
               email: user.email,
               createdAt: serverTimestamp(),
-              // Add any other initial user data here
             });
             console.log("[USER_DOC_LOGIC] User document created in Firestore for new user:", user.uid);
           } else {
             console.log("[USER_DOC_LOGIC] User document already exists for:", user.uid, userDocSnap.data());
           }
+          setIsUserSetupComplete(true); // Firestore setup successful
         } catch (error) {
           console.error("[FIRESTORE_ERROR] Error during Firestore operation in onAuthStateChanged:", error.message);
-          console.error("[FIRESTORE_ERROR] Full error object:", error); // Log the full error object
-          // Specifically log error code and name if available, as they can be informative
           if (error.code) console.error("[FIRESTORE_ERROR] Error Code:", error.code);
           if (error.name) console.error("[FIRESTORE_ERROR] Error Name:", error.name);
+          console.error("[FIRESTORE_ERROR] Full error object:", error);
+          setIsUserSetupComplete(false); // Firestore setup failed
+        } finally {
+          setLoadingAuth(false); // Auth flow (including initial setup attempt) is complete
         }
-
       } else {
         // User is signed out
         console.log("[AUTH_STATE_CHANGE] User signed out.");
         setCurrentUser(null);
-        setSelectedProjectId(null); // Clear project selection on logout
+        setSelectedProjectId(null);
         setSelectedProjectData(null);
         // Also reset other app states if necessary
         setDatasetFile(null);
         setUploadStatus("");
-        setTrainableDatasetName(null); // ADDED: Reset trainable dataset name
+        setTrainableDatasetName(null);
         setModelName("google/gemma-3-1b-pt");
         setEpochs(1);
         setLearningRate(0.0002);
@@ -133,11 +134,12 @@ function App() {
         setCurrentRequestId(null);
         setLastLogTimestamp(null);
         setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
+        setLoadingAuth(false);
+        setIsUserSetupComplete(false);
       }
-      setLoadingAuth(false);
     });
     return () => unsubscribe(); // Cleanup subscription on unmount
-  }, []);
+  }, []); // Empty dependency array is correct for onAuthStateChanged
 
   // ADDED: Handlers for Create Project Dialog
   const handleCreateProjectOpen = () => {
@@ -581,19 +583,30 @@ function App() {
     return <AuthPage />;
   }
 
-  // If no project is selected, show the dashboard
+  // If currentUser exists, but initial Firestore setup isn't complete yet
+  if (!isUserSetupComplete) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Setting up user data...</Typography>
+      </Box>
+    );
+  }
+
+  // If currentUser exists AND user setup is complete:
   if (!selectedProjectId) {
+    // Show the dashboard
     return (
       <>
-        <Header currentUser={currentUser} auth={auth} /> 
-        <ProjectDashboard 
-          handleCreateProjectOpen={handleCreateProjectOpen} 
-          handleProjectSelect={handleProjectSelect} 
-          currentUser={currentUser} // Pass currentUser to ProjectDashboard
+        <Header currentUser={currentUser} auth={auth} />
+        <ProjectDashboard
+          handleCreateProjectOpen={handleCreateProjectOpen}
+          handleProjectSelect={handleProjectSelect}
+          currentUser={currentUser}
         />
-        <CreateProjectDialog 
-          open={showCreateProjectDialog} 
-          handleClose={handleCreateProjectClose} 
+        <CreateProjectDialog
+          open={showCreateProjectDialog}
+          handleClose={handleCreateProjectClose}
           handleCreateProject={handleCreateProject}
         />
         <Footer />
