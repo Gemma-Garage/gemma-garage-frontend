@@ -620,21 +620,22 @@ function App() {
       )}
 
       <div className="main-content">
-        <div className="dataset-operations-section"> {/* Changed class from sidebar to dataset-operations-section */}
+        <div className="dataset-operations-section"> 
           <UploadDataset
             onFileChange={handleFileChange}
             onUpload={uploadDataset}
-            status={uploadStatus}
+            status={uploadStatus} // This prop is named status in UploadDataset
             datasetFile={datasetFile}
-            disabled={!selectedProjectData} // Disable if no project selected
+            disabled={!selectedProjectData} 
           />
-          {trainableDatasetName && datasetFile && (
-            <DatasetPreview file={datasetFile} dataset_path={trainableDatasetName} />
-          )}
+          {/* Moved the status display for trainableDatasetName here, below UploadDataset */}
           {trainableDatasetName && (
             <Paper elevation={1} sx={{ padding: '10px', marginTop: '10px', backgroundColor: '#e8f5e9' }}>
               <Typography variant="body2">Trainable GCS Path: {trainableDatasetName}</Typography>
             </Paper>
+          )}
+          {trainableDatasetName && datasetFile && (
+            <DatasetPreview file={datasetFile} dataset_path={trainableDatasetName} />
           )}
         </div>
         

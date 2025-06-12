@@ -78,10 +78,11 @@ const TrainingParameters = ({
   epochs,
   learningRate,
   loraRank,
-  onModelNameChange,
-  onEpochsChange,
-  onLearningRateChange,
-  onLoraRankChange
+  setModelName, // Changed from onModelNameChange
+  setEpochs,    // Changed from onEpochsChange
+  setLearningRate, // Changed from onLearningRateChange
+  setLoraRank,  // Changed from onLoraRankChange
+  disabled // Added disabled prop
 }) => {
   // Find the selected option from the modelOptions array
   const selectedOption = modelOptions.find(option => option.value === modelName);
@@ -90,7 +91,7 @@ const TrainingParameters = ({
   const selectedLoraRankOption = loraRankOptions.find(option => option.value === loraRank);
 
   const handleLearningRateChange = (event) => {
-    onLearningRateChange(event.target.value);
+    setLearningRate(event.target.value); // Changed from onLearningRateChange
   };
 
   return (
@@ -108,11 +109,12 @@ const TrainingParameters = ({
             <Select
               inputId="model-select"
               value={selectedOption}
-              onChange={(option) => onModelNameChange(option.value)}
+              onChange={(option) => setModelName(option.value)} // Changed from onModelNameChange
               options={modelOptions}
               styles={selectStyles}
               isClearable={false}
               isSearchable={true}
+              isDisabled={disabled} // Added disabled prop
             />
           </FormControl>
 
@@ -123,11 +125,12 @@ const TrainingParameters = ({
             <Select
               inputId="lora-rank-select"
               value={selectedLoraRankOption}
-              onChange={(option) => onLoraRankChange(option.value)}
+              onChange={(option) => setLoraRank(option.value)} // Changed from onLoraRankChange
               options={loraRankOptions}
               styles={selectStyles}
               isClearable={false}
               isSearchable={false}
+              isDisabled={disabled} // Added disabled prop
             />
             <Typography variant="caption" sx={{ mt: 1, color: "text.secondary" }}>
               Lower rank = faster training but less expressive. Higher rank = better quality but more memory.
@@ -142,12 +145,13 @@ const TrainingParameters = ({
               id="epochs-input"
               type="number"
               value={epochs}
-              onChange={(e) => onEpochsChange(e.target.value)}
+              onChange={(e) => setEpochs(e.target.value)} // Changed from onEpochsChange
               variant="outlined"
               InputProps={{
                 inputProps: { min: 1 }
               }}
               fullWidth
+              disabled={disabled} // Added disabled prop
             />
           </FormControl>
 
@@ -167,14 +171,16 @@ const TrainingParameters = ({
                 startAdornment: <InputAdornment position="start">λ</InputAdornment>,
               }}
               fullWidth
+              disabled={disabled} // Added disabled prop
             />
             <Slider 
               value={parseFloat(learningRate)}
               min={0.0001}
               max={0.01}
               step={0.0001}
-              onChange={(_, value) => onLearningRateChange(value)}
+              onChange={(_, value) => setLearningRate(value)} // Changed from onLearningRateChange
               sx={{ mt: 2 }}
+              disabled={disabled} // Added disabled prop
             />
           </FormControl>
         </Box>
