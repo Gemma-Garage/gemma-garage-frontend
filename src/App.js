@@ -9,10 +9,14 @@ import TestLLM from "./components/TestLLM";
 import DatasetPreview from "./components/DatasetPreview";
 import Footer from "./components/Footer";
 import AuthPage from "./components/AuthPage"; // Import AuthPage
-import { auth } from "./firebase"; // Import Firebase auth
+import ProjectDashboard from "./components/ProjectDashboard"; // ADDED
+import CreateProjectDialog from "./components/CreateProjectDialog"; // ADDED
+import { auth, db } from "./firebase"; // Import Firebase auth and db
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
+// ADDED Firestore functions
+import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, updateDoc } from "firebase/firestore"; 
 import "./style/App.css";
-import "./firebase"
+import "./firebase";
 
 // Import our API endpoints
 import { API_BASE_URL } from "./api";
@@ -57,15 +61,143 @@ function App() {
   const [progress, setProgress] = useState({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // New state for progress
   const [currentUser, setCurrentUser] = useState(null); // State for current user
   const [loadingAuth, setLoadingAuth] = useState(true); // State for auth loading
+  // ADDED state for project management
+  const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [selectedProjectData, setSelectedProjectData] = useState(null);
+
 
   // Listen to Firebase auth state changes
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => { // Made async
+      if (user) {
+        setCurrentUser(user);
+        // Check/create user document in Firestore
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) {
+          try {
+            await setDoc(userDocRef, {
+              email: user.email,
+              createdAt: serverTimestamp(),
+              // Add any other initial user data here
+            });
+            console.log("User document created in Firestore for new user:", user.uid);
+          } catch (error) {
+            console.error("Error creating user document in Firestore:", error);
+          }
+        }
+      } else {
+        // User is signed out
+        setCurrentUser(null);
+        setSelectedProjectId(null); // Clear project selection on logout
+        setSelectedProjectData(null);
+        // Also reset other app states if necessary
+        setDatasetFile(null);
+        setUploadStatus("");
+        setModelName("google/gemma-3-1b-pt");
+        setEpochs(1);
+        setLearningRate(0.0002);
+        setLoraRank(4);
+        setTrainingStatus("");
+        setLossData([]);
+        setWeightsUrl(null);
+        setCurrentRequestId(null);
+        setLastLogTimestamp(null);
+        setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
+      }
       setLoadingAuth(false);
     });
     return () => unsubscribe(); // Cleanup subscription on unmount
   }, []);
+
+  // ADDED: Handlers for Create Project Dialog
+  const handleCreateProjectOpen = () => {
+    setShowCreateProjectDialog(true);
+  };
+
+  const handleCreateProjectClose = () => {
+    setShowCreateProjectDialog(false);
+  };
+
+  const handleCreateProject = async (projectName) => {
+    if (!currentUser) {
+      alert("You must be logged in to create a project.");
+      return;
+    }
+    try {
+      const projectsCollectionRef = collection(db, "users", currentUser.uid, "projects");
+      await addDoc(projectsCollectionRef, {
+        displayName: projectName,
+        userId: currentUser.uid,
+        createdAt: serverTimestamp(),
+        requestId: null,
+        baseModel: modelName, // Uses current global modelName or could be a default from settings
+        weightsUrl: null,
+        lastTrainedAt: null,
+        // You could also store initial training parameters here if desired
+        // epochs: epochs,
+        // learningRate: learningRate,
+        // loraRank: loraRank,
+      });
+      console.log("Project created successfully:", projectName);
+      handleCreateProjectClose(); // Close dialog after creation
+    } catch (error) {
+      console.error("Error creating project:", error);
+      alert("Failed to create project: " + error.message);
+    }
+  };
+  
+  // ADDED: Handler for selecting a project
+  const handleProjectSelect = async (projectId) => {
+    if (!currentUser || !projectId) {
+      setSelectedProjectId(null);
+      setSelectedProjectData(null);
+      return;
+    }
+    
+    setLoadingAuth(true); // Use main auth loading state for simplicity, or add a new one
+    const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
+    const projectDocSnap = await getDoc(projectDocRef);
+
+    if (projectDocSnap.exists()) {
+      const projectData = { id: projectDocSnap.id, ...projectDocSnap.data() };
+      setSelectedProjectData(projectData);
+      setSelectedProjectId(projectId);
+
+      // Reset general app states to default or project-specific values
+      setDatasetFile(null); // Assuming dataset is not stored with project, or needs re-upload per session
+      setUploadStatus("");
+      
+      // Load parameters from project if they exist, otherwise use current or default
+      setEpochs(projectData.epochs || epochs); 
+      setLearningRate(projectData.learningRate || learningRate);
+      setLoraRank(projectData.loraRank || loraRank);
+      
+      setTrainingStatus(projectData.requestId ? "Project data loaded." : "Ready for training.");
+      setLossData(projectData.lossData || []); // Load saved loss data if available
+      setWeightsUrl(projectData.weightsUrl || null);
+      setCurrentRequestId(projectData.requestId || null);
+      setLastLogTimestamp(null); // Always reset for polling if needed for a new/resumed job
+      setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
+      setModelName(projectData.baseModel || modelName); // Load project's base model
+
+      if (projectData.requestId && projectData.weightsUrl) {
+        setTrainingStatus(`Training completed for project '${projectData.displayName}'. Model is available.`);
+      } else if (projectData.requestId) {
+        setTrainingStatus(`Training for project '${projectData.displayName}' was previously initiated (ID: ${projectData.requestId}). Check status or start new training.`);
+        // Optionally, trigger polling here if the job might be active and you want to auto-resume monitoring
+        // pollLogs(projectData.requestId, projectData.lastLogTimestamp || null); 
+      }
+
+    } else {
+      console.error("Selected project not found in Firestore:", projectId);
+      alert("Error: Could not load project data. The project may have been deleted.");
+      setSelectedProjectData(null);
+      setSelectedProjectId(null); // Clear selection if project not found
+    }
+    setLoadingAuth(false);
+  };
 
 
   // Handle file changes
@@ -164,7 +296,8 @@ function App() {
       const newLossPointsForGraph = []; // Collect only loss data points here
 
       if (data.loss_values && Array.isArray(data.loss_values)) {
-        data.loss_values.forEach(point => { // Iterate with forEach, map is not needed here for its return value
+        // CHANGED to for...of loop to allow await inside for Firestore updates
+        for (const point of data.loss_values) { 
             // Process status and progress messages first
             if (point && point.status_message) {
                 latestStatusMessage = point.status_message;
@@ -172,7 +305,7 @@ function App() {
                 // Update progress if any relevant fields are present
                 const hasProgressInfo = point.current_step !== undefined ||
                                         point.total_steps !== undefined ||
-                                        point.current_epoch !== undefined ||
+                                        point.current_epoch !== undefined || // Corrected: was point.epoch
                                         point.total_epochs !== undefined;
 
                 if (hasProgressInfo) {
@@ -185,8 +318,8 @@ function App() {
                         if (point.total_steps !== undefined) {
                             newProg.total_steps = point.total_steps;
                         }
-                        if (point.current_epoch !== undefined) {
-                            newProg.current_epoch = point.epoch;
+                        if (point.current_epoch !== undefined) { // Check current_epoch from point
+                            newProg.current_epoch = point.current_epoch; // Use point.current_epoch
                         }
                         if (point.total_epochs !== undefined) {
                             newProg.total_epochs = point.total_epochs;
@@ -199,14 +332,34 @@ function App() {
             // Check for training completion
             if (point && point.status === 'complete') {
                 trainingCompleted = true;
-                // Update status message if completion log has one, otherwise use a default
-                latestStatusMessage = point.status_message || "Training complete! Processing final results...";
-                if (point.weights_url) {
-                    newWeightsUrl = point.weights_url;
+                latestStatusMessage = point.status_message || "Training complete. Model saved.";
+                newWeightsUrl = point.weights_url || null; 
+                console.log("Training complete, weights URL:", newWeightsUrl);
+                
+                // ADDED: Update Firestore project document
+                if (selectedProjectId && currentUser && currentRequestId === requestId) { 
+                  const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
+                  try {
+                    // CHANGED to updateDoc for partial update
+                    await updateDoc(projectDocRef, { 
+                      // requestId: currentRequestId, // requestId is already set when job starts
+                      // baseModel: modelName, // baseModel is set on creation or can be updated if it changes per run
+                      weightsUrl: newWeightsUrl, 
+                      lastTrainedAt: serverTimestamp(),
+                      trainingStatusMessage: latestStatusMessage, // Store final status
+                      // Optionally save final loss data or other metrics here
+                      // epochs: epochs, // Save parameters used for this run
+                      // learningRate: learningRate,
+                      // loraRank: loraRank,
+                    });
+                    console.log("Project updated in Firestore with training completion details:", selectedProjectId);
+                  } catch (error) {
+                    console.error("Error updating project in Firestore after training completion:", error);
+                  }
                 }
             }
-
-            // Check for loss data specifically for the graph
+            
+            // Process loss data for the graph
             if (point && typeof point.loss === 'number' && point.current_epoch) {
               newLossPointsForGraph.push({
                 current_epoch: point.current_epoch,
@@ -268,11 +421,11 @@ function App() {
   };
 
 
-  // Start fine-tuning via HTTP
-  const startFinetuning = async () => {
-    if (!datasetFile && !uploadStatus.startsWith("Dataset uploaded")) {
-        alert("Please upload a dataset first.");
-        return;
+  // Start finetuning using the API endpoint
+  const submitFinetuningJob = async () => {
+    if (!datasetFile && !selectedProjectData?.datasetFile) { // Check if a dataset is available
+      alert("Please upload a dataset first.");
+      return;
     }
 
     // Extract the filename from uploadStatus if available, otherwise use datasetFile.name
@@ -319,7 +472,32 @@ function App() {
       const data = await response.json();
       setTrainingStatus(`Training job submitted. Request ID: ${data.request_id}. Polling for logs...`);
       setCurrentRequestId(data.request_id);
-      setLastLogTimestamp(new Date().toISOString()); // Start polling from now
+      setLastLogTimestamp(null); // Reset last log timestamp for the new job
+      setLossData([]); // Clear previous loss data
+      setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
+      setTrainingStatus(`Training in progress... Request ID: ${data.request_id}`);
+      setWeightsUrl(null); // Clear any previous weights URL
+
+      // Update Firestore with the new requestId for the current project
+      if (selectedProjectId && currentUser) {
+        const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
+        try {
+          await updateDoc(projectDocRef, {
+            requestId: data.request_id,
+            baseModel: modelName, // Ensure the current baseModel is saved for this run
+            lastTrainedAt: serverTimestamp(), // Timestamp for job submission
+            trainingStatusMessage: `Training initiated with ID: ${data.request_id}`,
+            weightsUrl: null, // Clear any old weights URL
+            // Optionally, save the training parameters for this run
+            epochs: parseInt(epochs, 10),
+            learningRate: parseFloat(learningRate),
+            loraRank: parseInt(loraRank, 10),
+          });
+          console.log("Project updated in Firestore with new training job ID:", data.request_id);
+        } catch (error) {
+          console.error("Error updating project in Firestore with new job ID:", error);
+        }
+      }
 
       // Start polling
       pollingIntervalRef.current = setInterval(() => {
@@ -368,137 +546,148 @@ function App() {
     };
   }, []);
 
+  // Conditional Rendering Logic
   if (loadingAuth) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress /> 
-        <Typography sx={{ ml: 2 }}>Loading...</Typography>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading authentication...</Typography>
       </Box>
-    ); // Or any other loading indicator
+    );
   }
 
   if (!currentUser) {
     return <AuthPage />;
   }
 
-  // downloadWeights function remains largely the same, ensure API_BASE_URL is used.
-  const downloadWeights = async () => {
-    // weightsUrl is now the GCS directory path, set when training completes.
-    // currentRequestId is also available and should be used.
-    if (!currentRequestId) {
-      setTrainingStatus("Error: No request ID found for download.");
-      console.error("Download weights called without a currentRequestId.");
-      return;
-    }
+  // If no project is selected, show the dashboard
+  if (!selectedProjectId) {
+    return (
+      <>
+        <Header currentUser={currentUser} auth={auth} /> 
+        <ProjectDashboard 
+          handleCreateProjectOpen={handleCreateProjectOpen} 
+          handleProjectSelect={handleProjectSelect} 
+          currentUser={currentUser} // Pass currentUser to ProjectDashboard
+        />
+        <CreateProjectDialog 
+          open={showCreateProjectDialog} 
+          handleClose={handleCreateProjectClose} 
+          handleCreateProject={handleCreateProject}
+        />
+        <Footer />
+      </>
+    );
+  }
 
-    setTrainingStatus("Preparing download links for model artifacts..."); // User feedback
-    try {
-      console.log("Requesting download links for request_id:", currentRequestId);
-      
-      const response = await fetch(`${API_BASE_URL}/download/download_weights`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Send request_id to the backend
-        body: JSON.stringify({ request_id: currentRequestId }), 
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Unknown server error" }));
-        setTrainingStatus(`Download failed: ${errorData.detail || "Could not retrieve file links"}`);
-        throw new Error(errorData.detail || "Could not retrieve file links from server");
-      }
-      
-      const data = await response.json(); // Expect { files: [{ filename: "...", download_url: "..." }, ...] }
-      
-      if (data.files && Array.isArray(data.files) && data.files.length > 0) {
-        setTrainingStatus(`Starting download of ${data.files.length} model files...`);
-        data.files.forEach((file, index) => {
-          // Optional: Add a small delay for each download if needed, though browsers usually handle this.
-          // setTimeout(() => {
-            const link = document.createElement("a");
-            link.href = file.download_url; // This is the GCS signed URL for the specific file
-            link.download = file.filename; // Use the filename from the backend for the download
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            console.log(`Download initiated for: ${file.filename}`);
-          // }, index * 1000); // Example: 1-second delay between downloads
-        });
-        setTrainingStatus("All model file downloads initiated.");
-      } else if (data.files && data.files.length === 0) {
-        setTrainingStatus("No model files found for download at the GCS location.");
-        console.warn("Backend returned an empty list of files for download for request_id:", currentRequestId);
-      } else {
-        setTrainingStatus("Download failed: Invalid response from server or no files found.");
-        throw new Error("Invalid response from server: 'files' array not found or empty.");
-      }
-    } catch (error) {
-      console.error("Error downloading model artifacts:", error);
-      setTrainingStatus(`Error downloading model artifacts: ${error.message}`);
-    }
-  };
-  
-  
-
+  // Main application view (Project Detail View)
   return (
-    <div>
-      <Header currentUser={currentUser} auth={auth} /> {/* Pass currentUser and auth to Header */}
-    <div className="container">
-      {/* <Sidebar /> */}
-      <div className="main-content">
-        <UploadDataset
-          datasetFile={datasetFile}
-          onFileChange={handleFileChange}
-          uploadStatus={uploadStatus}
-          onUpload={uploadDataset}
-        />
-        <DatasetPreview 
-          datasetFile={datasetFile}
-          dataset_path={datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null}
-        />
-        <TrainingParameters
-          modelName={modelName}
-          epochs={epochs}
-          learningRate={learningRate}
-          loraRank={loraRank}
-          onModelNameChange={setModelName}
-          onEpochsChange={setEpochs}
-          onLearningRateChange={setLearningRate}
-          onLoraRankChange={setLoraRank}
-        />
-        <FinetuneControl 
-            onStart={startFinetuning} 
-            wsStatus={trainingStatus} 
-            progress={progress} // Pass progress state
-        /> 
-        <LossGraph lossData={lossData} />
-        
-        {/* Use MUI for Download Weights button */}
-        {weightsUrl && (
-          <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
-            <Typography variant="h5" gutterBottom className="sessionName">
-              Download Fine-Tuned Model
+    <div className="App">
+      <Header currentUser={currentUser} auth={auth} />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
+        <Typography variant="h6">
+          Project: {selectedProjectData ? selectedProjectData.displayName : 'Loading...'}
+          {selectedProjectData && selectedProjectData.requestId && 
+            <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+              (Last Training ID: {selectedProjectData.requestId})
             </Typography>
-            <Button
-              variant="contained"
-              onClick={downloadWeights}
-              startIcon={<GetAppIcon />}
-              sx={{ 
-                backgroundColor: "#6200ee", 
-                "&:hover": { backgroundColor: "#3700b3" } 
+          }
+        </Typography>
+        <Button variant="outlined" onClick={() => {
+          setSelectedProjectId(null); 
+          setSelectedProjectData(null);
+          // Reset states to default when going back to dashboard
+          setDatasetFile(null);
+          setUploadStatus("");
+          setModelName("google/gemma-3-1b-pt"); // Default model
+          setEpochs(1);
+          setLearningRate(0.0002);
+          setLoraRank(4);
+          setTrainingStatus("");
+          setLossData([]);
+          setWeightsUrl(null);
+          setCurrentRequestId(null);
+          setLastLogTimestamp(null);
+          setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
+        }}>
+          Back to Dashboard
+        </Button>
+      </Box>
+      <div className="main-content">
+        <Sidebar>
+          <UploadDataset
+            onFileChange={handleFileChange}
+            onUpload={uploadDataset}
+            status={uploadStatus}
+            datasetFile={datasetFile}
+          />
+          {datasetFile && <DatasetPreview file={datasetFile} />}
+        </Sidebar>
+        <div className="training-section">
+          <TrainingParameters
+            modelName={modelName}
+            setModelName={setModelName}
+            epochs={epochs}
+            setEpochs={setEpochs}
+            learningRate={learningRate}
+            setLearningRate={setLearningRate}
+            loraRank={loraRank}
+            setLoraRank={setLoraRank}
+            disabled={!!currentRequestId && trainingStatus.includes("in progress")} // Disable if training active
+          />
+          <FinetuneControl
+            onFinetune={submitFinetuningJob}
+            status={trainingStatus}
+            weightsUrl={weightsUrl}
+            currentRequestId={currentRequestId}
+            disabled={!datasetFile || (!!currentRequestId && trainingStatus.includes("in progress"))} // Disable if no dataset or training active
+          />
+          {lossData.length > 0 && (
+            <Paper elevation={2} sx={{ padding: 2, marginTop: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Training Loss
+              </Typography>
+              <LossGraph data={lossData} />
+            </Paper>
+          )}
+          {weightsUrl && (
+            <Paper
+              elevation={2}
+              sx={{
+                padding: 2,
+                marginTop: 2,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
               }}
             >
-              Download Weights
-            </Button>
-          </Paper>
-        )}
-        <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
+              <Typography variant="h6" gutterBottom>
+                Model Weights Ready
+              </Typography>
+              <Button
+                variant="contained"
+                color="success"
+                href={weightsUrl}
+                download="model_weights.zip" // Suggest a filename for download
+                target="_blank" // Open in new tab, though download attribute might override
+                rel="noopener noreferrer"
+                startIcon={<GetAppIcon />}
+                sx={{ marginTop: 1 }}
+              >
+                Download Weights
+              </Button>
+            </Paper>
+          )}
+        </div>
+        <div className="test-llm-section">
+          <TestLLM 
+            currentModelName={currentRequestId || "default_model_name_if_no_request_id"} // Pass request ID or a default
+            currentBaseModel={modelName} // Pass the base model name
+          />
+        </div>
       </div>
+      <Footer />
     </div>
-    <Footer/>
-  </div>
   );
 }
 
