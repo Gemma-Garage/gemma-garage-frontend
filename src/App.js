@@ -219,9 +219,10 @@ function App() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Reset any previous upload status
       setUploadStatus("");
-      setTrainableDatasetName(null);
       
+      // Validate file type
       const fileExt = file.name.split('.').pop().toLowerCase();
       if (!['json', 'csv', 'pdf'].includes(fileExt)) {
         alert("Please upload a JSON, CSV, or PDF file.");
@@ -232,76 +233,43 @@ function App() {
     }
   };
 
-  const uploadDataset = async () => { // Changed: No longer takes 'file' as an argument
-    if (!datasetFile) { // Changed: Uses datasetFile from state
-      console.error("No file selected");
-      alert("Please select a file to upload."); // User-facing alert
-      setUploadStatus("No file selected."); // Update status
+  // Upload dataset using the API endpoint
+  const uploadDataset = async () => {
+    if (!datasetFile) {
+      alert("Please select a file.");
       return;
     }
-
+    
     const formData = new FormData();
-    formData.append("file", datasetFile); // Changed: Uses datasetFile from state
-
-    setUploadStatus("Uploading..."); // Feedback for user
+    formData.append("file", datasetFile);
 
     try {
+      setUploadStatus("Uploading...");
       const response = await fetch(`${API_BASE_URL}/dataset/upload`, {
         method: "POST",
         body: formData,
-        // Headers might be needed depending on backend setup, e.g., for auth
-        // headers: {
-        //   // 'Authorization': `Bearer ${token}`, // If using token auth
-        // },
       });
-
-      if (!response.ok) {
-        // Try to get error message from backend
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          // If response is not JSON, use status text
-          errorData = { message: response.statusText };
-        }
-        const errorMessage = errorData.detail || errorData.message || "Unknown error";
-        setUploadStatus(`Error: ${errorMessage}`); // Update status with error
-        throw new Error(
-          `HTTP error! status: ${response.status}, Message: ${errorMessage}`
-        );
-      }
-
-      const data = await response.json(); 
-
-      console.log("Dataset uploaded successfully:", data);
       
-      if (data.file_location) {
-        const fileName = data.file_location.split('/').pop(); // Extract filename
-        setUploadStatus(`Dataset '${fileName}' uploaded successfully. Ready for training.`); // User-friendly status
-        console.log("File uploaded to:", data.file_location);
-
-        // If the project is selected, update the project document in Firestore
-        if (selectedProjectData && selectedProjectId && currentUser) { 
-          const projectRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
-          await updateDoc(projectRef, {
-            dataset_gcs_path: data.file_location, 
-            dataset_filename: datasetFile.name,
-            trainableDatasetName: data.file_location, // This is the GCS path
-            updatedAt: serverTimestamp(),
-          });
-          console.log("Project document updated with dataset GCS path.");
-          setTrainableDatasetName(data.file_location); // Set state with the GCS path
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Error uploading file");
+      }
+      
+      const data = await response.json();
+      
+      const fileExt = datasetFile.name.split('.').pop().toLowerCase();
+      if (fileExt === 'pdf') {
+        setUploadStatus("PDF processed successfully: " + data.file_location);
       } else {
-        console.error("File location not found in response:", data);
-        setUploadStatus("Error: File location not found in response."); // Update status
+        // Assuming data.file_location is the GCS path like "your-bucket-name/your-file.json"
+        // We only need "your-file.json" for the training request.
+        const fileName = data.file_location.split('/').pop();
+        setUploadStatus(`Dataset uploaded: ${fileName}. Ready for training.`);
+        // Store the filename for training, or ensure datasetFile.name is correctly set if it's used directly
       }
     } catch (error) {
-      console.error("Error uploading dataset:", error);
-      // Check if status was already set by HTTP error block
-      if (!uploadStatus.startsWith("Error:")) {
-        setUploadStatus("Error uploading dataset: " + error.message); // Update status
-      }
+      console.error("Error uploading file", error);
+      setUploadStatus("Error: " + error.message);
     }
   };
 
@@ -314,6 +282,7 @@ function App() {
   };
 
   const pollLogs = async (requestId, sinceTimestamp) => {
+    // let processedNewPoints = []; // This will be populated specifically with loss data points
     try {
       let url = `${API_BASE_URL}/finetune/logs/${requestId}`;
       if (sinceTimestamp) {
@@ -337,13 +306,15 @@ function App() {
       let latestStatusMessage = trainingStatus; 
       let trainingCompleted = false;
       let newWeightsUrl = weightsUrl;
-      const newLossPointsForGraph = [];
+      const newLossPointsForGraph = []; // Collect only loss data points here
 
       if (data.loss_values && Array.isArray(data.loss_values)) {
-        for (const point of data.loss_values) { 
+        data.loss_values.forEach(point => { // Iterate with forEach, map is not needed here for its return value
+            // Process status and progress messages first
             if (point && point.status_message) {
                 latestStatusMessage = point.status_message;
                 
+                // Update progress if any relevant fields are present
                 const hasProgressInfo = point.current_step !== undefined ||
                                         point.total_steps !== undefined ||
                                         point.current_epoch !== undefined ||
@@ -351,7 +322,7 @@ function App() {
 
                 if (hasProgressInfo) {
                     setProgress(prevProgress => {
-                        const newProg = { ...prevProgress }; 
+                        const newProg = { ...prevProgress }; // Create a mutable copy
 
                         if (point.current_step !== undefined) {
                             newProg.current_step = point.current_step;
@@ -360,7 +331,7 @@ function App() {
                             newProg.total_steps = point.total_steps;
                         }
                         if (point.current_epoch !== undefined) {
-                            newProg.current_epoch = point.current_epoch;
+                            newProg.current_epoch = point.epoch; // Ensure this matches the backend field name, e.g., 'epoch' or 'current_epoch'
                         }
                         if (point.total_epochs !== undefined) {
                             newProg.total_epochs = point.total_epochs;
@@ -370,41 +341,33 @@ function App() {
                 }
             }
 
+            // Check for training completion
             if (point && point.status === 'complete') {
                 trainingCompleted = true;
-                latestStatusMessage = point.status_message || "Training complete. Model saved.";
-                newWeightsUrl = point.weights_url || null; 
-                console.log("Training complete, weights URL:", newWeightsUrl);
-                
-                if (selectedProjectId && currentUser && currentRequestId === requestId) { 
-                  const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
-                  try {
-                    await updateDoc(projectDocRef, { 
-                      weightsUrl: newWeightsUrl, 
-                      lastTrainedAt: serverTimestamp(),
-                      trainingStatusMessage: latestStatusMessage,
-                    });
-                    console.log("Project updated in Firestore with training completion details:", selectedProjectId);
-                  } catch (error) {
-                    console.error("Error updating project in Firestore after training completion:", error);
-                  }
+                // Update status message if completion log has one, otherwise use a default
+                latestStatusMessage = point.status_message || "Training complete! Processing final results...";
+                if (point.weights_url) {
+                    newWeightsUrl = point.weights_url;
                 }
             }
-            
-            if (point && typeof point.loss === 'number' && point.current_epoch) {
+
+            // Check for loss data specifically for the graph
+            if (point && typeof point.loss === 'number' && point.current_epoch !== undefined) { // Ensure current_epoch is present for loss points
               newLossPointsForGraph.push({
-                current_epoch: point.current_epoch,
+                current_epoch: point.current_epoch, // or point.epoch if that's the field name
                 time: new Date(point.timestamp).toLocaleTimeString(),
                 loss: point.loss,
                 rawTimestamp: point.timestamp
               });
             }
             
+            // Log other general messages if they exist and are not loss/status specific
+            // This helps in debugging what kind of messages are coming through
             if (point && point.message && typeof point.loss === 'undefined' && !point.status_message && point.status !== 'complete') {
                 console.log("General log message:", point.message, point);
             }
-        } 
-        
+        });
+
         if (newLossPointsForGraph.length > 0) {
           setLossData(prevLossData => {
             const existingRawTimestamps = new Set(prevLossData.map(p => p.rawTimestamp));
@@ -424,8 +387,10 @@ function App() {
       if (data.latest_timestamp) {
         setLastLogTimestamp(data.latest_timestamp);
       } else if (newLossPointsForGraph.length > 0 && newLossPointsForGraph[newLossPointsForGraph.length - 1].rawTimestamp) {
+        // If no explicit latest_timestamp, try to get from the last loss point
         setLastLogTimestamp(newLossPointsForGraph[newLossPointsForGraph.length - 1].rawTimestamp);
       } else if (data.loss_values && data.loss_values.length > 0) {
+        // Fallback: if no loss points but other messages came, use the timestamp of the last message
         const lastLogEntry = data.loss_values[data.loss_values.length - 1];
         if (lastLogEntry && lastLogEntry.timestamp) {
             setLastLogTimestamp(lastLogEntry.timestamp);
@@ -436,7 +401,9 @@ function App() {
         stopPollingLogs();
         if (newWeightsUrl) {
           setWeightsUrl(newWeightsUrl);
+          // The status message for completion is already set in the loop
         }
+        // setTrainingStatus is already called with latestStatusMessage which would be the completion message
       }
 
     } catch (error) {
@@ -445,22 +412,36 @@ function App() {
     }
   };
 
-  const submitFinetuningJob = async () => {
-    if (!trainableDatasetName) { 
-      alert("Please upload and process a dataset first. The 'trainableDatasetName' is missing.");
-      return;
+
+  // Start fine-tuning via HTTP
+  const startFinetuning = async () => {
+    if (!datasetFile && !uploadStatus.startsWith("Dataset uploaded")) {
+        alert("Please upload a dataset first.");
+        return;
     }
 
+    // Extract the filename from uploadStatus if available, otherwise use datasetFile.name
+    let datasetPathForTraining;
+    if (uploadStatus.startsWith("Dataset uploaded: ")) {
+        datasetPathForTraining = uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "");
+    } else if (datasetFile) {
+        datasetPathForTraining = datasetFile.name;
+    } else {
+        alert("Dataset not specified correctly.");
+        return;
+    }
+
+
     setTrainingStatus("Submitting training job...");
-    setLossData([]);
-    setLastLogTimestamp(null);
-    setCurrentRequestId(null);
-    setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
-    stopPollingLogs();
+    setLossData([]); // Clear previous loss data
+    setLastLogTimestamp(null); // Reset last log timestamp
+    setCurrentRequestId(null); // Reset request ID
+    setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
+    stopPollingLogs(); // Clear any existing polling interval
 
     const payload = {
       model_name: modelName,
-      dataset_path: trainableDatasetName,
+      dataset_path: datasetPathForTraining, // Use the extracted/stored filename
       epochs: epochs,
       learning_rate: learningRate,
       lora_rank: loraRank,
@@ -483,45 +464,40 @@ function App() {
       const data = await response.json();
       setTrainingStatus(`Training job submitted. Request ID: ${data.request_id}. Polling for logs...`);
       setCurrentRequestId(data.request_id);
-      setLastLogTimestamp(null);
-      setLossData([]);
-      setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
-      setTrainingStatus(`Training in progress... Request ID: ${data.request_id}`);
-      setWeightsUrl(null);
+      setLastLogTimestamp(new Date().toISOString()); // Start polling from now
 
-      if (selectedProjectId && currentUser) {
-        const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
-        try {
-          await updateDoc(projectDocRef, {
-            requestId: data.request_id,
-            baseModel: modelName,
-            lastTrainedAt: serverTimestamp(),
-            trainingStatusMessage: `Training initiated with ID: ${data.request_id}`,
-            weightsUrl: null,
-            epochs: parseInt(epochs, 10),
-            learningRate: parseFloat(learningRate),
-            loraRank: parseInt(loraRank, 10),
-            trainableDatasetName: trainableDatasetName,
-            lossData: [],
-          });
-          console.log("Project updated in Firestore with new training job ID:", data.request_id);
-        } catch (error) {
-          console.error("Error updating project in Firestore with new job ID:", error);
-        }
-      }
-
+      // Start polling
       pollingIntervalRef.current = setInterval(() => {
+        // Pass currentRequestId and lastLogTimestamp to pollLogs
+        // Need to use a function form of setState or refs if pollLogs itself is not recreated with these values
+        // For simplicity, pollLogs will fetch these from state directly if they are updated correctly.
+        // However, setInterval captures the initial state. A better way is to pass them or use a ref.
+        
+        // Correct way to ensure pollLogs gets the latest state:
+        // Wrap the pollLogs call in a function that reads the latest state
+        // Or, ensure pollLogs is part of the component and has access to up-to-date state
+        // For now, we'll rely on pollLogs accessing the state, but this can be tricky with setInterval.
+        // A common pattern is to use a ref for the values or clear and set a new interval.
+        
+        // Let's pass them directly to ensure correctness
+        // Need to get the latest values, not the ones captured at setInterval creation.
+        // This is a common pitfall. We'll use a functional update or ref for `lastLogTimestamp` inside `pollLogs`
+        // or ensure `pollLogs` is redefined if `lastLogTimestamp` changes.
+        // For now, let's assume `pollLogs` correctly fetches `currentRequestId` and `lastLogTimestamp` from state.
+        // This will be handled by `lastLogTimestamp` being updated by `pollLogs` itself.
+        
+        // A simple way to ensure pollLogs uses the latest state values:
         setCurrentRequestId(currentId => {
           setLastLogTimestamp(currentTimestamp => {
-            if (currentId) {
+            if (currentId) { // Only poll if we have a request ID
                  pollLogs(currentId, currentTimestamp);
             }
-            return currentTimestamp;
+            return currentTimestamp; // No change to timestamp here, pollLogs updates it
           });
-          return currentId;
+          return currentId; // No change to ID here
         });
 
-      }, 5000);
+      }, 5000); // Poll every 5 seconds
 
     } catch (error) {
       console.error("Error starting fine-tuning:", error);
@@ -530,150 +506,133 @@ function App() {
     }
   };
   
+  // Effect to clean up polling on component unmount
   React.useEffect(() => {
     return () => {
       stopPollingLogs();
     };
   }, []);
 
-  // }, []); // Make sure this useEffect for auth is correctly closed if it was open.
 
-  // Conditional rendering for ProjectDashboard vs Project View
-  if (!selectedProjectId && !loadingAuth) {
-    return (
-      <div className="App">
-        <Header currentUser={currentUser} auth={auth} />
-        <ProjectDashboard 
-          currentUser={currentUser} 
-          handleProjectSelect={handleProjectSelect} // Changed from onProjectSelect to handleProjectSelect
-          onCreateProjectOpen={handleCreateProjectOpen} 
-        />
-        <CreateProjectDialog 
-          open={showCreateProjectDialog} 
-          onClose={handleCreateProjectClose} 
-          onCreate={handleCreateProject} 
-        />
-        <Footer />
-      </div>
-    );
-  }
+  // downloadWeights function remains largely the same, ensure API_BASE_URL is used.
+  const downloadWeights = async () => {
+    // weightsUrl is now the GCS directory path, set when training completes.
+    // currentRequestId is also available and should be used.
+    if (!currentRequestId) {
+      setTrainingStatus("Error: No request ID found for download.");
+      console.error("Download weights called without a currentRequestId.");
+      return;
+    }
 
-  // Loading state for auth or initial project data
-  if (loadingAuth || (selectedProjectId && !selectedProjectData && !currentUser)) {
-    return (
-      <div className="App">
-        <Header currentUser={currentUser} auth={auth} />
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
-          <CircularProgress />
-          <Typography sx={{ ml: 2 }}>Loading user data and projects...</Typography>
-        </Box>
-        <Footer />
-      </div>
-    );
-  }
+    setTrainingStatus("Preparing download links for model artifacts..."); // User feedback
+    try {
+      console.log("Requesting download links for request_id:", currentRequestId);
+      
+      const response = await fetch(`${API_BASE_URL}/download/download_weights`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Send request_id to the backend
+        body: JSON.stringify({ request_id: currentRequestId }), 
+      });
 
-  // If user is not logged in and not loading, show AuthPage (should be handled by onAuthStateChanged redirecting or ProjectDashboard showing login)
-  // This might be redundant if ProjectDashboard handles the auth flow adequately.
-  if (!currentUser && !loadingAuth) {
-    return (
-      <div className="App">
-        <AuthPage auth={auth} />
-        <Footer />
-      </div>
-    );
-  }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Unknown server error" }));
+        setTrainingStatus(`Download failed: ${errorData.detail || "Could not retrieve file links"}`);
+        throw new Error(errorData.detail || "Could not retrieve file links from server");
+      }
+      
+      const data = await response.json(); // Expect { files: [{ filename: "...", download_url: "..." }, ...] }
+      
+      if (data.files && Array.isArray(data.files) && data.files.length > 0) {
+        setTrainingStatus(`Starting download of ${data.files.length} model files...`);
+        data.files.forEach((file, index) => {
+          // Optional: Add a small delay for each download if needed, though browsers usually handle this.
+          // setTimeout(() => {
+            const link = document.createElement("a");
+            link.href = file.download_url; // This is the GCS signed URL for the specific file
+            link.download = file.filename; // Use the filename from the backend for the download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            console.log(`Download initiated for: ${file.filename}`);
+          // }, index * 1000); // Example: 1-second delay between downloads
+        });
+        setTrainingStatus("All model file downloads initiated.");
+      } else if (data.files && data.files.length === 0) {
+        setTrainingStatus("No model files found for download at the GCS location.");
+        console.warn("Backend returned an empty list of files for download for request_id:", currentRequestId);
+      } else {
+        setTrainingStatus("Download failed: Invalid response from server or no files found.");
+        throw new Error("Invalid response from server: 'files' array not found or empty.");
+      }
+    } catch (error) {
+      console.error("Error downloading model artifacts:", error);
+      setTrainingStatus(`Error downloading model artifacts: ${error.message}`);
+    }
+  };
   
-  // Main project view (when a project is selected)
-  return (
-    <div className="App">
-      <Header currentUser={currentUser} auth={auth} />
-      {selectedProjectData && (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
-          <Typography variant="h6">
-            Project: {selectedProjectData.displayName}
-            {selectedProjectData.requestId && 
-              <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                (Last Training ID: {selectedProjectData.requestId})
-              </Typography>
-            }
-          </Typography>
-          <Button variant="outlined" onClick={() => {
-            setSelectedProjectId(null); 
-            setSelectedProjectData(null);
-            setDatasetFile(null);
-            setUploadStatus("");
-            setTrainableDatasetName(null);
-            setModelName("google/gemma-3-1b-pt");
-            setEpochs(1);
-            setLearningRate(0.0002);
-            setLoraRank(4);
-            setTrainingStatus("");
-            setLossData([]);
-            setWeightsUrl(null);
-            setCurrentRequestId(null);
-            setLastLogTimestamp(null);
-            setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
-          }}>
-            Back to Dashboard
-          </Button>
-        </Box>
-      )}
+  
 
+  return (
+    <div>
+      <Header />
+    <div className="container">
+      {/* <Sidebar /> */}
       <div className="main-content">
-        <div className="dataset-operations-section"> 
-          <UploadDataset
-            onFileChange={handleFileChange}
-            onUpload={uploadDataset}
-            status={uploadStatus} // This prop is named status in UploadDataset
-            datasetFile={datasetFile}
-            disabled={!selectedProjectData} 
-          />
-          {/* Moved the status display for trainableDatasetName here, below UploadDataset */}
-          {trainableDatasetName && (
-            <Paper elevation={1} sx={{ padding: '10px', marginTop: '10px', backgroundColor: '#e8f5e9' }}>
-              <Typography variant="body2">Trainable GCS Path: {trainableDatasetName}</Typography>
-            </Paper>
-          )}
-          {trainableDatasetName && datasetFile && (
-            <DatasetPreview file={datasetFile} dataset_path={trainableDatasetName} />
-          )}
-        </div>
+        <UploadDataset
+          datasetFile={datasetFile}
+          onFileChange={handleFileChange}
+          uploadStatus={uploadStatus} /* Pass uploadStatus here */
+          status={uploadStatus} /* Also passing as status for consistency if UploadDataset uses that */
+          onUpload={uploadDataset}
+        />
+        <DatasetPreview 
+          datasetFile={datasetFile}
+          dataset_path={datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null}
+        />
+        <TrainingParameters
+          modelName={modelName}
+          epochs={epochs}
+          learningRate={learningRate}
+          loraRank={loraRank}
+          onModelNameChange={setModelName}
+          onEpochsChange={setEpochs} /* Corrected prop name */
+          onLearningRateChange={setLearningRate} /* Corrected prop name */
+          onLoraRankChange={setLoraRank} /* Corrected prop name */
+        />
+        <FinetuneControl 
+            onStart={startFinetuning} 
+            wsStatus={trainingStatus} 
+            progress={progress} // Pass progress state
+        /> 
+        <LossGraph lossData={lossData} />
         
-        <div className="training-section">
-          {selectedProjectData ? (
-            <>
-              <TrainingParameters
-                modelName={modelName}
-                setModelName={setModelName}
-                epochs={epochs}
-                setEpochs={setEpochs}
-                learningRate={learningRate}
-                setLearningRate={setLearningRate}
-                loraRank={loraRank}
-                setLoraRank={setLoraRank}
-                disabled={!!currentRequestId && !weightsUrl} // Disable if training in progress and not complete
-              />
-              <FinetuneControl
-                onStart={submitFinetuningJob} // Changed from onStartFinetuning to onStart
-                status={trainingStatus}
-                progress={progress}
-                weightsUrl={weightsUrl}
-                currentRequestId={currentRequestId}
-                onStopPolling={stopPollingLogs}
-                disabled={!trainableDatasetName || (!!currentRequestId && !weightsUrl)} // Disable if no dataset or training in progress
-              />
-              <LossGraph lossData={lossData} />
-              {weightsUrl && selectedProjectData && (
-                <TestLLM weightsUrl={weightsUrl} baseModel={selectedProjectData.baseModel} />
-              )}
-            </>
-          ) : (
-            <Typography sx={{m:2}}>Select a project to see training options.</Typography>
-          )}
-        </div>
+        {/* Use MUI for Download Weights button */}
+        {weightsUrl && (
+          <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
+            <Typography variant="h5" gutterBottom className="sessionName">
+              Download Fine-Tuned Model
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={downloadWeights}
+              startIcon={<GetAppIcon />}
+              sx={{ 
+                backgroundColor: "#6200ee", 
+                "&:hover": { backgroundColor: "#3700b3" } 
+              }}
+            >
+              Download Weights
+            </Button>
+          </Paper>
+        )}
+        <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
       </div>
-      <Footer />
     </div>
+    <Footer/>
+  </div>
   );
 }
 
