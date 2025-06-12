@@ -35,6 +35,7 @@ import { Paper, Typography, Button, Box, CircularProgress } from "@mui/material"
 import GetAppIcon from "@mui/icons-material/GetApp";
 
 const createInitialUser = async () => {
+  console.log("Creating initial user in Firestore...");
   try {
     await addDoc(collection(db, "users"), {
       name: "Alice",
