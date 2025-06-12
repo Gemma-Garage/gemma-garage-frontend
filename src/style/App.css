@@ -27,14 +27,15 @@ body {
 
 /* Sidebar Styling */
 .sidebar {
-  width: 280px; /* Adjusted width */
-  flex-shrink: 0; /* Prevent sidebar from shrinking */
+  /* width: 280px; */ /* No longer a fixed-width sidebar */
+  /* flex-shrink: 0; */ /* No longer needed */
   background-color: #ffffff;
-  border-right: 1px solid #ddd;
+  /* border-right: 1px solid #ddd; */ /* No longer a sidebar */
   padding: 20px;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.05); /* Softer shadow */
-  overflow-y: auto; /* Allow sidebar to scroll if content is tall */
-  height: auto; /* Let it take the height of .main-content */
+  /* box-shadow: 2px 0 5px rgba(0,0,0,0.05); */ /* No longer a sidebar */
+  /* overflow-y: auto; */ /* Handled by training-section or individual components */
+  /* height: auto; */ 
+  margin-bottom: 20px; /* Add some space between this section and the training section */
 }
 
 .sidebar nav ul {
@@ -63,11 +64,11 @@ body {
 
 /* Main Content Area - Flex container for Sidebar and Training Section */
 .main-content {
-  display: flex; /* Lays out Sidebar and training-section side-by-side */
-  flex-direction: row;
-  flex-grow: 1; /* Allows this section to take available vertical space in .App */
-  overflow: hidden; /* Prevent issues with children's overflow if not handled */
- /* padding: 20px; /* Removed padding from here, apply to children if needed */
+  display: flex;
+  flex-direction: column; /* Changed from row to column */
+  flex-grow: 1;
+  overflow: hidden;
+ /* padding: 20px; */
 }
 
 /* Training Section - Area next to the Sidebar */

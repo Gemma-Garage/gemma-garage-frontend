@@ -232,15 +232,18 @@ function App() {
     }
   };
 
-  const uploadDataset = async (file) => {
-    if (!file) {
+  const uploadDataset = async () => { // Changed: No longer takes 'file' as an argument
+    if (!datasetFile) { // Changed: Uses datasetFile from state
       console.error("No file selected");
-      // Optionally, update UI to show error
+      alert("Please select a file to upload."); // User-facing alert
+      setUploadStatus("No file selected."); // Update status
       return;
     }
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", datasetFile); // Changed: Uses datasetFile from state
+
+    setUploadStatus("Uploading..."); // Feedback for user
 
     try {
       const response = await fetch(`${API_BASE_URL}/dataset/upload`, {
@@ -261,50 +264,44 @@ function App() {
           // If response is not JSON, use status text
           errorData = { message: response.statusText };
         }
+        const errorMessage = errorData.detail || errorData.message || "Unknown error";
+        setUploadStatus(`Error: ${errorMessage}`); // Update status with error
         throw new Error(
-          `HTTP error! status: ${response.status}, Message: ${
-            errorData.detail || errorData.message || "Unknown error"
-          }`
+          `HTTP error! status: ${response.status}, Message: ${errorMessage}`
         );
       }
 
-      const data = await response.json(); // Correctly parse the JSON response
+      const data = await response.json(); 
 
       console.log("Dataset uploaded successfully:", data);
-      // Assuming the backend returns { file_location: 'gs://...' }
-      // Update state or perform actions with data.file_location
+      
       if (data.file_location) {
-        setDatasetFile(file); // Corrected: Use setDatasetFile
-        // Or, if you want to store the GCS path:
-        // setUploadedDatasetPath(data.file_location);
-        // Trigger a preview based on the new GCS path if DatasetPreview is adapted for it
-        // fetchPreview(data.file_location); // You\\\'d need to implement fetchPreview
+        // setDatasetFile(datasetFile); // This line is redundant as datasetFile is already set correctly by handleFileChange
+        setUploadStatus("Dataset uploaded successfully: " + data.file_location); // Update status
         console.log("File uploaded to:", data.file_location);
 
         // If the project is selected, update the project document in Firestore
-        if (selectedProjectData && selectedProjectId && currentUser) { // Corrected: Use selectedProjectData and selectedProjectId, and check currentUser
-          const projectRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId); // Corrected: Use selectedProjectId
+        if (selectedProjectData && selectedProjectId && currentUser) { 
+          const projectRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
           await updateDoc(projectRef, {
-            dataset_gcs_path: data.file_location, // Save the GCS path
-            dataset_filename: file.name, // Optionally, save the original filename
-            trainableDatasetName: data.file_location, // Also update trainableDatasetName
+            dataset_gcs_path: data.file_location, 
+            dataset_filename: datasetFile.name, // Changed: Uses datasetFile.name from state
+            trainableDatasetName: data.file_location, 
             updatedAt: serverTimestamp(),
           });
           console.log("Project document updated with dataset GCS path.");
-          // Update local state for trainableDatasetName immediately
           setTrainableDatasetName(data.file_location);
-          // Refresh project data if necessary
-          // fetchProjects(); 
         }
-
-
       } else {
         console.error("File location not found in response:", data);
-        // Optionally, update UI to show error
+        setUploadStatus("Error: File location not found in response."); // Update status
       }
     } catch (error) {
       console.error("Error uploading dataset:", error);
-      // Optionally, update UI to show error message, e.g., error.message
+      // Check if status was already set by HTTP error block
+      if (!uploadStatus.startsWith("Error:")) {
+        setUploadStatus("Error uploading dataset: " + error.message); // Update status
+      }
     }
   };
 
@@ -623,7 +620,7 @@ function App() {
       )}
 
       <div className="main-content">
-        <div className="sidebar"> {/* Using .sidebar CSS class directly */}
+        <div className="dataset-operations-section"> {/* Changed class from sidebar to dataset-operations-section */}
           <UploadDataset
             onFileChange={handleFileChange}
             onUpload={uploadDataset}
