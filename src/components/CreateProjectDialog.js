@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField } from '@mui/material';
 
-const CreateProjectDialog = ({ open, handleClose, handleCreateProject }) => {
+const CreateProjectDialog = ({ open, onClose, onCreate }) => {
   const [projectName, setProjectName] = useState('');
   const [error, setError] = useState('');
 
@@ -11,15 +11,15 @@ const CreateProjectDialog = ({ open, handleClose, handleCreateProject }) => {
       return;
     }
     setError('');
-    handleCreateProject(projectName);
+    onCreate(projectName);
     setProjectName(''); // Reset for next time
-    handleClose();
+    onClose();
   };
 
   const handleDialogClose = () => {
     setProjectName(''); // Reset on close
     setError('');
-    handleClose();
+    onClose();
   };
 
   return (

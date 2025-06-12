@@ -519,161 +519,135 @@ function App() {
   }, []);
 
 
-  // downloadWeights function remains largely the same, ensure API_BASE_URL is used.
   const downloadWeights = async () => {
-    // weightsUrl is now the GCS directory path, set when training completes.
-    // currentRequestId is also available and should be used.
-    if (!currentRequestId) { // Check currentRequestId from state
+    if (!currentRequestId) {
       setTrainingStatus("Error: No request ID found for download.");
       console.error("Download weights called without a currentRequestId.");
       return;
     }
-
-    setTrainingStatus("Preparing download links for model artifacts..."); // User feedback
+    setTrainingStatus("Preparing download links for model artifacts...");
     try {
-      console.log("Requesting download links for request_id:", currentRequestId);
-      
-      const response = await fetch(`${API_BASE_URL}/download/download_weights`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Send request_id to the backend
-        body: JSON.stringify({ request_id: currentRequestId }), 
-      });
-
+      const response = await fetch(`${API_BASE_URL}/dataset/download_weights/${currentRequestId}`);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Unknown server error" }));
-        setTrainingStatus(`Download failed: ${errorData.detail || "Could not retrieve file links"}`);
-        throw new Error(errorData.detail || "Could not retrieve file links from server");
+        const errorData = await response.json().catch(() => ({ detail: "Unknown error during download preparation." }));
+        throw new Error(errorData.detail || "Failed to get download links");
       }
-      
-      const data = await response.json(); // Expect { files: [{ filename: "...", download_url: "..." }, ...] }
-      
-      if (data.files && Array.isArray(data.files) && data.files.length > 0) {
-        setTrainingStatus(`Starting download of ${data.files.length} model files...`);
-        data.files.forEach((file, index) => {
-          // Optional: Add a small delay for each download if needed, though browsers usually handle this.
-          // setTimeout(() => {
-            const link = document.createElement("a");
-            link.href = file.download_url; // This is the GCS signed URL for the specific file
-            link.download = file.filename; // Use the filename from the backend for the download
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            console.log(`Download initiated for: ${file.filename}`);
-          // }, index * 1000); // Example: 1-second delay between downloads
+      const data = await response.json();
+      if (data.download_links && data.download_links.length > 0) {
+        setTrainingStatus("Download links ready. Please check your browser downloads.");
+        data.download_links.forEach(link => {
+          const anchor = document.createElement('a');
+          anchor.href = link;
+          // Extract filename from URL for the download attribute
+          const urlParts = link.split('?')[0].split('/');
+          anchor.download = urlParts[urlParts.length - 1] || 'download';
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
         });
-        setTrainingStatus("All model file downloads initiated.");
-      } else if (data.files && data.files.length === 0) {
-        setTrainingStatus("No model files found for download at the GCS location.");
-        console.warn("Backend returned an empty list of files for download for request_id:", currentRequestId);
       } else {
-        setTrainingStatus("Download failed: Invalid response from server or no files found.");
-        throw new Error("Invalid response from server: 'files' array not found or empty.");
+        setTrainingStatus("No download links were returned by the server.");
       }
     } catch (error) {
-      console.error("Error downloading model artifacts:", error);
-      setTrainingStatus(`Error downloading model artifacts: ${error.message}`);
+      console.error("Error downloading weights:", error);
+      setTrainingStatus(`Error downloading weights: ${error.message}`);
     }
   };
-  
-  
 
   return (
-    <div>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header currentUser={currentUser} auth={auth} />
-      {loadingAuth ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 100px)', /* Adjusted for header/footer */ }}>
-          <CircularProgress />
-          <Typography sx={{ ml: 2 }}>Loading authentication...</Typography>
-        </Box>
-      ) : !currentUser ? (
-        <AuthPage />
-      ) : !isUserSetupComplete ? ( 
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 100px)', /* Adjusted for header/footer */ }}>
-          <CircularProgress />
-          <Typography sx={{ ml: 2 }}>Finalizing user setup...</Typography>
-        </Box>
-      ) : !selectedProjectId ? ( 
-        <>
-          <ProjectDashboard
-            currentUser={currentUser}
-            handleCreateProjectOpen={handleCreateProjectOpen}
-            handleProjectSelect={handleProjectSelect}
-          />
-          <CreateProjectDialog
-            open={showCreateProjectDialog}
-            onClose={handleCreateProjectClose}
-            onCreate={handleCreateProject}
-          />
-        </>
-      ) : selectedProjectId ? (
-        <div className="container">
-          {/* <Sidebar /> */}
-          <div className="main-content">
-            {selectedProjectData && (
-              <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', margin: 2, fontWeight: 'bold' }}>
-                Project: {selectedProjectData.displayName} (ID: {selectedProjectId})
-              </Typography>
-            )}
-            <UploadDataset
-              datasetFile={datasetFile}
-              onFileChange={handleFileChange}
-              uploadStatus={uploadStatus}
-              status={uploadStatus}
-              onUpload={uploadDataset}
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        {loadingAuth ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+            <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Loading authentication...</Typography>
+          </Box>
+        ) : !currentUser ? (
+          <AuthPage />
+        ) : !isUserSetupComplete ? ( 
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+            <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Finalizing user setup...</Typography>
+          </Box>
+        ) : !selectedProjectId ? ( 
+          <>
+            <ProjectDashboard
+              currentUser={currentUser}
+              handleCreateProjectOpen={handleCreateProjectOpen}
+              handleProjectSelect={handleProjectSelect}
             />
-            <DatasetPreview 
-              datasetFile={datasetFile}
-              dataset_path={trainableDatasetName || (datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null)}
+            <CreateProjectDialog
+              open={showCreateProjectDialog}
+              onClose={handleCreateProjectClose}
+              onCreate={handleCreateProject}
             />
-            <TrainingParameters
-              modelName={modelName}
-              epochs={epochs}
-              learningRate={learningRate}
-              loraRank={loraRank}
-              onModelNameChange={setModelName}
-              onEpochsChange={setEpochs}
-              onLearningRateChange={setLearningRate}
-              onLoraRankChange={setLoraRank}
-            />
-            <FinetuneControl 
-                onStart={startFinetuning} 
-                wsStatus={trainingStatus} 
-                progress={progress}
-            /> 
-            <LossGraph lossData={lossData} />
-            
-            {weightsUrl && (
-              <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
-                <Typography variant="h5" gutterBottom className="sessionName">
-                  Download Fine-Tuned Model
+          </>
+        ) : selectedProjectId ? (
+          <div className="container" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="main-content" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+              {selectedProjectData && (
+                <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', margin: 2, fontWeight: 'bold' }}>
+                  Project: {selectedProjectData.displayName} (ID: {selectedProjectId})
                 </Typography>
-                <Button
-                  variant="contained"
-                  onClick={downloadWeights}
-                  startIcon={<GetAppIcon />}
-                  sx={{ 
-                    backgroundColor: "#6200ee", 
-                    "&:hover": { backgroundColor: "#3700b3" } 
-                  }}
-                >
-                  Download Weights
-                </Button>
-              </Paper>
-            )}
-            <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
+              )}
+              <UploadDataset
+                datasetFile={datasetFile}
+                onFileChange={handleFileChange}
+                uploadStatus={uploadStatus}
+                status={uploadStatus} // Pass status for consistency if UploadDataset uses it
+                onUpload={uploadDataset}
+              />
+              <DatasetPreview 
+                datasetFile={datasetFile}
+                dataset_path={trainableDatasetName || (datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null)}
+              />
+              <TrainingParameters
+                modelName={modelName}
+                epochs={epochs}
+                learningRate={learningRate}
+                loraRank={loraRank}
+                onModelNameChange={setModelName}
+                onEpochsChange={setEpochs}
+                onLearningRateChange={setLearningRate}
+                onLoraRankChange={setLoraRank}
+              />
+              <FinetuneControl 
+                  onStart={startFinetuning} 
+                  wsStatus={trainingStatus} // Ensure this prop is named consistently if FinetuneControl expects 'status' or 'trainingStatus'
+                  progress={progress}
+              /> 
+              <LossGraph lossData={lossData} />
+              
+              {weightsUrl && (
+                <Paper elevation={3} sx={{ padding: 3, marginTop: 2, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
+                  <Typography variant="h5" gutterBottom className="sessionName">
+                    Download Fine-Tuned Model
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    onClick={downloadWeights}
+                    startIcon={<GetAppIcon />}
+                    sx={{ 
+                      backgroundColor: "#6200ee", 
+                      "&:hover": { backgroundColor: "#3700b3" } 
+                    }}
+                  >
+                    Download Weights
+                  </Button>
+                </Paper>
+              )}
+              <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
+            </div>
           </div>
-        </div>
-      ) : (
-        // Fallback for any unexpected state, though ideally not reached
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 100px)'}}>
-          <Typography>An unexpected error occurred. Please refresh the page.</Typography>
-        </Box>
-      )}
+        ) : (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+            <Typography>An unexpected error occurred. Please refresh the page.</Typography>
+          </Box>
+        )}
+      </Box>
       <Footer/>
-    </div>
+    </Box>
   );
 }
 
