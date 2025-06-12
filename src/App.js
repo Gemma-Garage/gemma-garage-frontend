@@ -25,7 +25,7 @@ import UploadDataset from "./components/UploadDataset";
 import TrainingParameters from "./components/TrainingParameters";
 import FinetuneControl from "./components/FinetuneControl";
 import LossGraph from "./components/LossGraph";
-import Sidebar from "./components/Sidebar";
+// import Sidebar from "./components/Sidebar"; // No longer using Sidebar component directly here
 import TestLLM from "./components/TestLLM";
 import DatasetPreview from "./components/DatasetPreview";
 import Footer from "./components/Footer";
@@ -504,150 +504,132 @@ function App() {
     };
   }, []);
 
-  if (loadingAuth) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Loading authentication...</Typography>
-      </Box>
-    );
-  }
+  // }, []); // Make sure this useEffect for auth is correctly closed if it was open.
 
-  if (!currentUser) {
-    return <AuthPage />;
-  }
-
-  if (!isUserSetupComplete) { 
+  // Conditional rendering for ProjectDashboard vs Project View
+  if (!selectedProjectId && !loadingAuth) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Setting up user data...</Typography>
-      </Box>
-    );
-  }
-
-  if (!selectedProjectId) {
-    return (
-      <>
+      <div className="App">
         <Header currentUser={currentUser} auth={auth} />
-        <ProjectDashboard
-          handleCreateProjectOpen={handleCreateProjectOpen}
-          handleProjectSelect={handleProjectSelect}
-          currentUser={currentUser}
+        <ProjectDashboard 
+          currentUser={currentUser} 
+          onProjectSelect={handleProjectSelect} 
+          onCreateProjectOpen={handleCreateProjectOpen} 
         />
-        <CreateProjectDialog
-          open={showCreateProjectDialog}
-          handleClose={handleCreateProjectClose}
-          handleCreateProject={handleCreateProject}
+        <CreateProjectDialog 
+          open={showCreateProjectDialog} 
+          onClose={handleCreateProjectClose} 
+          onCreate={handleCreateProject} 
         />
         <Footer />
-      </>
+      </div>
     );
   }
 
+  // Loading state for auth or initial project data
+  if (loadingAuth || (selectedProjectId && !selectedProjectData && !currentUser)) {
+    return (
+      <div className="App">
+        <Header currentUser={currentUser} auth={auth} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+          <CircularProgress />
+          <Typography sx={{ ml: 2 }}>Loading user data and projects...</Typography>
+        </Box>
+        <Footer />
+      </div>
+    );
+  }
+
+  // If user is not logged in and not loading, show AuthPage (should be handled by onAuthStateChanged redirecting or ProjectDashboard showing login)
+  // This might be redundant if ProjectDashboard handles the auth flow adequately.
+  if (!currentUser && !loadingAuth) {
+    return (
+      <div className="App">
+        <AuthPage auth={auth} />
+        <Footer />
+      </div>
+    );
+  }
+  
+  // Main project view (when a project is selected)
   return (
     <div className="App">
       <Header currentUser={currentUser} auth={auth} />
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
-        <Typography variant="h6">
-          Project: {selectedProjectData ? selectedProjectData.displayName : 'Loading...'}
-          {selectedProjectData && selectedProjectData.requestId && 
-            <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-              (Last Training ID: {selectedProjectData.requestId})
-            </Typography>
-          }
-        </Typography>
-        <Button variant="outlined" onClick={() => {
-          setSelectedProjectId(null); 
-          setSelectedProjectData(null);
-          setDatasetFile(null);
-          setUploadStatus("");
-          setTrainableDatasetName(null);
-          setModelName("google/gemma-3-1b-pt");
-          setEpochs(1);
-          setLearningRate(0.0002);
-          setLoraRank(4);
-          setTrainingStatus("");
-          setLossData([]);
-          setWeightsUrl(null);
-          setCurrentRequestId(null);
-          setLastLogTimestamp(null);
-          setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
-        }}>
-          Back to Dashboard
-        </Button>
-      </Box>
+      {selectedProjectData && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
+          <Typography variant="h6">
+            Project: {selectedProjectData.displayName}
+            {selectedProjectData.requestId && 
+              <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                (Last Training ID: {selectedProjectData.requestId})
+              </Typography>
+            }
+          </Typography>
+          <Button variant="outlined" onClick={() => {
+            setSelectedProjectId(null); 
+            setSelectedProjectData(null);
+            setDatasetFile(null);
+            setUploadStatus("");
+            setTrainableDatasetName(null);
+            setModelName("google/gemma-3-1b-pt");
+            setEpochs(1);
+            setLearningRate(0.0002);
+            setLoraRank(4);
+            setTrainingStatus("");
+            setLossData([]);
+            setWeightsUrl(null);
+            setCurrentRequestId(null);
+            setLastLogTimestamp(null);
+            setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
+          }}>
+            Back to Dashboard
+          </Button>
+        </Box>
+      )}
+
       <div className="main-content">
-        <Sidebar>
+        <div className="sidebar"> {/* Using .sidebar CSS class directly */}
           <UploadDataset
             onFileChange={handleFileChange}
             onUpload={uploadDataset}
             status={uploadStatus}
             datasetFile={datasetFile}
+            disabled={!selectedProjectData} // Disable if no project selected
           />
-          {datasetFile && <DatasetPreview file={datasetFile} />}
-        </Sidebar>
-        <div className="training-section">
-          <TrainingParameters
-            modelName={modelName}
-            setModelName={setModelName}
-            epochs={epochs}
-            setEpochs={setEpochs}
-            learningRate={learningRate}
-            setLearningRate={setLearningRate}
-            loraRank={loraRank}
-            setLoraRank={setLoraRank}
-            disabled={!!currentRequestId && trainingStatus.includes("in progress")}
-          />
-          <FinetuneControl
-            onFinetune={submitFinetuningJob}
-            status={trainingStatus}
-            weightsUrl={weightsUrl}
-            currentRequestId={currentRequestId}
-            disabled={!trainableDatasetName || (!!currentRequestId && trainingStatus.includes("in progress"))}
-          />
-          {lossData.length > 0 && (
-            <Paper elevation={2} sx={{ padding: 2, marginTop: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Training Loss
-              </Typography>
-              <LossGraph data={lossData} />
-            </Paper>
-          )}
-          {weightsUrl && (
-            <Paper
-              elevation={2}
-              sx={{
-                padding: 2,
-                marginTop: 2,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Typography variant="h6" gutterBottom>
-                Model Weights Ready
-              </Typography>
-              <Button
-                variant="contained"
-                color="success"
-                href={weightsUrl}
-                download="model_weights.zip"
-                target="_blank"
-                rel="noopener noreferrer"
-                startIcon={<GetAppIcon />}
-                sx={{ marginTop: 1 }}
-              >
-                Download Weights
-              </Button>
-            </Paper>
-          )}
+          {datasetFile && selectedProjectData && <DatasetPreview file={datasetFile} />}
         </div>
-        <div className="test-llm-section">
-          <TestLLM 
-            currentModelName={currentRequestId || "default_model_name_if_no_request_id"}
-            currentBaseModel={modelName}
-          />
+        
+        <div className="training-section">
+          {selectedProjectData ? (
+            <>
+              <TrainingParameters
+                modelName={modelName}
+                setModelName={setModelName}
+                epochs={epochs}
+                setEpochs={setEpochs}
+                learningRate={learningRate}
+                setLearningRate={setLearningRate}
+                loraRank={loraRank}
+                setLoraRank={setLoraRank}
+                disabled={!!currentRequestId && !weightsUrl} // Disable if training in progress and not complete
+              />
+              <FinetuneControl
+                onStartFinetuning={submitFinetuningJob}
+                status={trainingStatus}
+                progress={progress}
+                weightsUrl={weightsUrl}
+                currentRequestId={currentRequestId}
+                onStopPolling={stopPollingLogs}
+                disabled={!trainableDatasetName || (!!currentRequestId && !weightsUrl)} // Disable if no dataset or training in progress
+              />
+              <LossGraph lossData={lossData} />
+              {weightsUrl && selectedProjectData && (
+                <TestLLM weightsUrl={weightsUrl} baseModel={selectedProjectData.baseModel} />
+              )}
+            </>
+          ) : (
+            <Typography sx={{m:2}}>Select a project to see training options.</Typography>
+          )}
         </div>
       </div>
       <Footer />

@@ -6,7 +6,16 @@ body {
   background-color: #f5f5f5;
 }
 
+/* App container */
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 /* Layout */
+/* .container class is not actively used by App.js, .main-content is the primary layout div */
+/*
 .container {
   display: flex;
   flex-direction: row;
@@ -14,15 +23,18 @@ body {
   justify-content: flex-start;
   padding: 0px;
 }
+*/
 
 /* Sidebar Styling */
 .sidebar {
-  width: 250px;
-  height: 100vh;
+  width: 280px; /* Adjusted width */
+  flex-shrink: 0; /* Prevent sidebar from shrinking */
   background-color: #ffffff;
   border-right: 1px solid #ddd;
   padding: 20px;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 0 5px rgba(0,0,0,0.05); /* Softer shadow */
+  overflow-y: auto; /* Allow sidebar to scroll if content is tall */
+  height: auto; /* Let it take the height of .main-content */
 }
 
 .sidebar nav ul {
@@ -49,11 +61,23 @@ body {
   background-color: #f0f0f0;
 }
 
-/* Main Content Area */
+/* Main Content Area - Flex container for Sidebar and Training Section */
 .main-content {
-  flex-grow: 1;
-  padding: 20px;
+  display: flex; /* Lays out Sidebar and training-section side-by-side */
+  flex-direction: row;
+  flex-grow: 1; /* Allows this section to take available vertical space in .App */
+  overflow: hidden; /* Prevent issues with children's overflow if not handled */
+ /* padding: 20px; /* Removed padding from here, apply to children if needed */
 }
+
+/* Training Section - Area next to the Sidebar */
+.training-section {
+  flex-grow: 1; /* Allows this section to take remaining width */
+  padding: 20px;
+  overflow-y: auto; /* Allows this section to scroll if content is tall */
+  background-color: #f9f9f9; /* Slight background differentiation */
+}
+
 
 /* Section Styling */
 .section {
