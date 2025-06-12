@@ -13,8 +13,8 @@ import ProjectDashboard from "./components/ProjectDashboard"; // ADDED
 import CreateProjectDialog from "./components/CreateProjectDialog"; // ADDED
 import { auth } from "./firebase"; // Import Firebase auth
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from "firebase/firestore"; // Removed Firestore imports
-import { db } from './firebase'; // Assuming db is primarily for Firestore, removing its direct import if not used elsewhere
+import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from "firebase/firestore"; // Re-enabled Firestore imports
+import { db } from './firebase'; // Re-enabled db import
 import "./style/App.css";
 
 // Import our API endpoints
@@ -37,6 +37,7 @@ import GetAppIcon from "@mui/icons-material/GetApp";
 const createInitialUser = async () => {
   console.log("Creating initial user in Firestore...");
   try {
+    // Ensure db is correctly initialized and imported, and user has permissions
     await addDoc(collection(db, "users"), {
       name: "Alice",
       age: 25,
@@ -48,8 +49,7 @@ const createInitialUser = async () => {
   }
 };
 
-createInitialUser();
-
+// createInitialUser(); // Removed call from here to prevent execution on module load before auth
 
 ChartJS.register(
   CategoryScale,
@@ -92,12 +92,34 @@ function App() {
       if (user) {
         setCurrentUser(user);
         console.log("[AUTH_STATE_CHANGE] User signed in:", user.uid);
-        // console.log("[AUTH_STATE_CHANGE] Firestore 'db' instance:", db); // Removed Firestore-specific log
+        console.log("[AUTH_STATE_CHANGE] Firestore 'db' instance:", db);
 
-        // Firestore logic removed, setting user setup as complete and auth loading to false
-        setIsUserSetupComplete(true); 
-        setLoadingAuth(false); 
-
+        try {
+          // --- Check/create user document ---
+          console.log("[USER_DOC_LOGIC] Attempting to get/create user document for:", user.uid);
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (!userDocSnap.exists()) {
+            console.log("[USER_DOC_LOGIC] User document does not exist for " + user.uid + ". Creating now.");
+            await setDoc(userDocRef, {
+              email: user.email,
+              createdAt: serverTimestamp(),
+            });
+            console.log("[USER_DOC_LOGIC] User document created in Firestore for new user:", user.uid);
+          } else {
+            console.log("[USER_DOC_LOGIC] User document already exists for:", user.uid, userDocSnap.data());
+          }
+          setIsUserSetupComplete(true); // Firestore setup successful
+        } catch (e) {
+          console.error("[FIRESTORE_CATCH_BLOCK] Caught something in onAuthStateChanged user setup!");
+          console.error("[FIRESTORE_CATCH_BLOCK] Error object:", e);
+          console.error("[FIRESTORE_CATCH_BLOCK] Error message:", e.message);
+          console.error("[FIRESTORE_CATCH_BLOCK] Error code:", e.code);
+          console.error("[FIRESTORE_CATCH_BLOCK] Error name:", e.name);
+          setIsUserSetupComplete(false); // Firestore setup failed
+        } finally {
+          setLoadingAuth(false); // Auth flow (including initial setup attempt) is complete
+        }
       } else {
         // User is signed out
         console.log("[AUTH_STATE_CHANGE] User signed out.");
@@ -139,11 +161,28 @@ function App() {
       alert("You must be logged in to create a project.");
       return;
     }
-    // Firestore logic removed
-    console.log("Project creation logic (Firestore part) removed. Project name:", projectName);
-    // Example: You might want to handle project creation with a different backend or local state here.
-    // For now, just closing the dialog.
-    handleCreateProjectClose();
+    try {
+      const projectsCollectionRef = collection(db, "users", currentUser.uid, "projects");
+      const newProjectRef = await addDoc(projectsCollectionRef, {
+        displayName: projectName,
+        userId: currentUser.uid,
+        createdAt: serverTimestamp(),
+        requestId: null,
+        baseModel: modelName, // Uses current global modelName or could be a default from settings
+        weightsUrl: null,
+        lastTrainedAt: null,
+        epochs: parseInt(epochs, 10),
+        learningRate: parseFloat(learningRate),
+        loraRank: parseInt(loraRank, 10),
+        trainingStatusMessage: "Project created. Ready for training."
+      });
+      console.log("Project created successfully with ID:", newProjectRef.id, " Name:", projectName);
+      handleCreateProjectClose(); // Close dialog after creation
+      // Optionally, select the newly created project or refresh the project list
+    } catch (error) {
+      console.error("Error creating project:", error);
+      alert("Failed to create project: " + error.message);
+    }
   };
   
   // ADDED: Handler for selecting a project
@@ -156,30 +195,53 @@ function App() {
     }
     
     setLoadingAuth(true); 
-    // Firestore logic removed
-    console.log("Project selection logic (Firestore part) removed for project ID:", projectId);
-    // setSelectedProjectData({ displayName: "Selected Project (No Firestore)", id: projectId }); // Example placeholder
-    // setSelectedProjectId(projectId);
+    try {
+      const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
+      const projectDocSnap = await getDoc(projectDocRef);
 
-    // Reset general app states to default or project-specific values
-    setDatasetFile(null); 
-    setUploadStatus("");
-    setTrainableDatasetName(null); 
-    
-    // Reset parameters to default as project data is no longer fetched from Firestore
-    // setEpochs(epochs); // Or reset to a default
-    // setLearningRate(learningRate); // Or reset to a default
-    // setLoraRank(loraRank); // Or reset to a default
-    
-    setTrainingStatus("Project selected (no Firestore data). Ready for training.");
-    setLossData([]); 
-    setWeightsUrl(null);
-    setCurrentRequestId(null);
-    setLastLogTimestamp(null); 
-    setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); 
-    // setModelName(modelName); // Or reset to a default
+      if (projectDocSnap.exists()) {
+        const projectData = { id: projectDocSnap.id, ...projectDocSnap.data() };
+        setSelectedProjectData(projectData);
+        setSelectedProjectId(projectId);
 
-    setLoadingAuth(false);
+        // Reset general app states to default or project-specific values
+        setDatasetFile(null); 
+        setUploadStatus("");
+        setTrainableDatasetName(null); 
+        
+        // Load parameters from project if they exist, otherwise use current or default
+        setEpochs(projectData.epochs || epochs); 
+        setLearningRate(projectData.learningRate || learningRate);
+        setLoraRank(projectData.loraRank || loraRank);
+        
+        setTrainingStatus(projectData.trainingStatusMessage || (projectData.requestId ? "Project data loaded." : "Ready for training."));
+        setLossData(projectData.lossData || []); 
+        setWeightsUrl(projectData.weightsUrl || null);
+        setCurrentRequestId(projectData.requestId || null);
+        setLastLogTimestamp(null); 
+        setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); 
+        setModelName(projectData.baseModel || modelName); 
+
+        if (projectData.requestId && projectData.weightsUrl) {
+          setTrainingStatus(projectData.trainingStatusMessage || `Training completed for project '${projectData.displayName}'. Model is available.`);
+        } else if (projectData.requestId) {
+          setTrainingStatus(projectData.trainingStatusMessage || `Training for project '${projectData.displayName}' was previously initiated (ID: ${projectData.requestId}). Check status or start new training.`);
+        }
+
+      } else {
+        console.error("Selected project not found in Firestore:", projectId);
+        alert("Error: Could not load project data. The project may have been deleted.");
+        setSelectedProjectData(null);
+        setSelectedProjectId(null); 
+      }
+    } catch (error) {
+      console.error("Error selecting project:", error);
+      alert("Error loading project data: " + error.message);
+      setSelectedProjectData(null);
+      setSelectedProjectId(null);
+    } finally {
+      setLoadingAuth(false);
+    }
   };
 
 
@@ -323,20 +385,21 @@ function App() {
                 newWeightsUrl = point.weights_url || null; 
                 console.log("Training complete, weights URL:", newWeightsUrl);
                 
-                // REMOVED: Update Firestore project document
-                // if (selectedProjectId && currentUser && currentRequestId === requestId) { 
-                //   const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
-                //   try {
-                //     await updateDoc(projectDocRef, { 
-                //       weightsUrl: newWeightsUrl, 
-                //       lastTrainedAt: serverTimestamp(),
-                //       trainingStatusMessage: latestStatusMessage, 
-                //     });
-                //     console.log("Project updated in Firestore with training completion details:", selectedProjectId);
-                //   } catch (error) {
-                //     console.error("Error updating project in Firestore after training completion:", error);
-                //   }
-                // }
+                // ADDED: Update Firestore project document
+                if (selectedProjectId && currentUser && currentRequestId === requestId) { 
+                  const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
+                  try {
+                    await updateDoc(projectDocRef, { 
+                      weightsUrl: newWeightsUrl, 
+                      lastTrainedAt: serverTimestamp(),
+                      trainingStatusMessage: latestStatusMessage,
+                      // Optionally save final loss data or other metrics here
+                    });
+                    console.log("Project updated in Firestore with training completion details:", selectedProjectId);
+                  } catch (error) {
+                    console.error("Error updating project in Firestore after training completion:", error);
+                  }
+                }
             }
             
             // Process loss data for the graph
@@ -445,25 +508,27 @@ function App() {
       setTrainingStatus(`Training in progress... Request ID: ${data.request_id}`);
       setWeightsUrl(null); // Clear any previous weights URL
 
-      // REMOVED: Update Firestore with the new requestId for the current project
-      // if (selectedProjectId && currentUser) {
-      //   const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
-      //   try {
-      //     await updateDoc(projectDocRef, {
-      //       requestId: data.request_id,
-      //       baseModel: modelName,
-      //       lastTrainedAt: serverTimestamp(),
-      //       trainingStatusMessage: `Training initiated with ID: ${data.request_id}`,
-      //       weightsUrl: null,
-      //       epochs: parseInt(epochs, 10),
-      //       learningRate: parseFloat(learningRate),
-      //       loraRank: parseInt(loraRank, 10),
-      //     });
-      //     console.log("Project updated in Firestore with new training job ID:", data.request_id);
-      //   } catch (error) {
-      //     console.error("Error updating project in Firestore with new job ID:", error);
-      //   }
-      // }
+      // Update Firestore with the new requestId for the current project
+      if (selectedProjectId && currentUser) {
+        const projectDocRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
+        try {
+          await updateDoc(projectDocRef, {
+            requestId: data.request_id,
+            baseModel: modelName,
+            lastTrainedAt: serverTimestamp(), // Mark as last activity
+            trainingStatusMessage: `Training initiated with ID: ${data.request_id}`,
+            weightsUrl: null, // Reset weights URL for new training
+            epochs: parseInt(epochs, 10),
+            learningRate: parseFloat(learningRate),
+            loraRank: parseInt(loraRank, 10),
+            // Clear any previous loss data if stored in project doc
+            // lossData: [], 
+          });
+          console.log("Project updated in Firestore with new training job ID:", data.request_id);
+        } catch (error) {
+          console.error("Error updating project in Firestore with new job ID:", error);
+        }
+      }
 
       // Start polling
       pollingIntervalRef.current = setInterval(() => {
