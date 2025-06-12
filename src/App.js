@@ -276,8 +276,8 @@ function App() {
       console.log("Dataset uploaded successfully:", data);
       
       if (data.file_location) {
-        // setDatasetFile(datasetFile); // This line is redundant as datasetFile is already set correctly by handleFileChange
-        setUploadStatus("Dataset uploaded successfully: " + data.file_location); // Update status
+        const fileName = data.file_location.split('/').pop(); // Extract filename
+        setUploadStatus(`Dataset '${fileName}' uploaded successfully. Ready for training.`); // User-friendly status
         console.log("File uploaded to:", data.file_location);
 
         // If the project is selected, update the project document in Firestore
@@ -285,12 +285,12 @@ function App() {
           const projectRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId);
           await updateDoc(projectRef, {
             dataset_gcs_path: data.file_location, 
-            dataset_filename: datasetFile.name, // Changed: Uses datasetFile.name from state
-            trainableDatasetName: data.file_location, 
+            dataset_filename: datasetFile.name,
+            trainableDatasetName: data.file_location, // This is the GCS path
             updatedAt: serverTimestamp(),
           });
           console.log("Project document updated with dataset GCS path.");
-          setTrainableDatasetName(data.file_location);
+          setTrainableDatasetName(data.file_location); // Set state with the GCS path
         }
       } else {
         console.error("File location not found in response:", data);
@@ -628,7 +628,14 @@ function App() {
             datasetFile={datasetFile}
             disabled={!selectedProjectData} // Disable if no project selected
           />
-          {datasetFile && selectedProjectData && <DatasetPreview file={datasetFile} />}
+          {trainableDatasetName && datasetFile && (
+            <DatasetPreview file={datasetFile} dataset_path={trainableDatasetName} />
+          )}
+          {trainableDatasetName && (
+            <Paper elevation={1} sx={{ padding: '10px', marginTop: '10px', backgroundColor: '#e8f5e9' }}>
+              <Typography variant="body2">Trainable GCS Path: {trainableDatasetName}</Typography>
+            </Paper>
+          )}
         </div>
         
         <div className="training-section">
