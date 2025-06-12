@@ -369,13 +369,12 @@ function App() {
               });
             }
             
-            // Log other general messages if they exist and are not loss/status specific
-            // This helps in debugging what kind of messages are coming through
             if (point && point.message && typeof point.loss === 'undefined' && !point.status_message && point.status !== 'complete') {
                 console.log("General log message:", point.message, point);
             }
-        });
-
+        } // Corrected closing brace for the for...of loop body
+        
+        // The following code is now correctly placed *after* the for...of loop
         if (newLossPointsForGraph.length > 0) {
           setLossData(prevLossData => {
             const existingRawTimestamps = new Set(prevLossData.map(p => p.rawTimestamp));
