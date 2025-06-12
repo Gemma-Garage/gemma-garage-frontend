@@ -513,7 +513,7 @@ function App() {
         <Header currentUser={currentUser} auth={auth} />
         <ProjectDashboard 
           currentUser={currentUser} 
-          onProjectSelect={handleProjectSelect} 
+          handleProjectSelect={handleProjectSelect} // Changed from onProjectSelect to handleProjectSelect
           onCreateProjectOpen={handleCreateProjectOpen} 
         />
         <CreateProjectDialog 
