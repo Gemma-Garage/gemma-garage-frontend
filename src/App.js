@@ -129,6 +129,23 @@ function App() {
     return () => unsubscribe(); // Cleanup subscription on unmount
   }, []); // Empty dependency array ensures this runs once on mount and cleans up on unmount
 
+  const handleGoToDashboard = () => {
+    setSelectedProjectId(null);
+    setSelectedProjectData(null);
+    // Reset other project-specific states to their defaults
+    setDatasetFile(null);
+    setUploadStatus("");
+    setTrainableDatasetName(null);
+    // Keep global settings like modelName, epochs, learningRate, loraRank as they are,
+    // or reset them if they should be default on the dashboard / new project selection
+    setTrainingStatus(""); // Reset training status
+    setLossData([]);
+    setWeightsUrl(null);
+    setCurrentRequestId(null); // Important to clear this
+    setLastLogTimestamp(null);
+    setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
+  };
+
   const handleCreateProjectOpen = () => {
     setShowCreateProjectDialog(true);
   };
@@ -556,7 +573,12 @@ function App() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Header currentUser={currentUser} auth={auth} />
+      <Header 
+        currentUser={currentUser} 
+        auth={auth} 
+        selectedProjectId={selectedProjectId} 
+        onGoToDashboard={handleGoToDashboard} 
+      />
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         {loadingAuth ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
@@ -587,7 +609,7 @@ function App() {
           <div className="container" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
             <div className="main-content" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
               {selectedProjectData && (
-                <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', margin: 2, fontWeight: 'bold' }}>
+                <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', margin: 2 }}>
                   Project: {selectedProjectData.displayName} (ID: {selectedProjectId})
                 </Typography>
               )}

@@ -4,6 +4,7 @@ import { AppBar, Toolbar, Typography, Link, Button, Box, useMediaQuery, IconButt
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import DiamondIcon from '@mui/icons-material/Diamond';
+import DashboardIcon from '@mui/icons-material/Dashboard'; // Import DashboardIcon
 import { signOut } from 'firebase/auth'; // Import signOut
 import "../style/Header.css";
 
@@ -18,7 +19,7 @@ const theme = createTheme({
   },
 });
 
-const Header = ({ currentUser, auth }) => { // Accept currentUser and auth as props
+const Header = ({ currentUser, auth, selectedProjectId, onGoToDashboard }) => { // Added selectedProjectId and onGoToDashboard
   const isSmallScreen = useMediaQuery('(max-width:600px)');
 
   const handleLogout = async () => {
@@ -50,6 +51,16 @@ const Header = ({ currentUser, auth }) => { // Accept currentUser and auth as pr
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {currentUser && selectedProjectId && (
+              <Button 
+                color="inherit" 
+                onClick={onGoToDashboard}
+                startIcon={<DashboardIcon />}
+                sx={{ textTransform: 'none', mr: 2, fontWeight: 'bold', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)'} }}
+              >
+                Dashboard
+              </Button>
+            )}
             {currentUser ? (
               <>
                 <Typography sx={{ mr: 2, color: 'white' }}>
