@@ -31,6 +31,9 @@ import {
   Legend,
 } from "chart.js";
 
+import { Paper, Typography, Button, Box, CircularProgress } from "@mui/material";
+import GetAppIcon from "@mui/icons-material/GetApp";
+
 const createInitialUser = async () => {
   try {
     await addDoc(collection(db, "users"), {
@@ -46,8 +49,6 @@ const createInitialUser = async () => {
 
 createInitialUser();
 
-import { Paper, Typography, Button, Box, CircularProgress } from "@mui/material";
-import GetAppIcon from "@mui/icons-material/GetApp";
 
 ChartJS.register(
   CategoryScale,
