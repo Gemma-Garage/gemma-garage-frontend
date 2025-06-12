@@ -654,7 +654,7 @@ function App() {
                 disabled={!!currentRequestId && !weightsUrl} // Disable if training in progress and not complete
               />
               <FinetuneControl
-                onStartFinetuning={submitFinetuningJob}
+                onStart={submitFinetuningJob} // Changed from onStartFinetuning to onStart
                 status={trainingStatus}
                 progress={progress}
                 weightsUrl={weightsUrl}

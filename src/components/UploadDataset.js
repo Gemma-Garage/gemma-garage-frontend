@@ -6,7 +6,9 @@ import {
   Paper, 
   CircularProgress,
   Link,
-  Chip
+  Chip,
+  Alert, // Added Alert
+  AlertTitle // Added AlertTitle
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -29,7 +31,7 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
-const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) => {
+const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload, status }) => { // Added status prop
   const [loading, setLoading] = useState(false);
   
   // Determine file type icon
@@ -55,6 +57,9 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) =>
     await onUpload();
     setLoading(false);
   };
+
+  // Use 'status' prop for the Alert display
+  const currentStatus = status || uploadStatus; 
 
   return (
     <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
@@ -103,21 +108,18 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) =>
           {loading ? <CircularProgress size={24} color="inherit" /> : "Upload Dataset"}
         </Button>
         
-        {uploadStatus && (
-          <Box sx={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: 1, 
-            padding: 1, 
-            backgroundColor: "#e3f2fd", 
-            borderRadius: 1,
-            maxWidth: "100%",
-            overflow: "hidden",
-            textOverflow: "ellipsis"
-          }}>
-            <CheckCircleIcon color="success" />
-            <Typography variant="body2">{uploadStatus}</Typography>
-          </Box>
+        {/* Alert for displaying upload status */}
+        {currentStatus && (
+          <Alert 
+            severity={currentStatus.toLowerCase().includes("error") ? "error" : currentStatus.toLowerCase().includes("successfully") ? "success" : "info"}
+            sx={{ width: "100%", mt: 2 }} 
+            icon={currentStatus.toLowerCase().includes("successfully") ? <CheckCircleIcon fontSize="inherit" /> : undefined}
+          >
+            <AlertTitle>
+              {currentStatus.toLowerCase().includes("error") ? "Error" : currentStatus.toLowerCase().includes("successfully") ? "Success" : "Status"}
+            </AlertTitle>
+            {currentStatus}
+          </Alert>
         )}
 
         <Typography variant="body2">
