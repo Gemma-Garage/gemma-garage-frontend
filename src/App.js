@@ -68,11 +68,12 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      // setIsUserSetupComplete(false); // Moved down
       if (user) {
-        setCurrentUser(user);
-        console.log("[AUTH_STATE_CHANGE] User signed in:", user.uid);
-        // console.log("[AUTH_STATE_CHANGE] Firestore 'db' instance:", db); // Already know db works
+        // Start of a new user session or app load with an existing user
+        setLoadingAuth(true);         // Indicate loading for auth and setup
+        setIsUserSetupComplete(false); // Reset user setup status for this session
+        setCurrentUser(user);         // Set user object (this will trigger re-render)
+        console.log("[AUTH_STATE_CHANGE] User signed in:", user.uid, "Display Name:", user.displayName);
 
         try {
           console.log("[USER_DOC_LOGIC] Attempting to get/create user document for:", user.uid);
@@ -82,30 +83,32 @@ function App() {
             console.log("[USER_DOC_LOGIC] User document does not exist for " + user.uid + ". Creating now.");
             await setDoc(userDocRef, {
               email: user.email,
+              displayName: user.displayName || user.email, // Store displayName
               createdAt: serverTimestamp(),
-              // Initialize other user-specific fields if needed
             });
-            console.log("[USER_DOC_LOGIC] User document created in Firestore for new user:", user.uid);
+            console.log("[USER_DOC_LOGIC] User document created for new user:", user.uid);
           } else {
             console.log("[USER_DOC_LOGIC] User document already exists for:", user.uid, userDocSnap.data());
+            // Optionally, update displayName if it changed in Firebase Auth & differs from Firestore
+            if (user.displayName && userDocSnap.data().displayName !== user.displayName) {
+              await updateDoc(userDocRef, { displayName: user.displayName });
+              console.log("[USER_DOC_LOGIC] Updated displayName for user:", user.uid);
+            }
           }
-          setIsUserSetupComplete(true); // Set to true after successful get/create
+          setIsUserSetupComplete(true); // User setup in Firestore is complete
         } catch (e) {
-          console.error("[FIRESTORE_CATCH_BLOCK] Caught something in onAuthStateChanged user setup!");
-          console.error("[FIRESTORE_CATCH_BLOCK] Error object:", e);
-          // console.error("[FIRESTORE_CATCH_BLOCK] Error message:", e.message);
-          // console.error("[FIRESTORE_CATCH_BLOCK] Error code:", e.code);
-          // console.error("[FIRESTORE_CATCH_BLOCK] Error name:", e.name);
+          console.error("[FIRESTORE_CATCH_BLOCK] Error during user document setup:", e);
           setIsUserSetupComplete(false); // Ensure this is false on error
+          // Consider signing out user or showing a persistent error message to the user
         } finally {
-          setLoadingAuth(false);
+          setLoadingAuth(false); // Auth and setup process finished for this user session
         }
       } else {
+        // User signed out
         console.log("[AUTH_STATE_CHANGE] User signed out.");
         setCurrentUser(null);
         setSelectedProjectId(null);
         setSelectedProjectData(null);
-        // Reset all other states as before
         setDatasetFile(null);
         setUploadStatus("");
         setTrainableDatasetName(null);
@@ -116,15 +119,15 @@ function App() {
         setTrainingStatus("");
         setLossData([]);
         setWeightsUrl(null);
-        setCurrentRequestId(null); // This is important for project identification
+        setCurrentRequestId(null);
         setLastLogTimestamp(null);
         setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
-        setLoadingAuth(false);
-        setIsUserSetupComplete(false); // User is not set up if not logged in
+        setLoadingAuth(false); // No longer loading auth state
+        setIsUserSetupComplete(false); // No user setup is complete
       }
     });
-    return () => unsubscribe();
-  }, []);
+    return () => unsubscribe(); // Cleanup subscription on unmount
+  }, []); // Empty dependency array ensures this runs once on mount and cleans up on unmount
 
   const handleCreateProjectOpen = () => {
     setShowCreateProjectDialog(true);
@@ -581,18 +584,23 @@ function App() {
     <div>
       <Header currentUser={currentUser} auth={auth} />
       {loadingAuth ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 100px)', /* Adjusted for header/footer */ }}>
           <CircularProgress />
-          <Typography sx={{ ml: 2 }}>Loading...</Typography>
+          <Typography sx={{ ml: 2 }}>Loading authentication...</Typography>
         </Box>
       ) : !currentUser ? (
         <AuthPage />
-      ) : !selectedProjectId && isUserSetupComplete ? (
+      ) : !isUserSetupComplete ? ( 
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 100px)', /* Adjusted for header/footer */ }}>
+          <CircularProgress />
+          <Typography sx={{ ml: 2 }}>Finalizing user setup...</Typography>
+        </Box>
+      ) : !selectedProjectId ? ( 
         <>
-          <ProjectDashboard 
+          <ProjectDashboard
+            currentUser={currentUser}
             handleCreateProjectOpen={handleCreateProjectOpen}
             handleProjectSelect={handleProjectSelect}
-            // Pass any other necessary props like currentUser if ProjectDashboard needs it directly
           />
           <CreateProjectDialog
             open={showCreateProjectDialog}
@@ -600,15 +608,13 @@ function App() {
             onCreate={handleCreateProject}
           />
         </>
-      ) : selectedProjectId && isUserSetupComplete ? (
-        // This is the "Project View"
+      ) : selectedProjectId ? (
         <div className="container">
           {/* <Sidebar /> */}
           <div className="main-content">
-            {/* Display selected project name or some identifier */}
             {selectedProjectData && (
               <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', margin: 2, fontWeight: 'bold' }}>
-                Project: {selectedProjectData.displayName}
+                Project: {selectedProjectData.displayName} (ID: {selectedProjectId})
               </Typography>
             )}
             <UploadDataset
@@ -661,9 +667,9 @@ function App() {
           </div>
         </div>
       ) : (
-        // Fallback for unexpected states, or if isUserSetupComplete is false after auth loading
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <Typography>Please wait or refresh...</Typography>
+        // Fallback for any unexpected state, though ideally not reached
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 100px)'}}>
+          <Typography>An unexpected error occurred. Please refresh the page.</Typography>
         </Box>
       )}
       <Footer/>
