@@ -282,7 +282,7 @@ function App() {
         console.log("File uploaded to:", data.file_location);
 
         // If the project is selected, update the project document in Firestore
-        if (selectedProjectData && selectedProjectId && currentUser) { // Corrected: Use selectedProjectData and selectedProjectId
+        if (selectedProjectData && selectedProjectId && currentUser) { // Corrected: Use selectedProjectData and selectedProjectId, and check currentUser
           const projectRef = doc(db, "users", currentUser.uid, "projects", selectedProjectId); // Corrected: Use selectedProjectId
           await updateDoc(projectRef, {
             dataset_gcs_path: data.file_location, // Save the GCS path
