@@ -13,8 +13,8 @@ import ProjectDashboard from "./components/ProjectDashboard"; // ADDED
 import CreateProjectDialog from "./components/CreateProjectDialog"; // ADDED
 import { auth } from "./firebase"; // Import Firebase auth
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
-// import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from "firebase/firestore"; // Removed Firestore imports
-// import { db } from './firebase'; // Assuming db is primarily for Firestore, removing its direct import if not used elsewhere
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from "firebase/firestore"; // Removed Firestore imports
+import { db } from './firebase'; // Assuming db is primarily for Firestore, removing its direct import if not used elsewhere
 import "./style/App.css";
 
 // Import our API endpoints
@@ -30,6 +30,21 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+
+const createInitialUser = async () => {
+  try {
+    await addDoc(collection(db, "users"), {
+      name: "Alice",
+      age: 25,
+      email: "alice@example.com"
+    });
+    console.log("User added successfully!");
+  } catch (e) {
+    console.error("Error adding user: ", e);
+  }
+};
+
+createInitialUser();
 
 import { Paper, Typography, Button, Box, CircularProgress } from "@mui/material";
 import GetAppIcon from "@mui/icons-material/GetApp";
