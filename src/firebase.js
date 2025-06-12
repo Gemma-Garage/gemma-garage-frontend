@@ -25,6 +25,6 @@ export const auth = getAuth(app);
 export const db = getFirestore(app); // Export Firestore instance
 
 console.log("Firebase initialized successfully");
-console.log(db);
+console.log(db, "gemma-garage-db");
 
 export default app;
