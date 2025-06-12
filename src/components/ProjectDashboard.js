@@ -1,7 +1,7 @@
 // src/components/ProjectDashboard.js
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase'; // auth might not be strictly needed if App.js gatekeeps
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { db } from '../firebase'; // auth removed as currentUser is prop
+import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { Container, Typography, Button, List, ListItem, ListItemButton, ListItemText, Paper, CircularProgress, Box, Divider } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
@@ -11,9 +11,9 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // currentUser is passed as a prop, ensuring it's available when this component mounts
     if (currentUser && currentUser.uid) {
       setLoading(true);
+      setError(null); // Clear previous errors when attempting to load projects
       const projectsRef = collection(db, `users/${currentUser.uid}/projects`);
       const q = query(projectsRef, orderBy('createdAt', 'desc'));
 
@@ -32,11 +32,15 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
 
       return () => unsubscribe();
     } else {
-      // This case should ideally not be hit if App.js correctly manages rendering
-      setProjects([]);
-      setLoading(false);
+      // This block handles cases where currentUser is not valid for fetching projects
+      setProjects([]); // Clear projects if user/UID is not valid
+      setLoading(false); // Stop loading indicator
+
       if (!currentUser) {
         setError("No user logged in. Cannot display projects.");
+      } else { // currentUser exists, but uid is missing (should be rare for Firebase auth user objects)
+        setError("User data is incomplete (missing UID). Cannot display projects.");
+        console.warn("ProjectDashboard: currentUser prop is present but UID is missing.", currentUser);
       }
     }
   }, [currentUser]); // Re-run when currentUser changes
