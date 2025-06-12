@@ -4,7 +4,6 @@ import { AppBar, Toolbar, Typography, Link, Button, Box, useMediaQuery, IconButt
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import DiamondIcon from '@mui/icons-material/Diamond';
-import CodeIcon from '@mui/icons-material/Code';
 import { signOut } from 'firebase/auth'; // Import signOut
 import "../style/Header.css";
 
@@ -54,12 +53,12 @@ const Header = ({ currentUser, auth }) => { // Accept currentUser and auth as pr
             {currentUser ? (
               <>
                 <Typography sx={{ mr: 2, color: 'white' }}>
-                  Hi, {currentUser.email}
+                  Hi, {currentUser.displayName || currentUser.email}
                 </Typography>
                 <Button 
                   color="inherit" 
                   onClick={handleLogout}
-                  sx={{ textTransform: 'none', mr: 1 }}
+                  sx={{ textTransform: 'none', mr: 1, fontWeight: 'bold', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)'} }}
                 >
                   Logout
                 </Button>

@@ -68,11 +68,11 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setIsUserSetupComplete(false);
+      // setIsUserSetupComplete(false); // Moved down
       if (user) {
         setCurrentUser(user);
         console.log("[AUTH_STATE_CHANGE] User signed in:", user.uid);
-        console.log("[AUTH_STATE_CHANGE] Firestore 'db' instance:", db);
+        // console.log("[AUTH_STATE_CHANGE] Firestore 'db' instance:", db); // Already know db works
 
         try {
           console.log("[USER_DOC_LOGIC] Attempting to get/create user document for:", user.uid);
@@ -83,19 +83,20 @@ function App() {
             await setDoc(userDocRef, {
               email: user.email,
               createdAt: serverTimestamp(),
+              // Initialize other user-specific fields if needed
             });
             console.log("[USER_DOC_LOGIC] User document created in Firestore for new user:", user.uid);
           } else {
             console.log("[USER_DOC_LOGIC] User document already exists for:", user.uid, userDocSnap.data());
           }
-          setIsUserSetupComplete(true);
+          setIsUserSetupComplete(true); // Set to true after successful get/create
         } catch (e) {
           console.error("[FIRESTORE_CATCH_BLOCK] Caught something in onAuthStateChanged user setup!");
           console.error("[FIRESTORE_CATCH_BLOCK] Error object:", e);
-          console.error("[FIRESTORE_CATCH_BLOCK] Error message:", e.message);
-          console.error("[FIRESTORE_CATCH_BLOCK] Error code:", e.code);
-          console.error("[FIRESTORE_CATCH_BLOCK] Error name:", e.name);
-          setIsUserSetupComplete(false);
+          // console.error("[FIRESTORE_CATCH_BLOCK] Error message:", e.message);
+          // console.error("[FIRESTORE_CATCH_BLOCK] Error code:", e.code);
+          // console.error("[FIRESTORE_CATCH_BLOCK] Error name:", e.name);
+          setIsUserSetupComplete(false); // Ensure this is false on error
         } finally {
           setLoadingAuth(false);
         }
@@ -104,6 +105,7 @@ function App() {
         setCurrentUser(null);
         setSelectedProjectId(null);
         setSelectedProjectData(null);
+        // Reset all other states as before
         setDatasetFile(null);
         setUploadStatus("");
         setTrainableDatasetName(null);
@@ -114,11 +116,11 @@ function App() {
         setTrainingStatus("");
         setLossData([]);
         setWeightsUrl(null);
-        setCurrentRequestId(null);
+        setCurrentRequestId(null); // This is important for project identification
         setLastLogTimestamp(null);
         setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
         setLoadingAuth(false);
-        setIsUserSetupComplete(false);
+        setIsUserSetupComplete(false); // User is not set up if not logged in
       }
     });
     return () => unsubscribe();
@@ -518,7 +520,7 @@ function App() {
   const downloadWeights = async () => {
     // weightsUrl is now the GCS directory path, set when training completes.
     // currentRequestId is also available and should be used.
-    if (!currentRequestId) {
+    if (!currentRequestId) { // Check currentRequestId from state
       setTrainingStatus("Error: No request ID found for download.");
       console.error("Download weights called without a currentRequestId.");
       return;
@@ -577,62 +579,95 @@ function App() {
 
   return (
     <div>
-      <Header />
-    <div className="container">
-      {/* <Sidebar /> */}
-      <div className="main-content">
-        <UploadDataset
-          datasetFile={datasetFile}
-          onFileChange={handleFileChange}
-          uploadStatus={uploadStatus} /* Pass uploadStatus here */
-          status={uploadStatus} /* Also passing as status for consistency if UploadDataset uses that */
-          onUpload={uploadDataset}
-        />
-        <DatasetPreview 
-          datasetFile={datasetFile}
-          dataset_path={datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null}
-        />
-        <TrainingParameters
-          modelName={modelName}
-          epochs={epochs}
-          learningRate={learningRate}
-          loraRank={loraRank}
-          onModelNameChange={setModelName}
-          onEpochsChange={setEpochs} /* Corrected prop name */
-          onLearningRateChange={setLearningRate} /* Corrected prop name */
-          onLoraRankChange={setLoraRank} /* Corrected prop name */
-        />
-        <FinetuneControl 
-            onStart={startFinetuning} 
-            wsStatus={trainingStatus} 
-            progress={progress} // Pass progress state
-        /> 
-        <LossGraph lossData={lossData} />
-        
-        {/* Use MUI for Download Weights button */}
-        {weightsUrl && (
-          <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
-            <Typography variant="h5" gutterBottom className="sessionName">
-              Download Fine-Tuned Model
-            </Typography>
-            <Button
-              variant="contained"
-              onClick={downloadWeights}
-              startIcon={<GetAppIcon />}
-              sx={{ 
-                backgroundColor: "#6200ee", 
-                "&:hover": { backgroundColor: "#3700b3" } 
-              }}
-            >
-              Download Weights
-            </Button>
-          </Paper>
-        )}
-        <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
-      </div>
+      <Header currentUser={currentUser} auth={auth} />
+      {loadingAuth ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <CircularProgress />
+          <Typography sx={{ ml: 2 }}>Loading...</Typography>
+        </Box>
+      ) : !currentUser ? (
+        <AuthPage />
+      ) : !selectedProjectId && isUserSetupComplete ? (
+        <>
+          <ProjectDashboard 
+            handleCreateProjectOpen={handleCreateProjectOpen}
+            handleProjectSelect={handleProjectSelect}
+            // Pass any other necessary props like currentUser if ProjectDashboard needs it directly
+          />
+          <CreateProjectDialog
+            open={showCreateProjectDialog}
+            onClose={handleCreateProjectClose}
+            onCreate={handleCreateProject}
+          />
+        </>
+      ) : selectedProjectId && isUserSetupComplete ? (
+        // This is the "Project View"
+        <div className="container">
+          {/* <Sidebar /> */}
+          <div className="main-content">
+            {/* Display selected project name or some identifier */}
+            {selectedProjectData && (
+              <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', margin: 2, fontWeight: 'bold' }}>
+                Project: {selectedProjectData.displayName}
+              </Typography>
+            )}
+            <UploadDataset
+              datasetFile={datasetFile}
+              onFileChange={handleFileChange}
+              uploadStatus={uploadStatus}
+              status={uploadStatus}
+              onUpload={uploadDataset}
+            />
+            <DatasetPreview 
+              datasetFile={datasetFile}
+              dataset_path={trainableDatasetName || (datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null)}
+            />
+            <TrainingParameters
+              modelName={modelName}
+              epochs={epochs}
+              learningRate={learningRate}
+              loraRank={loraRank}
+              onModelNameChange={setModelName}
+              onEpochsChange={setEpochs}
+              onLearningRateChange={setLearningRate}
+              onLoraRankChange={setLoraRank}
+            />
+            <FinetuneControl 
+                onStart={startFinetuning} 
+                wsStatus={trainingStatus} 
+                progress={progress}
+            /> 
+            <LossGraph lossData={lossData} />
+            
+            {weightsUrl && (
+              <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
+                <Typography variant="h5" gutterBottom className="sessionName">
+                  Download Fine-Tuned Model
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={downloadWeights}
+                  startIcon={<GetAppIcon />}
+                  sx={{ 
+                    backgroundColor: "#6200ee", 
+                    "&:hover": { backgroundColor: "#3700b3" } 
+                  }}
+                >
+                  Download Weights
+                </Button>
+              </Paper>
+            )}
+            <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
+          </div>
+        </div>
+      ) : (
+        // Fallback for unexpected states, or if isUserSetupComplete is false after auth loading
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <Typography>Please wait or refresh...</Typography>
+        </Box>
+      )}
+      <Footer/>
     </div>
-    <Footer/>
-  </div>
   );
 }
 

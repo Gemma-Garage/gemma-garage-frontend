@@ -1,23 +1,20 @@
 // src/components/ProjectDashboard.js
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase';
+import { db, auth } from '../firebase'; // auth might not be strictly needed if App.js gatekeeps
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { Container, Typography, Button, List, ListItem, ListItemText, Paper, CircularProgress, Box, Divider } from '@mui/material';
+import { Container, Typography, Button, List, ListItem, ListItemButton, ListItemText, Paper, CircularProgress, Box, Divider } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
-// Forward declaration for now, will be passed via props or context
-// const handleCreateProjectOpen = () => {}; 
-// const handleProjectSelect = (projectId) => {};
-
-const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect }) => {
+const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, currentUser }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (auth.currentUser) {
+    // currentUser is passed as a prop, ensuring it's available when this component mounts
+    if (currentUser && currentUser.uid) {
       setLoading(true);
-      const projectsRef = collection(db, `users/${auth.currentUser.uid}/projects`);
+      const projectsRef = collection(db, `users/${currentUser.uid}/projects`);
       const q = query(projectsRef, orderBy('createdAt', 'desc'));
 
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -35,10 +32,14 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect }) => {
 
       return () => unsubscribe();
     } else {
+      // This case should ideally not be hit if App.js correctly manages rendering
       setProjects([]);
       setLoading(false);
+      if (!currentUser) {
+        setError("No user logged in. Cannot display projects.");
+      }
     }
-  }, []); // Re-run if auth.currentUser changes - though App.js should ensure this component only renders when user exists
+  }, [currentUser]); // Re-run when currentUser changes
 
   if (loading) {
     return (
@@ -81,15 +82,16 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect }) => {
           <List>
             {projects.map((project) => (
               <ListItem 
-                button 
+                disablePadding
                 key={project.id} 
-                onClick={() => handleProjectSelect(project.id)} // This will be connected in App.js
                 divider
               >
-                <ListItemText 
-                  primary={project.displayName || 'Untitled Project'} 
-                  secondary={`Request ID: ${project.requestId || 'Not yet trained'} - Base: ${project.baseModel || 'N/A'}`}
-                />
+                <ListItemButton onClick={() => handleProjectSelect(project.id)}>
+                  <ListItemText 
+                    primary={project.displayName || 'Untitled Project'} 
+                    secondary={`ID: ${project.id} ${project.requestId ? `(Job: ${project.requestId})` : ''} - Base: ${project.baseModel || 'N/A'} - Last Trained: ${project.lastTrainedAt ? new Date(project.lastTrainedAt.seconds * 1000).toLocaleDateString() : 'Never'}`}
+                  />
+                </ListItemButton>
               </ListItem>
             ))}
           </List>
