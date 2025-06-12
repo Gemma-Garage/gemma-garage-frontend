@@ -5,6 +5,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import CodeIcon from '@mui/icons-material/Code';
+import { signOut } from 'firebase/auth'; // Import signOut
 import "../style/Header.css";
 
 const theme = createTheme({
@@ -18,8 +19,17 @@ const theme = createTheme({
   },
 });
 
-const Header = () => {
+const Header = ({ currentUser, auth }) => { // Accept currentUser and auth as props
   const isSmallScreen = useMediaQuery('(max-width:600px)');
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // User signed out, App.js will handle redirect or UI update
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
+  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -40,7 +50,25 @@ const Header = () => {
             </Typography>
           </Box>
           
-          <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {currentUser ? (
+              <>
+                <Typography sx={{ mr: 2, color: 'white' }}>
+                  Hi, {currentUser.email}
+                </Typography>
+                <Button 
+                  color="inherit" 
+                  onClick={handleLogout}
+                  sx={{ textTransform: 'none', mr: 1 }}
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
+              // Optionally, show Login/SignUp buttons here if not on AuthPage
+              // For now, this part is empty as AuthPage handles non-logged-in users
+              null 
+            )}
             <Button 
               color="inherit" 
               href="https://github.com/Gemma-Garage/" 
