@@ -65,6 +65,7 @@ function App() {
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [selectedProjectData, setSelectedProjectData] = useState(null);
+  const [trainableDatasetName, setTrainableDatasetName] = useState(null); // Ensure this line is present
 
 
   // Listen to Firebase auth state changes
@@ -95,6 +96,7 @@ function App() {
         // Also reset other app states if necessary
         setDatasetFile(null);
         setUploadStatus("");
+        setTrainableDatasetName(null); // ADDED: Reset trainable dataset name
         setModelName("google/gemma-3-1b-pt");
         setEpochs(1);
         setLearningRate(0.0002);
@@ -153,6 +155,7 @@ function App() {
     if (!currentUser || !projectId) {
       setSelectedProjectId(null);
       setSelectedProjectData(null);
+      setTrainableDatasetName(null); // ADDED: Reset trainable dataset name
       return;
     }
     
@@ -168,6 +171,7 @@ function App() {
       // Reset general app states to default or project-specific values
       setDatasetFile(null); // Assuming dataset is not stored with project, or needs re-upload per session
       setUploadStatus("");
+      setTrainableDatasetName(null); // ADDED: Reset trainable dataset name for new project context
       
       // Load parameters from project if they exist, otherwise use current or default
       setEpochs(projectData.epochs || epochs); 
@@ -206,6 +210,7 @@ function App() {
     if (file) {
       // Reset any previous upload status
       setUploadStatus("");
+      setTrainableDatasetName(null); // ADDED: Reset trainable name when new file is selected
       
       // Validate file type
       const fileExt = file.name.split('.').pop().toLowerCase();
@@ -230,6 +235,7 @@ function App() {
 
     try {
       setUploadStatus("Uploading...");
+      setTrainableDatasetName(null); // Reset before new upload attempt
       const response = await fetch(`${API_BASE_URL}/dataset/upload`, {
         method: "POST",
         body: formData,
@@ -240,21 +246,23 @@ function App() {
         throw new Error(errorData.detail || "Error uploading file");
       }
       
-      const data = await response.json();
-      
+      const data = await response.json(); // from /dataset/upload
       const fileExt = datasetFile.name.split('.').pop().toLowerCase();
+      let readyFileName;
+
+      // Regardless of PDF or other, the backend now returns file_location of the ready-to-use file.
+      readyFileName = data.file_location.split('/').pop();
+      
       if (fileExt === 'pdf') {
-        setUploadStatus("PDF processed successfully: " + data.file_location);
+        setUploadStatus(`PDF processed. Trainable dataset: ${readyFileName}`);
       } else {
-        // Assuming data.file_location is the GCS path like "your-bucket-name/your-file.json"
-        // We only need "your-file.json" for the training request.
-        const fileName = data.file_location.split('/').pop();
-        setUploadStatus(`Dataset uploaded: ${fileName}. Ready for training.`);
-        // Store the filename for training, or ensure datasetFile.name is correctly set if it's used directly
+        setUploadStatus(`Dataset uploaded: ${readyFileName}. Ready for training.`);
       }
+      setTrainableDatasetName(readyFileName); // Set the trainable name
     } catch (error) {
       console.error("Error uploading file", error);
       setUploadStatus("Error: " + error.message);
+      setTrainableDatasetName(null); // Reset on error
     }
   };
 
@@ -422,22 +430,10 @@ function App() {
 
   // Start finetuning using the API endpoint
   const submitFinetuningJob = async () => {
-    if (!datasetFile && !selectedProjectData?.datasetFile) { // Check if a dataset is available
-      alert("Please upload a dataset first.");
+    if (!trainableDatasetName) { // MODIFIED: Check trainableDatasetName state
+      alert("Please upload and process a dataset first. The 'trainableDatasetName' is missing.");
       return;
     }
-
-    // Extract the filename from uploadStatus if available, otherwise use datasetFile.name
-    let datasetPathForTraining;
-    if (uploadStatus.startsWith("Dataset uploaded: ")) {
-        datasetPathForTraining = uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "");
-    } else if (datasetFile) {
-        datasetPathForTraining = datasetFile.name;
-    } else {
-        alert("Dataset not specified correctly.");
-        return;
-    }
-
 
     setTrainingStatus("Submitting training job...");
     setLossData([]); // Clear previous loss data
@@ -448,7 +444,7 @@ function App() {
 
     const payload = {
       model_name: modelName,
-      dataset_path: datasetPathForTraining, // Use the extracted/stored filename
+      dataset_path: trainableDatasetName, // MODIFIED: Use trainableDatasetName state
       epochs: epochs,
       learning_rate: learningRate,
       lora_rank: loraRank,
@@ -598,16 +594,17 @@ function App() {
           // Reset states to default when going back to dashboard
           setDatasetFile(null);
           setUploadStatus("");
-          setModelName("google/gemma-3-1b-pt"); // Default model
-          setEpochs(1);
-          setLearningRate(0.0002);
-          setLoraRank(4);
-          setTrainingStatus("");
-          setLossData([]);
-          setWeightsUrl(null);
-          setCurrentRequestId(null);
-          setLastLogTimestamp(null);
-          setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
+          setTrainableDatasetName(null); // ADDED: Reset trainable dataset name
+          setModelName("google/gemma-3-1b-pt"); // Reset model name
+          setEpochs(1); // Reset epochs
+          setLearningRate(0.0002); // Reset learning rate
+          setLoraRank(4); // Reset lora rank
+          setTrainingStatus(""); // Reset training status
+          setLossData([]); // Clear loss data
+          setWeightsUrl(null); // Clear weights URL
+          setCurrentRequestId(null); // Clear current request ID
+          setLastLogTimestamp(null); // Clear last log timestamp
+          setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
         }}>
           Back to Dashboard
         </Button>
@@ -639,7 +636,7 @@ function App() {
             status={trainingStatus}
             weightsUrl={weightsUrl}
             currentRequestId={currentRequestId}
-            disabled={!datasetFile || (!!currentRequestId && trainingStatus.includes("in progress"))} // Disable if no dataset or training active
+            disabled={!trainableDatasetName || (!!currentRequestId && trainingStatus.includes("in progress"))} // MODIFIED: Check trainableDatasetName
           />
           {lossData.length > 0 && (
             <Paper elevation={2} sx={{ padding: 2, marginTop: 2 }}>
