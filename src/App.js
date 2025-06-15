@@ -48,7 +48,7 @@ function App() {
   const [datasetFile, setDatasetFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState("");
   const [modelName, setModelName] = useState("google/gemma-3-1b-pt");
-  const [epochs, setEpochs] = useState(1);
+  const [epochs, setEpochs] = useState(1); // Can be string "" or number
   const [learningRate, setLearningRate] = useState(0.0002);
   const [loraRank, setLoraRank] = useState(4);
   const [trainingStatus, setTrainingStatus] = useState("");
@@ -65,6 +65,25 @@ function App() {
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [selectedProjectData, setSelectedProjectData] = useState(null);
   const [trainableDatasetName, setTrainableDatasetName] = useState(null);
+
+  // Add this handler function
+  const handleEpochsChange = (value) => {
+    if (value === "") {
+      setEpochs(""); // Allow epochs state to be an empty string
+    } else {
+      const num = parseInt(value, 10);
+      // If it's a valid number, store it. Otherwise, if user types non-numeric,
+      // you might want to keep it as "" or revert to a valid number.
+      // For now, only update if it's a parseable number.
+      // The min:1 logic is primarily for when the value is *used*.
+      if (!isNaN(num)) {
+        setEpochs(num < 1 && value !== "0" ? 1 : num); // Store the number, ensure it's at least 1 if not "0"
+      } else if (value === "0") {
+        setEpochs(0); // Allow typing "0" temporarily
+      }
+      // If user types "abc", epochs state remains unchanged from its last valid state or ""
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -630,7 +649,7 @@ function App() {
                 learningRate={learningRate}
                 loraRank={loraRank}
                 onModelNameChange={setModelName}
-                onEpochsChange={setEpochs}
+                onEpochsChange={handleEpochsChange} // Use the new handler
                 onLearningRateChange={setLearningRate}
                 onLoraRankChange={setLoraRank}
               />
