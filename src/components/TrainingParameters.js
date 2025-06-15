@@ -103,101 +103,99 @@ const TrainingParameters = ({
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
-        <Typography variant="h5" gutterBottom className="sessionName">
-          Set Training Parameters
-        </Typography>
+    <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
+      <Typography variant="h5" gutterBottom className="sessionName">
+        Set Training Parameters
+      </Typography>
 
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <FormControl fullWidth>
-            <FormLabel id="model-select-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
-              Model Name
-            </FormLabel>
-            <Select
-              inputId="model-select"
-              value={selectedOption}
-              onChange={(option) => onModelNameChange(option.value)} // Changed to onModelNameChange
-              options={modelOptions}
-              styles={selectStyles}
-              isClearable={false}
-              isSearchable={true}
-              isDisabled={disabled}
-            />
-          </FormControl>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <FormControl fullWidth>
+          <FormLabel id="model-select-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
+            Model Name
+          </FormLabel>
+          <Select
+            inputId="model-select"
+            value={selectedOption}
+            onChange={(option) => onModelNameChange(option.value)} // Changed to onModelNameChange
+            options={modelOptions}
+            styles={selectStyles}
+            isClearable={false}
+            isSearchable={true}
+            isDisabled={disabled}
+          />
+        </FormControl>
 
-          <FormControl fullWidth>
-            <FormLabel id="lora-rank-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
-              LoRA Rank (Parameter Efficiency)
-            </FormLabel>
-            <Select
-              inputId="lora-rank-select"
-              value={selectedLoraRankOption}
-              onChange={(option) => onLoraRankChange(option.value)} // Changed to onLoraRankChange
-              options={loraRankOptions}
-              styles={selectStyles}
-              isClearable={false}
-              isSearchable={false}
-              isDisabled={disabled}
-            />
-            <Typography variant="caption" sx={{ mt: 1, color: "text.secondary" }}>
-              Lower rank = faster training but less expressive. Higher rank = better quality but more memory.
-            </Typography>
-          </FormControl>
+        <FormControl fullWidth>
+          <FormLabel id="lora-rank-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
+            LoRA Rank (Parameter Efficiency)
+          </FormLabel>
+          <Select
+            inputId="lora-rank-select"
+            value={selectedLoraRankOption}
+            onChange={(option) => onLoraRankChange(option.value)} // Changed to onLoraRankChange
+            options={loraRankOptions}
+            styles={selectStyles}
+            isClearable={false}
+            isSearchable={false}
+            isDisabled={disabled}
+          />
+          <Typography variant="caption" sx={{ mt: 1, color: "text.secondary" }}>
+            Lower rank = faster training but less expressive. Higher rank = better quality but more memory.
+          </Typography>
+        </FormControl>
 
-          <FormControl fullWidth>
-            <FormLabel id="epochs-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
-              Epochs
-            </FormLabel>
-            <TextField
-              id="epochs-input"
-              type="number"
-              value={epochs}
-              onChange={(e) => {
-                // Pass the raw string value. This allows the field to be empty.
-                // App.js will handle parsing and defaulting when the value is used.
-                onEpochsChange(e.target.value);
-              }}
-              variant="outlined"
-              InputProps={{
-                inputProps: { min: 1 } // HTML5 validation hint
-              }}
-              fullWidth
-              disabled={disabled}
-            />
-          </FormControl>
+        <FormControl fullWidth>
+          <FormLabel id="epochs-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
+            Epochs
+          </FormLabel>
+          <TextField
+            id="epochs-input"
+            type="number"
+            value={epochs}
+            onChange={(e) => {
+              // Pass the raw string value. This allows the field to be empty.
+              // App.js will handle parsing and defaulting when the value is used.
+              onEpochsChange(e.target.value);
+            }}
+            variant="outlined"
+            InputProps={{
+              inputProps: { min: 1 } // HTML5 validation hint
+            }}
+            fullWidth
+            disabled={disabled}
+          />
+        </FormControl>
 
-          <FormControl fullWidth>
-            <FormLabel id="learning-rate-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
-              Learning Rate: {learningRate}
-            </FormLabel>
-            <TextField
-              id="learning-rate-input"
-              type="number"
-              step="0.0001"
-              value={learningRate}
-              onChange={handleLearningRateTextChange} // Changed to use new handler
-              variant="outlined"
-              InputProps={{
-                inputProps: { min: 0.0001, max: 0.1, step: 0.0001 },
-                startAdornment: <InputAdornment position="start">λ</InputAdornment>,
-              }}
-              fullWidth
-              disabled={disabled}
-            />
-            <Slider 
-              value={parseFloat(learningRate) || 0} // Ensure value is a number for slider
-              min={0.0001}
-              max={0.01}
-              step={0.0001}
-              onChange={(_, value) => onLearningRateChange(value)} // Changed to onLearningRateChange
-              sx={{ mt: 2 }}
-              disabled={disabled}
-            />
-          </FormControl>
-        </Box>
-      </Paper>
-    </ThemeProvider>
+        <FormControl fullWidth>
+          <FormLabel id="learning-rate-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
+            Learning Rate: {learningRate}
+          </FormLabel>
+          <TextField
+            id="learning-rate-input"
+            type="number"
+            step="0.0001"
+            value={learningRate}
+            onChange={handleLearningRateTextChange} // Changed to use new handler
+            variant="outlined"
+            InputProps={{
+              inputProps: { min: 0.0001, max: 0.1, step: 0.0001 },
+              startAdornment: <InputAdornment position="start">λ</InputAdornment>,
+            }}
+            fullWidth
+            disabled={disabled}
+          />
+          <Slider 
+            value={parseFloat(learningRate) || 0} // Ensure value is a number for slider
+            min={0.0001}
+            max={0.01}
+            step={0.0001}
+            onChange={(_, value) => onLearningRateChange(value)} // Changed to onLearningRateChange
+            sx={{ mt: 2 }}
+            disabled={disabled}
+          />
+        </FormControl>
+      </Box>
+    </Paper>
   );
 };
 

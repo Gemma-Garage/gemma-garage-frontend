@@ -203,7 +203,7 @@ const LossGraph = ({ lossData }) => {
 
   return (
     <ThemeProvider theme={theme}>
-      <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
+      <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
           <Typography variant="h5" gutterBottom className="sessionName" sx={{ mb: 0 }}>
             Real-Time Loss Graph

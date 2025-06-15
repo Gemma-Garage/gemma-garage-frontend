@@ -47,7 +47,7 @@ const FinetuneControl = ({ onStart, wsStatus, progress }) => {
   const overallProgressPercentage = calculateOverallProgress();
 
   return (
-    <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
+    <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
       <Typography variant="h5" gutterBottom className="sessionName">
         Start Fine-Tuning
       </Typography>
