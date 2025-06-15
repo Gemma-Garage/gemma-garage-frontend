@@ -154,12 +154,13 @@ const TrainingParameters = ({
               type="number"
               value={epochs}
               onChange={(e) => {
-                const value = parseInt(e.target.value, 10);
-                onEpochsChange(Math.max(1, value || 1)); // Changed to onEpochsChange
+                // Pass the raw string value. This allows the field to be empty.
+                // App.js will handle parsing and defaulting when the value is used.
+                onEpochsChange(e.target.value);
               }}
               variant="outlined"
               InputProps={{
-                inputProps: { min: 1 }
+                inputProps: { min: 1 } // HTML5 validation hint
               }}
               fullWidth
               disabled={disabled}
