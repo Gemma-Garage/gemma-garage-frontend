@@ -31,7 +31,7 @@ const AuthPage = () => {
   };
 
   return (
-    <Container component="main" maxWidth="sm" sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <Container component="main" maxWidth="sm" sx={{ marginTop: 8, marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <Typography component="h1" variant="h4" gutterBottom>
         Welcome to Gemma Garage
       </Typography>
