@@ -145,7 +145,11 @@ const TrainingParameters = ({
               id="epochs-input"
               type="number"
               value={epochs}
-              onChange={(e) => setEpochs(e.target.value)} // Changed from onEpochsChange
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                // Ensure it's a number and at least 1, or default to 1 if input is invalid/empty
+                setEpochs(Math.max(1, value || 1));
+              }}
               variant="outlined"
               InputProps={{
                 inputProps: { min: 1 }

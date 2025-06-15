@@ -7,19 +7,19 @@ import {
   CircularProgress,
   Alert,
   AlertTitle,
-  LinearProgress, // Import LinearProgress
-  TextField // Added TextField import
+  LinearProgress // Import LinearProgress
+  // TextField import removed
 } from "@mui/material";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import "../style/assets.css";
 
-const FinetuneControl = ({ onStart, wsStatus, progress }) => { // Add progress prop
+const FinetuneControl = ({ onStart, wsStatus, progress }) => {
   const [loading, setLoading] = useState(false);
-  const [epochs, setEpochs] = useState(1); // Added state for epochs
+  // const [epochs, setEpochs] = useState(1); // Removed state for epochs
 
   const handleStartFineTuning = () => {
     setLoading(true);
-    onStart({ epochs }); // Pass epochs to onStart
+    onStart(); // Reverted: Pass epochs to onStart
     // We don't set loading to false here because training is asynchronous
     // and progress is shown through wsStatus
   };
@@ -53,18 +53,7 @@ const FinetuneControl = ({ onStart, wsStatus, progress }) => { // Add progress p
       </Typography>
       
       <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-        <TextField
-          label="Number of Epochs"
-          type="number"
-          value={epochs}
-          onChange={(e) => setEpochs(Math.max(1, parseInt(e.target.value, 10) || 1))}
-          disabled={loading}
-          variant="outlined"
-          fullWidth
-          sx={{ mb: 1 }} // Adjusted margin for spacing
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ min: 1 }}
-        />
+        {/* TextField for epochs removed */}
         <Button
           variant="contained"
           startIcon={<PlayArrowIcon />}
