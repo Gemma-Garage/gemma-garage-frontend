@@ -598,7 +598,7 @@ function App() {
         selectedProjectId={selectedProjectId} 
         onGoToDashboard={handleGoToDashboard} 
       />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', padding: '16px' }}>
         {loadingAuth ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
             <CircularProgress />
