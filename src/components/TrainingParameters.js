@@ -78,11 +78,11 @@ const TrainingParameters = ({
   epochs,
   learningRate,
   loraRank,
-  setModelName, // Changed from onModelNameChange
-  setEpochs,    // Changed from onEpochsChange
-  setLearningRate, // Changed from onLearningRateChange
-  setLoraRank,  // Changed from onLoraRankChange
-  disabled // Added disabled prop
+  onModelNameChange, // Changed from setModelName
+  onEpochsChange,    // Changed from setEpochs
+  onLearningRateChange, // Changed from setLearningRate
+  onLoraRankChange,  // Changed from setLoraRank
+  disabled
 }) => {
   // Find the selected option from the modelOptions array
   const selectedOption = modelOptions.find(option => option.value === modelName);
@@ -90,8 +90,16 @@ const TrainingParameters = ({
   // Find the selected LoRA rank option
   const selectedLoraRankOption = loraRankOptions.find(option => option.value === loraRank);
 
-  const handleLearningRateChange = (event) => {
-    setLearningRate(event.target.value); // Changed from onLearningRateChange
+  const handleLearningRateTextChange = (event) => {
+    // Parse to float, or keep as is if App.js handles it robustly
+    // For consistency and safety, parsing here is good.
+    const value = parseFloat(event.target.value);
+    if (!isNaN(value)) {
+      onLearningRateChange(value);
+    } else if (event.target.value === "") {
+      // Allow clearing the field, App.js might have a default or handle empty string
+      onLearningRateChange(event.target.value); 
+    }
   };
 
   return (
@@ -109,12 +117,12 @@ const TrainingParameters = ({
             <Select
               inputId="model-select"
               value={selectedOption}
-              onChange={(option) => setModelName(option.value)} // Changed from onModelNameChange
+              onChange={(option) => onModelNameChange(option.value)} // Changed to onModelNameChange
               options={modelOptions}
               styles={selectStyles}
               isClearable={false}
               isSearchable={true}
-              isDisabled={disabled} // Added disabled prop
+              isDisabled={disabled}
             />
           </FormControl>
 
@@ -125,12 +133,12 @@ const TrainingParameters = ({
             <Select
               inputId="lora-rank-select"
               value={selectedLoraRankOption}
-              onChange={(option) => setLoraRank(option.value)} // Changed from onLoraRankChange
+              onChange={(option) => onLoraRankChange(option.value)} // Changed to onLoraRankChange
               options={loraRankOptions}
               styles={selectStyles}
               isClearable={false}
               isSearchable={false}
-              isDisabled={disabled} // Added disabled prop
+              isDisabled={disabled}
             />
             <Typography variant="caption" sx={{ mt: 1, color: "text.secondary" }}>
               Lower rank = faster training but less expressive. Higher rank = better quality but more memory.
@@ -147,15 +155,14 @@ const TrainingParameters = ({
               value={epochs}
               onChange={(e) => {
                 const value = parseInt(e.target.value, 10);
-                // Ensure it's a number and at least 1, or default to 1 if input is invalid/empty
-                setEpochs(Math.max(1, value || 1));
+                onEpochsChange(Math.max(1, value || 1)); // Changed to onEpochsChange
               }}
               variant="outlined"
               InputProps={{
                 inputProps: { min: 1 }
               }}
               fullWidth
-              disabled={disabled} // Added disabled prop
+              disabled={disabled}
             />
           </FormControl>
 
@@ -168,23 +175,23 @@ const TrainingParameters = ({
               type="number"
               step="0.0001"
               value={learningRate}
-              onChange={handleLearningRateChange}
+              onChange={handleLearningRateTextChange} // Changed to use new handler
               variant="outlined"
               InputProps={{
                 inputProps: { min: 0.0001, max: 0.1, step: 0.0001 },
                 startAdornment: <InputAdornment position="start">λ</InputAdornment>,
               }}
               fullWidth
-              disabled={disabled} // Added disabled prop
+              disabled={disabled}
             />
             <Slider 
-              value={parseFloat(learningRate)}
+              value={parseFloat(learningRate) || 0} // Ensure value is a number for slider
               min={0.0001}
               max={0.01}
               step={0.0001}
-              onChange={(_, value) => setLearningRate(value)} // Changed from onLearningRateChange
+              onChange={(_, value) => onLearningRateChange(value)} // Changed to onLearningRateChange
               sx={{ mt: 2 }}
-              disabled={disabled} // Added disabled prop
+              disabled={disabled}
             />
           </FormControl>
         </Box>
