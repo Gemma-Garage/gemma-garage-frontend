@@ -22,7 +22,7 @@ const MAX_DISPLAY_POINTS = 15;
 
 const LossGraph = ({ lossData }) => {
   // State to control whether to show all points or just the most recent ones
-  const [showAllPoints, setShowAllPoints] = React.useState(false);
+  const [showAllPoints, setShowAllPoints] = React.useState(true); // Default to true
   const isSmallScreen = useMediaQuery('(max-width:600px)');
   
   // Process data to limit the number of points if needed
