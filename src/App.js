@@ -563,18 +563,22 @@ function App() {
     }
     setTrainingStatus("Preparing download ZIP for model artifacts...");
     try {
+      console.log("[Download] Calling backend /download_weights_zip with request_id:", currentRequestId);
       // Call backend to get ZIP of all model files for this model
       const response = await fetch(`${API_BASE_URL}/download_weights_zip`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ request_id: currentRequestId })
       });
+      console.log("[Download] Backend response status:", response.status);
       if (!response.ok) {
         const errorData = await response.text();
+        console.error("[Download] Backend error:", errorData);
         throw new Error(errorData || "Failed to get ZIP download");
       }
       // Download the zip file
       const blob = await response.blob();
+      console.log("[Download] Received ZIP blob, size:", blob.size);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -660,7 +664,8 @@ function App() {
               /> 
               <LossGraph lossData={lossData} />
               
-              {weightsUrl && (
+              {/* Show download button if training is complete and we have a requestId */}
+              {currentRequestId && trainingStatus.toLowerCase().includes("complete") && (
                 <Paper elevation={3} sx={{ padding: 3, marginTop: 2, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
                   <Typography variant="h5" gutterBottom className="sessionName">
                     Download Fine-Tuned Model
