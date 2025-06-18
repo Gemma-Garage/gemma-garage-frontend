@@ -561,31 +561,31 @@ function App() {
       console.error("Download weights called without a currentRequestId.");
       return;
     }
-    setTrainingStatus("Preparing download links for model artifacts...");
+    setTrainingStatus("Preparing download ZIP for model artifacts...");
     try {
-      const response = await fetch(`${API_BASE_URL}/dataset/download_weights/${currentRequestId}`);
+      // Call backend to get ZIP of all model files for this model
+      const response = await fetch(`${API_BASE_URL}/download_weights_zip`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request_id: currentRequestId })
+      });
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Unknown error during download preparation." }));
-        throw new Error(errorData.detail || "Failed to get download links");
+        const errorData = await response.text();
+        throw new Error(errorData || "Failed to get ZIP download");
       }
-      const data = await response.json();
-      if (data.download_links && data.download_links.length > 0) {
-        setTrainingStatus("Download links ready. Please check your browser downloads.");
-        data.download_links.forEach(link => {
-          const anchor = document.createElement('a');
-          anchor.href = link;
-          // Extract filename from URL for the download attribute
-          const urlParts = link.split('?')[0].split('/');
-          anchor.download = urlParts[urlParts.length - 1] || 'download';
-          document.body.appendChild(anchor);
-          anchor.click();
-          document.body.removeChild(anchor);
-        });
-      } else {
-        setTrainingStatus("No download links were returned by the server.");
-      }
+      // Download the zip file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `model_${currentRequestId}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      setTrainingStatus("Model ZIP download started.");
     } catch (error) {
-      console.error("Error downloading weights:", error);
+      console.error("Error downloading weights as ZIP:", error);
       setTrainingStatus(`Error downloading weights: ${error.message}`);
     }
   };
@@ -674,7 +674,7 @@ function App() {
                       "&:hover": { backgroundColor: "#3700b3" } 
                     }}
                   >
-                    Download Weights
+                    Download All Model Files (ZIP)
                   </Button>
                 </Paper>
               )}
