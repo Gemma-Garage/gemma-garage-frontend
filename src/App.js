@@ -565,7 +565,7 @@ function App() {
     try {
       console.log("[Download] Calling backend /download_weights_zip with request_id:", currentRequestId);
       // Call backend to get ZIP of all model files for this model
-      const response = await fetch(`${API_BASE_URL}/download_weights_zip`, {
+      const response = await fetch(`${API_BASE_URL}/download/download_weights_zip`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ request_id: currentRequestId })
