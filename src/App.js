@@ -265,8 +265,8 @@ function App() {
       
       // Validate file type
       const fileExt = file.name.split('.').pop().toLowerCase();
-      if (!['json', 'csv', 'pdf'].includes(fileExt)) {
-        alert("Please upload a JSON, CSV, or PDF file.");
+      if (!['json', 'csv', 'pdf', 'ppt', 'pptx', 'docx', 'html', 'txt'].includes(fileExt)) {
+        alert("Please upload a JSON, CSV, PDF, PPT, PPTX, DOCX, HTML, or TXT file.");
         return;
       }
       
