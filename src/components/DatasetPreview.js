@@ -31,6 +31,7 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
   const [errorAugmenting, setErrorAugmenting] = useState(null);
   const [totalAugmentedEntries, setTotalAugmentedEntries] = useState(0);
   const [activeTab, setActiveTab] = useState(0); // New state for active tab
+  const [summary, setSummary] = useState(null); // New state for summary
 
 
   useEffect(() => {
@@ -89,6 +90,7 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
     setAugmentedDataPreview([]);
     setAugmentedDatasetGCSPath(null);
     setTotalAugmentedEntries(0);
+    setSummary(null);
 
     try {
       const response = await fetch(`${API_BASE_URL}/dataset/augment-unified`, {
@@ -117,11 +119,11 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
       }
 
       const data = await response.json();
-      
       if (data.preview_augmented_data && data.augmented_dataset_gcs_path) {
         setAugmentedDataPreview(data.preview_augmented_data.preview || []);
         setTotalAugmentedEntries(data.preview_augmented_data.full_count || (data.preview_augmented_data.preview || []).length);
         setAugmentedDatasetGCSPath(data.augmented_dataset_gcs_path);
+        setSummary(data.summary || null);
         // setActiveTab(1); // Switch to augmented data tab
       } else {
         console.error("Augmentation response missing expected fields:", data);
@@ -274,6 +276,11 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
               )}
               {activeTab === 1 && (
                 <>
+                  {summary && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <strong>Summary:</strong> {summary}
+                    </Alert>
+                  )}
                   <Typography variant="subtitle1" gutterBottom>
                     Augmented Dataset Preview {augmentedDatasetGCSPath && `(from ${augmentedDatasetGCSPath})`}
                   </Typography>
