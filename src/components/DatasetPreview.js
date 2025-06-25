@@ -91,7 +91,7 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
     setTotalAugmentedEntries(0);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/dataset/augment-gemma`, {
+      const response = await fetch(`${API_BASE_URL}/dataset/augment-unified`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
