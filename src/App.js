@@ -65,6 +65,7 @@ function App() {
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [selectedProjectData, setSelectedProjectData] = useState(null);
   const [trainableDatasetName, setTrainableDatasetName] = useState(null);
+  const [selectedDatasetChoice, setSelectedDatasetChoice] = useState("original"); // 'original' or 'augmented'
 
   // Add this handler function
   const handleEpochsChange = (value) => {
@@ -486,6 +487,7 @@ function App() {
       epochs: epochs,
       learning_rate: learningRate,
       lora_rank: loraRank,
+      dataset_choice: selectedDatasetChoice, // Pass the dataset choice (original/augmented)
     };
     console.log("Starting fine-tuning with payload:", payload);
     try {
@@ -646,6 +648,8 @@ function App() {
               <DatasetPreview 
                 datasetFile={datasetFile}
                 dataset_path={trainableDatasetName || (datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null)}
+                onDatasetChoiceChange={setSelectedDatasetChoice}
+                selectedDatasetChoice={selectedDatasetChoice}
               />
               <TrainingParameters
                 modelName={modelName}

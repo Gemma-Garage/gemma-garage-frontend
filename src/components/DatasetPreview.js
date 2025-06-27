@@ -15,10 +15,14 @@ import {
   TextField, // Added TextField
   Tabs,
   Tab,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Slider,
 } from "@mui/material";
 import { API_BASE_URL } from "../api";
 
-const DatasetPreview = ({ datasetFile, dataset_path }) => {
+const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, selectedDatasetChoice }) => {
   const [previewData, setPreviewData] = useState([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [totalEntries, setTotalEntries] = useState(0);
@@ -32,7 +36,8 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
   const [totalAugmentedEntries, setTotalAugmentedEntries] = useState(0);
   const [activeTab, setActiveTab] = useState(0); // New state for active tab
   const [summary, setSummary] = useState(null); // New state for summary
-
+  const [datasetChoice, setDatasetChoice] = useState("original"); // 'original' or 'augmented'
+  const [qaPairsNbr, setQaPairsNbr] = useState(100);
 
   useEffect(() => {
     if (dataset_path) {
@@ -84,14 +89,12 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
       setErrorAugmenting("Please ensure a dataset is uploaded and a task prompt is provided.");
       return;
     }
-
     setIsAugmenting(true);
     setErrorAugmenting(null);
     setAugmentedDataPreview([]);
     setAugmentedDatasetGCSPath(null);
     setTotalAugmentedEntries(0);
     setSummary(null);
-
     try {
       const response = await fetch(`${API_BASE_URL}/dataset/augment-unified`, {
         method: "POST",
@@ -101,8 +104,8 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
         body: JSON.stringify({
           dataset_gcs_path: dataset_path,
           fine_tuning_task_prompt: fineTuningTaskPrompt,
-          model_choice: "gemini-1.5-flash", // Can be added later if needed
-          num_examples_to_generate: 50, // Can be added later
+          model_choice: "gemini-1.5-flash",
+          num_examples_to_generate: qaPairsNbr, // Use slider value
         }),
       });
       
@@ -110,7 +113,7 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
         dataset_gcs_path: dataset_path,
         fine_tuning_task_prompt: fineTuningTaskPrompt,
         model_choice: "gemini-1.5-flash",
-        num_examples_to_generate: 50,
+        num_examples_to_generate: qaPairsNbr,
       });
 
       if (!response.ok) {
@@ -196,6 +199,16 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
     }
   };
 
+  // Notify parent of dataset choice change (for fine-tuning)
+  useEffect(() => {
+    if (onDatasetChoiceChange) {
+      onDatasetChoiceChange(datasetChoice);
+    }
+  }, [datasetChoice, onDatasetChoiceChange]);
+
+  // Helper: is JSON file
+  const isJsonFile = datasetFile && datasetFile.name && datasetFile.name.split('.').pop().toLowerCase() === 'json';
+
   return (
     <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
       <Typography variant="h5" gutterBottom className="sessionName">
@@ -224,6 +237,20 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
               disabled={isAugmenting}
               variant="outlined"
             />
+            {/* Slider for QA pairs */}
+            <Box sx={{ mb: 2 }}>
+              <Typography gutterBottom>Number of QA pairs to generate: {qaPairsNbr}</Typography>
+              <Slider
+                value={qaPairsNbr}
+                onChange={(_, v) => setQaPairsNbr(v)}
+                step={100}
+                min={100}
+                max={500}
+                marks={[{value:100,label:'100'},{value:200,label:'200'},{value:300,label:'300'},{value:400,label:'400'},{value:500,label:'500'}]}
+                valueLabelDisplay="auto"
+                disabled={isAugmenting}
+              />
+            </Box>
             <Button
               variant="contained"
               onClick={handleGenerateAugmentedDataset}
@@ -232,8 +259,8 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
                 backgroundColor: "#6200ee",
                 "&:hover": { backgroundColor: "#3700b3" },
                 "&:disabled": { backgroundColor: "#e0e0e0" },
-                mb: 1, // Adjusted margin
-                mr: 1, // Added margin for spacing if other buttons are added
+                mb: 1,
+                mr: 1,
               }}
             >
               {isAugmenting ? <CircularProgress size={24} sx={{ color: "white"}} /> : "Generate Augmented Dataset"}
@@ -248,7 +275,20 @@ const DatasetPreview = ({ datasetFile, dataset_path }) => {
               </Alert>
             )}
           </Box>
-          
+          {/* Only show dataset choice if JSON file and augmentation exists */}
+          {isJsonFile && augmentedDatasetGCSPath && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Choose which dataset to use for fine-tuning:</Typography>
+              <RadioGroup
+                row
+                value={datasetChoice}
+                onChange={e => setDatasetChoice(e.target.value)}
+              >
+                <FormControlLabel value="original" control={<Radio />} label="Original Dataset" />
+                <FormControlLabel value="augmented" control={<Radio />} label="Augmented Dataset" />
+              </RadioGroup>
+            </Box>
+          )}
           <Box sx={{ width: '100%' }}>
             <Tabs
               value={activeTab}

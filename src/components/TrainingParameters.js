@@ -62,7 +62,10 @@ const modelOptions = [
   {value:"google/gemma-3-4b-it", label:"google/gemma-3-4b-it"},
   { value: "google/gemma-2b", label: "google/gemma-2b" },
   //{ value: "princeton-nlp/Sheared-LLaMA-1.3B", label: "princeton-nlp/Sheared-LLaMA-1.3B" },
-  { value: "google/gemma-2-2b-it", label: "google/gemma-2-2b-it" }
+    { value: "google/gemma-3n-E2B-it", label: "google/gemma-3n-E2B-it" },
+  { value: "google/gemma-3n-E4B-it", label: "google/gemma-3n-E4B-it" },
+  { value: "google/gemma-3n-E2B", label: "google/gemma-3n-E2B" },
+  { value: "google/gemma-3n-E4B", label: "google/gemma-3n-E4B" },
 ];
 
 // LoRA rank options
