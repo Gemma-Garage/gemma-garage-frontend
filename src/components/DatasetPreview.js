@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 import { API_BASE_URL } from "../api";
 
-const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, selectedDatasetChoice }) => {
+const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, selectedDatasetChoice, onAugmentedDatasetReady }) => {
   const [previewData, setPreviewData] = useState([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [totalEntries, setTotalEntries] = useState(0);
@@ -199,6 +199,16 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     }
   };
 
+  // Helper: is JSON file
+  const isJsonFile = datasetFile && datasetFile.name && datasetFile.name.split('.').pop().toLowerCase() === 'json';
+
+  // Only allow dataset choice if JSON file and augmentation exists, otherwise force to augmented
+  useEffect(() => {
+    if (!isJsonFile && augmentedDatasetGCSPath) {
+      setDatasetChoice('augmented');
+    }
+  }, [isJsonFile, augmentedDatasetGCSPath]);
+
   // Notify parent of dataset choice change (for fine-tuning)
   useEffect(() => {
     if (onDatasetChoiceChange) {
@@ -206,9 +216,16 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     }
   }, [datasetChoice, onDatasetChoiceChange]);
 
-  // Helper: is JSON file
-  const isJsonFile = datasetFile && datasetFile.name && datasetFile.name.split('.').pop().toLowerCase() === 'json';
+  // When augmentation completes, notify parent with the new file name
+  useEffect(() => {
+    if (augmentedDatasetGCSPath && datasetChoice === 'augmented' && onAugmentedDatasetReady) {
+      // Extract just the filename from the GCS path
+      const fileName = augmentedDatasetGCSPath.split('/').pop();
+      onAugmentedDatasetReady(fileName);
+    }
+  }, [augmentedDatasetGCSPath, datasetChoice, onAugmentedDatasetReady]);
 
+  // UI rendering
   return (
     <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
       <Typography variant="h5" gutterBottom className="sessionName">
@@ -286,6 +303,16 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
               >
                 <FormControlLabel value="original" control={<Radio />} label="Original Dataset" />
                 <FormControlLabel value="augmented" control={<Radio />} label="Augmented Dataset" />
+              </RadioGroup>
+            </Box>
+          )}
+          {/* If not JSON, only show the augmented option as a radio button, disabled original */}
+          {!isJsonFile && augmentedDatasetGCSPath && (
+            <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Choose which dataset to use for fine-tuning:</Typography>
+              <RadioGroup row value="augmented">
+                <FormControlLabel value="original" control={<Radio disabled />} label="Original Dataset" />
+                <FormControlLabel value="augmented" control={<Radio checked readOnly />} label="Augmented Dataset" />
               </RadioGroup>
             </Box>
           )}

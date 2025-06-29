@@ -66,6 +66,7 @@ function App() {
   const [selectedProjectData, setSelectedProjectData] = useState(null);
   const [trainableDatasetName, setTrainableDatasetName] = useState(null);
   const [selectedDatasetChoice, setSelectedDatasetChoice] = useState("original"); // 'original' or 'augmented'
+  const [augmentedDatasetFileName, setAugmentedDatasetFileName] = useState(null);
 
   // Add this handler function
   const handleEpochsChange = (value) => {
@@ -464,7 +465,9 @@ function App() {
 
     // Extract the filename from uploadStatus if available, otherwise use datasetFile.name
     let datasetPathForTraining;
-    if (uploadStatus.startsWith("Dataset uploaded: ")) {
+    if (selectedDatasetChoice === "augmented" && augmentedDatasetFileName) {
+        datasetPathForTraining = augmentedDatasetFileName;
+    } else if (uploadStatus.startsWith("Dataset uploaded: ")) {
         datasetPathForTraining = uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "");
     } else if (datasetFile) {
         datasetPathForTraining = datasetFile.name;
@@ -526,19 +529,8 @@ function App() {
         // Need to get the latest values, not the ones captured at setInterval creation.
         // This is a common pitfall. We'll use a functional update or ref for `lastLogTimestamp` inside `pollLogs`
         // or ensure `pollLogs` is redefined if `lastLogTimestamp` changes.
-        // For now, let's assume `pollLogs` correctly fetches `currentRequestId` and `lastLogTimestamp` from state.
-        // This will be handled by `lastLogTimestamp` being updated by `pollLogs` itself.
-        
-        // A simple way to ensure pollLogs uses the latest state values:
-        setCurrentRequestId(currentId => {
-          setLastLogTimestamp(currentTimestamp => {
-            if (currentId) { // Only poll if we have a request ID
-                 pollLogs(currentId, currentTimestamp);
-            }
-            return currentTimestamp; // No change to timestamp here, pollLogs updates it
-          });
-          return currentId; // No change to ID here
-        });
+        // For now, let's assume `pollLogs` correctly fetches the state.
+        pollLogs(currentRequestId, lastLogTimestamp);
 
       }, 5000); // Poll every 5 seconds
 
@@ -650,6 +642,7 @@ function App() {
                 dataset_path={trainableDatasetName || (datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null)}
                 onDatasetChoiceChange={setSelectedDatasetChoice}
                 selectedDatasetChoice={selectedDatasetChoice}
+                onAugmentedDatasetReady={setAugmentedDatasetFileName}
               />
               <TrainingParameters
                 modelName={modelName}
