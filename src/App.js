@@ -57,6 +57,8 @@ function App() {
   const [currentRequestId, setCurrentRequestId] = useState(null);
   const [lastLogTimestamp, setLastLogTimestamp] = useState(null);
   const pollingIntervalRef = useRef(null);
+  const requestIdRef = useRef(null);
+  const lastLogTimestampRef = useRef(null);
   const [progress, setProgress] = useState({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -429,14 +431,18 @@ function App() {
 
       if (data.latest_timestamp) {
         setLastLogTimestamp(data.latest_timestamp);
+        lastLogTimestampRef.current = data.latest_timestamp;
       } else if (newLossPointsForGraph.length > 0 && newLossPointsForGraph[newLossPointsForGraph.length - 1].rawTimestamp) {
         // If no explicit latest_timestamp, try to get from the last loss point
-        setLastLogTimestamp(newLossPointsForGraph[newLossPointsForGraph.length - 1].rawTimestamp);
+        const newTimestamp = newLossPointsForGraph[newLossPointsForGraph.length - 1].rawTimestamp;
+        setLastLogTimestamp(newTimestamp);
+        lastLogTimestampRef.current = newTimestamp;
       } else if (data.loss_values && data.loss_values.length > 0) {
         // Fallback: if no loss points but other messages came, use the timestamp of the last message
         const lastLogEntry = data.loss_values[data.loss_values.length - 1];
         if (lastLogEntry && lastLogEntry.timestamp) {
             setLastLogTimestamp(lastLogEntry.timestamp);
+            lastLogTimestampRef.current = lastLogEntry.timestamp;
         }
       }
       
@@ -480,7 +486,9 @@ function App() {
     setTrainingStatus("Submitting training job...");
     setLossData([]); // Clear previous loss data
     setLastLogTimestamp(null); // Reset last log timestamp
+    lastLogTimestampRef.current = null;
     setCurrentRequestId(null); // Reset request ID
+    requestIdRef.current = null;
     setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
     stopPollingLogs(); // Clear any existing polling interval
 
@@ -509,29 +517,19 @@ function App() {
 
       const data = await response.json();
       setTrainingStatus(`Training job submitted. Request ID: ${data.request_id}. Polling for logs...`);
+      
+      // Set state and refs
       setCurrentRequestId(data.request_id);
-      setLastLogTimestamp(new Date().toISOString()); // Start polling from now
+      requestIdRef.current = data.request_id;
+      const initialTimestamp = new Date().toISOString();
+      setLastLogTimestamp(initialTimestamp);
+      lastLogTimestampRef.current = initialTimestamp;
 
       // Start polling
       pollingIntervalRef.current = setInterval(() => {
-        // Pass currentRequestId and lastLogTimestamp to pollLogs
-        // Need to use a function form of setState or refs if pollLogs itself is not recreated with these values
-        // For simplicity, pollLogs will fetch these from state directly if they are updated correctly.
-        // However, setInterval captures the initial state. A better way is to pass them or use a ref.
-        
-        // Correct way to ensure pollLogs gets the latest state:
-        // Wrap the pollLogs call in a function that reads the latest state
-        // Or, ensure pollLogs is part of the component and has access to up-to-date state
-        // For now, we'll rely on pollLogs accessing the state, but this can be tricky with setInterval.
-        // A common pattern is to use a ref for the values or clear and set a new interval.
-        
-        // Let's pass them directly to ensure correctness
-        // Need to get the latest values, not the ones captured at setInterval creation.
-        // This is a common pitfall. We'll use a functional update or ref for `lastLogTimestamp` inside `pollLogs`
-        // or ensure `pollLogs` is redefined if `lastLogTimestamp` changes.
-        // For now, let's assume `pollLogs` correctly fetches the state.
-        pollLogs(currentRequestId, lastLogTimestamp);
-
+        if (requestIdRef.current) {
+          pollLogs(requestIdRef.current, lastLogTimestampRef.current);
+        }
       }, 5000); // Poll every 5 seconds
 
     } catch (error) {
