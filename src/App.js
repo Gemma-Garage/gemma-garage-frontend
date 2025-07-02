@@ -355,6 +355,15 @@ function App() {
       let newWeightsUrl = weightsUrl;
       const newLossPointsForGraph = []; // Collect only loss data points here
 
+      // --- Pretrain log debug ---
+      if (data.loss_values && Array.isArray(data.loss_values)) {
+        const pretrainLogs = extractPretrainLogs(data.loss_values);
+        if (pretrainLogs.length > 0) {
+          console.log('[PretrainStepProgress] Pretrain logs:', pretrainLogs);
+        }
+      }
+      // --- End pretrain log debug ---
+
       if (data.loss_values && Array.isArray(data.loss_values)) {
         data.loss_values.forEach(point => { // Iterate with forEach, map is not needed here for its return value
             // Process status and progress messages first
