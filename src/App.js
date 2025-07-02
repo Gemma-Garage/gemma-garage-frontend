@@ -32,6 +32,8 @@ import Footer from "./components/Footer";
 import AuthPage from "./components/AuthPage";
 import ProjectDashboard from "./components/ProjectDashboard";
 import CreateProjectDialog from "./components/CreateProjectDialog";
+import PretrainStepProgress from "./components/PretrainStepProgress";
+import { extractPretrainLogs, hasTrainingStarted } from "./utils/pretrainLogUtils";
 import "./style/App.css";
 
 ChartJS.register(
@@ -652,6 +654,10 @@ function App() {
                 onLearningRateChange={setLearningRate}
                 onLoraRankChange={setLoraRank}
               />
+              {/* Pre-training step progress bar: only show if not yet started training and there are pretrain logs */}
+              {lossData && extractPretrainLogs(lossData).length > 0 && !hasTrainingStarted(lossData) && (
+                <PretrainStepProgress logs={extractPretrainLogs(lossData)} />
+              )}
               <FinetuneControl 
                   onStart={startFinetuning} 
                   wsStatus={trainingStatus} // Ensure this prop is named consistently if FinetuneControl expects 'status' or 'trainingStatus'
