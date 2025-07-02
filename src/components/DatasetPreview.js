@@ -105,7 +105,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
           dataset_gcs_path: dataset_path,
           fine_tuning_task_prompt: fineTuningTaskPrompt,
           model_choice: "gemini-1.5-flash",
-          num_examples_to_generate: qaPairsNbr, // Use slider value
+          qa_pairs: qaPairsNbr, // Use slider value, match backend
         }),
       });
       
@@ -113,7 +113,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         dataset_gcs_path: dataset_path,
         fine_tuning_task_prompt: fineTuningTaskPrompt,
         model_choice: "gemini-1.5-flash",
-        num_examples_to_generate: qaPairsNbr,
+        qa_pairs: qaPairsNbr,
       });
 
       if (!response.ok) {
