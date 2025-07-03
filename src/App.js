@@ -366,6 +366,17 @@ function App() {
       // --- End pretrain log debug ---
 
       if (data.loss_values && Array.isArray(data.loss_values)) {
+        // Append all logs to allLogs state
+        setAllLogs(prevLogs => {
+          // Avoid duplicates by timestamp
+          const existingTimestamps = new Set(prevLogs.map(l => l.timestamp));
+          const newLogs = data.loss_values.filter(l => l.timestamp && !existingTimestamps.has(l.timestamp));
+          if (newLogs.length > 0) {
+            console.log('[App pollLogs] Adding new logs to allLogs:', newLogs);
+          }
+          return [...prevLogs, ...newLogs];
+        });
+        
         data.loss_values.forEach(point => { // Iterate with forEach, map is not needed here for its return value
             // Process status and progress messages first
             if (point && point.status_message) {
@@ -672,7 +683,8 @@ function App() {
                 console.log('[App render] allLogs:', allLogs);
                 // eslint-disable-next-line no-console
                 console.log('[App render] extractPretrainLogs(allLogs):', extractPretrainLogs(allLogs));
-                return lossData && extractPretrainLogs(allLogs).length > 0 && !hasTrainingStarted(allLogs) && (
+                // Show pretraining progress bar if there are pretrain logs and training hasn't started yet
+                return extractPretrainLogs(allLogs).length > 0 && !hasTrainingStarted(allLogs) && (
                   <PretrainStepProgress logs={extractPretrainLogs(allLogs)} />
                 );
               })()}
