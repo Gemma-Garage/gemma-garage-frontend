@@ -693,23 +693,23 @@ function App() {
                 onLearningRateChange={setLearningRate}
                 onLoraRankChange={setLoraRank}
               />
-              {/* Pre-training step progress bar: only show if not yet started training and there are pretrain logs */}
+              <FinetuneControl 
+                  onStart={startFinetuning} 
+                  wsStatus={trainingStatus} // Ensure this prop is named consistently if FinetuneControl expects 'status' or 'trainingStatus'
+                  progress={progress}
+              />
+              {/* Pre-training step progress bar: show if there are pretrain logs */}
               {(() => {
                 // Debug print for logs and extracted pretrain logs
                 // eslint-disable-next-line no-console
                 console.log('[App render] allLogs:', allLogs);
                 // eslint-disable-next-line no-console
                 console.log('[App render] extractPretrainLogs(allLogs):', extractPretrainLogs(allLogs));
-                // Show pretraining progress bar if there are pretrain logs and training hasn't started yet
-                return extractPretrainLogs(allLogs).length > 0 && !hasTrainingStarted(allLogs) && (
+                // Show pretraining progress bar if there are pretrain logs (keep visible even after training starts)
+                return extractPretrainLogs(allLogs).length > 0 && (
                   <PretrainStepProgress logs={extractPretrainLogs(allLogs)} />
                 );
-              })()}
-              <FinetuneControl 
-                  onStart={startFinetuning} 
-                  wsStatus={trainingStatus} // Ensure this prop is named consistently if FinetuneControl expects 'status' or 'trainingStatus'
-                  progress={progress}
-              /> 
+              })()} 
               <LossGraph lossData={lossData} />
               
               {/* Show download button if training is complete and we have a requestId */}
