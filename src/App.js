@@ -599,15 +599,6 @@ function App() {
     }
   };
 
-  React.useEffect(() => {
-    if (allLogs && allLogs.length > 0) {
-      // eslint-disable-next-line no-console
-      console.log('[App] allLogs:', allLogs);
-      // eslint-disable-next-line no-console
-      console.log('[App] extractPretrainLogs(allLogs):', extractPretrainLogs(allLogs));
-    }
-  }, [allLogs]);
-
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header 
@@ -675,9 +666,16 @@ function App() {
                 onLoraRankChange={setLoraRank}
               />
               {/* Pre-training step progress bar: only show if not yet started training and there are pretrain logs */}
-              {lossData && extractPretrainLogs(allLogs).length > 0 && !hasTrainingStarted(allLogs) && (
-                <PretrainStepProgress logs={extractPretrainLogs(allLogs)} />
-              )}
+              {(() => {
+                // Debug print for logs and extracted pretrain logs
+                // eslint-disable-next-line no-console
+                console.log('[App render] allLogs:', allLogs);
+                // eslint-disable-next-line no-console
+                console.log('[App render] extractPretrainLogs(allLogs):', extractPretrainLogs(allLogs));
+                return lossData && extractPretrainLogs(allLogs).length > 0 && !hasTrainingStarted(allLogs) && (
+                  <PretrainStepProgress logs={extractPretrainLogs(allLogs)} />
+                );
+              })()}
               <FinetuneControl 
                   onStart={startFinetuning} 
                   wsStatus={trainingStatus} // Ensure this prop is named consistently if FinetuneControl expects 'status' or 'trainingStatus'
