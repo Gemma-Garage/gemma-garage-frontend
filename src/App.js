@@ -599,6 +599,15 @@ function App() {
     }
   };
 
+  React.useEffect(() => {
+    if (allLogs && allLogs.length > 0) {
+      // eslint-disable-next-line no-console
+      console.log('[App] allLogs:', allLogs);
+      // eslint-disable-next-line no-console
+      console.log('[App] extractPretrainLogs(allLogs):', extractPretrainLogs(allLogs));
+    }
+  }, [allLogs]);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header 
