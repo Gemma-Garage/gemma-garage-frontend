@@ -351,6 +351,7 @@ function App() {
       }
 
       const data = await response.json();
+      console.log('[App pollLogs] Received data:', data); // Debug what we got from backend
       let latestStatusMessage = trainingStatus; 
       let trainingCompleted = false;
       let newWeightsUrl = weightsUrl;
@@ -366,11 +367,14 @@ function App() {
       // --- End pretrain log debug ---
 
       if (data.loss_values && Array.isArray(data.loss_values)) {
+        console.log('[App pollLogs] About to update allLogs with:', data.loss_values.length, 'logs');
         // Append all logs to allLogs state
         setAllLogs(prevLogs => {
+          console.log('[App pollLogs] Current allLogs length:', prevLogs.length);
           // Avoid duplicates by timestamp
           const existingTimestamps = new Set(prevLogs.map(l => l.timestamp));
           const newLogs = data.loss_values.filter(l => l.timestamp && !existingTimestamps.has(l.timestamp));
+          console.log('[App pollLogs] New logs to add:', newLogs.length);
           if (newLogs.length > 0) {
             console.log('[App pollLogs] Adding new logs to allLogs:', newLogs);
           }
