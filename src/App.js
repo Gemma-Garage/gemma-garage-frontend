@@ -71,6 +71,7 @@ function App() {
   const [trainableDatasetName, setTrainableDatasetName] = useState(null);
   const [selectedDatasetChoice, setSelectedDatasetChoice] = useState("original"); // 'original' or 'augmented'
   const [augmentedDatasetFileName, setAugmentedDatasetFileName] = useState(null);
+  const [allLogs, setAllLogs] = useState([]); // Store all logs for pretraining stepper
 
   // Add this handler function
   const handleEpochsChange = (value) => {
@@ -502,6 +503,7 @@ function App() {
     requestIdRef.current = null;
     setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
     stopPollingLogs(); // Clear any existing polling interval
+    setAllLogs([]); // Reset all logs for new job
 
     const payload = {
       model_name: modelName,
@@ -664,8 +666,8 @@ function App() {
                 onLoraRankChange={setLoraRank}
               />
               {/* Pre-training step progress bar: only show if not yet started training and there are pretrain logs */}
-              {lossData && extractPretrainLogs(lossData).length > 0 && !hasTrainingStarted(lossData) && (
-                <PretrainStepProgress logs={extractPretrainLogs(lossData)} />
+              {lossData && extractPretrainLogs(allLogs).length > 0 && !hasTrainingStarted(allLogs) && (
+                <PretrainStepProgress logs={extractPretrainLogs(allLogs)} />
               )}
               <FinetuneControl 
                   onStart={startFinetuning} 
