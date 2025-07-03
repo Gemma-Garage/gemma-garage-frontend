@@ -16,9 +16,13 @@ export default function PretrainStepProgress({ logs }) {
   if (logs && logs.length > 0) {
     for (let i = 0; i < logs.length; ++i) {
       const log = logs[i];
-      if (log.step && log.step > activeStep) {
-        activeStep = log.step;
-        statusMessage = log.status_message || "";
+      if (log.step && typeof log.step === "number") {
+        // Subtract 1 to match zero-based stepper
+        const stepIdx = Math.max(0, Math.min(PRETRAIN_STEPS.length - 1, log.step - 1));
+        if (stepIdx > activeStep) {
+          activeStep = stepIdx;
+          statusMessage = log.status_message || "";
+        }
       }
       // If training started, set to last step
       if (log.status_message && log.status_message.toLowerCase().includes("starting training")) {
@@ -26,6 +30,11 @@ export default function PretrainStepProgress({ logs }) {
         statusMessage = log.status_message;
       }
     }
+  }
+  // Debug print
+  if (logs && logs.length > 0) {
+    // eslint-disable-next-line no-console
+    console.log('[PretrainStepProgress] logs:', logs, 'activeStep:', activeStep);
   }
 
   return (
