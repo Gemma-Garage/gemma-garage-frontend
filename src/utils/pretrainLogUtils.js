@@ -7,12 +7,13 @@ export function extractPretrainLogs(lossValues) {
   );
 }
 
-// Utility to check if training has started (i.e., a log with 'Starting training')
+// Utility to check if training has started (i.e., a log with 'Training Start')
 export function hasTrainingStarted(lossValues) {
   if (!Array.isArray(lossValues)) return false;
   return lossValues.some(
     (log) =>
-      log.status_message &&
-      log.status_message.toLowerCase().includes("starting training")
+      log.step_name === "Training Start" ||
+      (log.status_message &&
+       log.status_message.toLowerCase().includes("starting training"))
   );
 }

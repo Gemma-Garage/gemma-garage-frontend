@@ -2,11 +2,12 @@ import React from "react";
 import { Box, Stepper, Step, StepLabel, Typography, Paper } from "@mui/material";
 
 const PRETRAIN_STEPS = [
+  "Job Submitted",
   "Job Instantiated",
   "Dataset Loading",
   "Model Loading",
   "Dataset Formatting",
-  "Training"
+  "Training Start"
 ];
 
 export default function PretrainStepProgress({ logs }) {
@@ -17,20 +18,26 @@ export default function PretrainStepProgress({ logs }) {
     for (let i = 0; i < logs.length; ++i) {
       const log = logs[i];
       if (log.step && typeof log.step === "number") {
-        // Subtract 1 to match zero-based stepper
-        const stepIdx = Math.max(0, Math.min(PRETRAIN_STEPS.length - 1, log.step - 1));
+        // Use step number directly as array index (backend uses 0-based indexing)
+        const stepIdx = Math.max(0, Math.min(PRETRAIN_STEPS.length - 1, log.step));
         if (stepIdx > activeStep) {
           activeStep = stepIdx;
           statusMessage = log.status_message || "";
         }
       }
       // If training started, set to last step
-      if (log.status_message && log.status_message.toLowerCase().includes("starting training")) {
+      if (log.step_name && log.step_name === "Training Start") {
         activeStep = PRETRAIN_STEPS.length - 1;
         statusMessage = log.status_message;
       }
     }
   }
+  
+  // Debug print
+  console.log('[PretrainStepProgress] Component received logs:', logs);
+  console.log('[PretrainStepProgress] Component logs length:', logs ? logs.length : 0);
+  console.log('[PretrainStepProgress] Component activeStep:', activeStep);
+  console.log('[PretrainStepProgress] Component statusMessage:', statusMessage);
   // Debug print
   if (logs && logs.length > 0) {
     // eslint-disable-next-line no-console

@@ -144,6 +144,7 @@ function App() {
         setLoraRank(4);
         setTrainingStatus("");
         setLossData([]);
+        setAllLogs([]); // Reset pretrain logs
         setWeightsUrl(null);
         setCurrentRequestId(null);
         setLastLogTimestamp(null);
@@ -166,6 +167,7 @@ function App() {
     // or reset them if they should be default on the dashboard / new project selection
     setTrainingStatus(""); // Reset training status
     setLossData([]);
+    setAllLogs([]); // Reset pretrain logs
     setWeightsUrl(null);
     setCurrentRequestId(null); // Important to clear this
     setLastLogTimestamp(null);
@@ -360,6 +362,17 @@ function App() {
       // --- Pretrain log debug ---
       if (data.loss_values && Array.isArray(data.loss_values)) {
         const pretrainLogs = extractPretrainLogs(data.loss_values);
+        console.log('[PretrainStepProgress] Raw logs received:', data.loss_values);
+        console.log('[PretrainStepProgress] Extracted pretrain logs:', pretrainLogs);
+        console.log('[PretrainStepProgress] Pretrain logs count:', pretrainLogs.length);
+        
+        // Debug step field analysis
+        data.loss_values.forEach((log, idx) => {
+          if (log.step !== undefined || log.step_name !== undefined) {
+            console.log(`[PretrainStepProgress] Log ${idx}: step=${log.step}, step_name="${log.step_name}", status_message="${log.status_message}"`);
+          }
+        });
+        
         if (pretrainLogs.length > 0) {
           console.log('[PretrainStepProgress] Pretrain logs:', pretrainLogs);
         }
@@ -549,9 +562,9 @@ function App() {
       // Set state and refs
       setCurrentRequestId(data.request_id);
       requestIdRef.current = data.request_id;
-      const initialTimestamp = new Date().toISOString();
-      setLastLogTimestamp(initialTimestamp);
-      lastLogTimestampRef.current = initialTimestamp;
+      // Start with null timestamp to fetch all logs from the beginning
+      setLastLogTimestamp(null);
+      lastLogTimestampRef.current = null;
 
       // Start polling
       pollingIntervalRef.current = setInterval(() => {
