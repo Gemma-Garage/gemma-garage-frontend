@@ -697,19 +697,8 @@ function App() {
                   onStart={startFinetuning} 
                   wsStatus={trainingStatus} // Ensure this prop is named consistently if FinetuneControl expects 'status' or 'trainingStatus'
                   progress={progress}
-              />
-              {/* Pre-training step progress bar: show if there are pretrain logs */}
-              {(() => {
-                // Debug print for logs and extracted pretrain logs
-                // eslint-disable-next-line no-console
-                console.log('[App render] allLogs:', allLogs);
-                // eslint-disable-next-line no-console
-                console.log('[App render] extractPretrainLogs(allLogs):', extractPretrainLogs(allLogs));
-                // Show pretraining progress bar if there are pretrain logs (keep visible even after training starts)
-                return extractPretrainLogs(allLogs).length > 0 && (
-                  <PretrainStepProgress logs={extractPretrainLogs(allLogs)} />
-                );
-              })()} 
+                  allLogs={allLogs}
+              /> 
               <LossGraph lossData={lossData} />
               
               {/* Show download button if training is complete and we have a requestId */}

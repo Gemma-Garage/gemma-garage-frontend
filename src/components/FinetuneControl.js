@@ -11,9 +11,11 @@ import {
   // TextField import removed
 } from "@mui/material";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PretrainStepProgress from "./PretrainStepProgress";
+import { extractPretrainLogs } from "../utils/pretrainLogUtils";
 import "../style/assets.css";
 
-const FinetuneControl = ({ onStart, wsStatus, progress }) => {
+const FinetuneControl = ({ onStart, wsStatus, progress, allLogs }) => {
   const [loading, setLoading] = useState(false);
   // const [epochs, setEpochs] = useState(1); // Removed state for epochs
 
@@ -74,7 +76,14 @@ const FinetuneControl = ({ onStart, wsStatus, progress }) => {
           )}
         </Button>
         
-        {/* Progress Bar */} 
+        {/* Pretraining Progress Bar */}
+        {extractPretrainLogs(allLogs || []).length > 0 && (
+          <Box sx={{ width: '100%', mt: 1 }}>
+            <PretrainStepProgress logs={extractPretrainLogs(allLogs || [])} />
+          </Box>
+        )}
+        
+        {/* Training Progress Bar */} 
         {loading && progress && progress.total_steps > 0 && (
           <Box sx={{ width: '100%', mt: 1, mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
