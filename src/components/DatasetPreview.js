@@ -45,6 +45,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       // Reset augmentation states if original dataset changes
       setAugmentedDataPreview([]);
       setAugmentedDatasetGCSPath(null);
+      onAugmentedDatasetReady(null); // Notify parent
       setErrorAugmenting(null);
       setFineTuningTaskPrompt("");
       setTotalAugmentedEntries(0);
@@ -96,7 +97,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     setTotalAugmentedEntries(0);
     setSummary(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/dataset/augment-gemma`, {
+      const response = await fetch(`${API_BASE_URL}/dataset/augment-unified`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -105,7 +106,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
           dataset_gcs_path: dataset_path,
           fine_tuning_task_prompt: fineTuningTaskPrompt,
           model_choice: "gemini-1.5-flash",
-          qa_pairs: qaPairsNbr, // Use slider value, match backend
+          qa_pairs: qaPairsNbr,
         }),
       });
       
@@ -118,7 +119,11 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: "Error augmenting dataset. Server response not JSON." }));
-        throw new Error(errorData.detail || `Error augmenting dataset. Status: ${response.status}`);
+        let detail = errorData.detail || `Error augmenting dataset. Status: ${response.status}`;
+        if (detail.includes("response contains a valid `Part`, but none was returned")) {
+            detail = "The data augmentation request was blocked by the content safety filter. Please try rephrasing your fine-tuning task prompt to be less sensitive.";
+        }
+        throw new Error(detail);
       }
 
       const data = await response.json();
@@ -126,6 +131,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         setAugmentedDataPreview(data.preview_augmented_data.preview || []);
         setTotalAugmentedEntries(data.preview_augmented_data.full_count || (data.preview_augmented_data.preview || []).length);
         setAugmentedDatasetGCSPath(data.augmented_dataset_gcs_path);
+        onAugmentedDatasetReady(data.augmented_dataset_gcs_path); // Notify parent
         setSummary(data.summary || null);
         // setActiveTab(1); // Switch to augmented data tab
       } else {

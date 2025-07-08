@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Paper, Button } from '@mui/material';
 import GetAppIcon from "@mui/icons-material/GetApp";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { API_BASE_URL } from "../api";
 
@@ -58,6 +58,7 @@ function ProjectPage({ currentUser }) {
 
           // Load project settings
           setTrainableDatasetName(projectData.trainableDatasetName || null);
+          setAugmentedDatasetFileName(projectData.augmentedDatasetFileName || null);
           setEpochs(projectData.epochs || 1);
           setLearningRate(projectData.learningRate || 0.0002);
           setLoraRank(projectData.loraRank || 4);
@@ -100,7 +101,7 @@ function ProjectPage({ currentUser }) {
     }
   };
 
-  const uploadDataset = async () => {
+  const handleUpload = async () => {
     if (!datasetFile) {
       alert("Please select a file.");
       return;
@@ -127,12 +128,28 @@ function ProjectPage({ currentUser }) {
       if (fileExt === 'pdf') {
         setUploadStatus("PDF processed successfully: " + data.file_location);
       } else {
-        // Assuming data.file_location is the GCS path like "your-bucket-name/your-file.json"
-        // We only need "your-file.json" for the training request.
         const fileName = data.file_location.split('/').pop();
         setUploadStatus(`Dataset uploaded: ${fileName}. Ready for training.`);
-        // Store the filename for training, or ensure datasetFile.name is correctly set if it's used directly
       }
+      // After a successful upload, set the trainable dataset name
+      setTrainableDatasetName(data.file_location);
+      // Clear any old augmented dataset state
+      setAugmentedDatasetFileName(null);
+
+      // Also save to Firestore
+      if (currentUser && projectId) {
+          try {
+              const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
+              await updateDoc(projectDocRef, {
+                  trainableDatasetName: data.file_location,
+                  augmentedDatasetFileName: null // Clear old augmented data
+              });
+              console.log("Project updated with new trainable dataset name.");
+          } catch (error) {
+              console.error("Error updating project with trainable dataset name:", error);
+          }
+      }
+
     } catch (error) {
       console.error("Error uploading file", error);
       setUploadStatus("Error: " + error.message);
@@ -310,22 +327,20 @@ function ProjectPage({ currentUser }) {
   };
 
   const startFinetuning = async () => {
-    if (!datasetFile && !uploadStatus.startsWith("Dataset uploaded")) {
-        alert("Please upload a dataset first.");
-        return;
-    }
-
-    // Extract the filename from uploadStatus if available, otherwise use datasetFile.name
     let datasetPathForTraining;
-    if (selectedDatasetChoice === "augmented" && augmentedDatasetFileName) {
+
+    if (selectedDatasetChoice === "augmented") {
+        if (!augmentedDatasetFileName) {
+            alert("Please generate an augmented dataset first, or select the original dataset.");
+            return;
+        }
         datasetPathForTraining = augmentedDatasetFileName;
-    } else if (uploadStatus.startsWith("Dataset uploaded: ")) {
-        datasetPathForTraining = uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "");
-    } else if (datasetFile) {
-        datasetPathForTraining = datasetFile.name;
     } else {
-        alert("Dataset not specified correctly.");
-        return;
+        if (!trainableDatasetName) {
+            alert("Please upload a dataset first.");
+            return;
+        }
+        datasetPathForTraining = trainableDatasetName;
     }
 
 
@@ -430,6 +445,22 @@ function ProjectPage({ currentUser }) {
     };
   }, []);
 
+  const handleAugmentedDatasetReady = async (augmentedGcsPath) => {
+    setAugmentedDatasetFileName(augmentedGcsPath);
+
+    if (currentUser && projectId) {
+        try {
+            const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
+            await updateDoc(projectDocRef, {
+                augmentedDatasetFileName: augmentedGcsPath
+            });
+            console.log("Project updated with augmented dataset path.");
+        } catch (error) {
+            console.error("Error updating project with augmented dataset path:", error);
+        }
+    }
+  };
+
   const handleEpochsChange = (value) => {
     if (value === "") {
       setEpochs("");
@@ -460,21 +491,21 @@ function ProjectPage({ currentUser }) {
           Project: {selectedProjectData.displayName} (ID: {projectId})
         </Typography>
         
-        <UploadDataset
-          datasetFile={datasetFile}
-          onFileChange={handleFileChange}
-          uploadStatus={uploadStatus}
-          status={uploadStatus} // Pass status for consistency if UploadDataset uses it
-          onUpload={uploadDataset}
-        />
-        
-        <DatasetPreview 
-          datasetFile={datasetFile}
-          dataset_path={trainableDatasetName || (datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null)}
-          onDatasetChoiceChange={setSelectedDatasetChoice}
-          selectedDatasetChoice={selectedDatasetChoice}
-          onAugmentedDatasetReady={setAugmentedDatasetFileName}
-        />
+        <Paper elevation={3} sx={{ padding: 3, marginBottom: 2 }}>
+          <Typography variant="h5" gutterBottom>Project Controls</Typography>
+          <UploadDataset 
+            datasetFile={datasetFile}
+            onFileChange={handleFileChange}
+            uploadStatus={uploadStatus}
+            onUpload={handleUpload}
+          />
+          <DatasetPreview 
+            dataset_path={trainableDatasetName}
+            onDatasetChoiceChange={setSelectedDatasetChoice}
+            selectedDatasetChoice={selectedDatasetChoice}
+            onAugmentedDatasetReady={handleAugmentedDatasetReady}
+          />
+        </Paper>
         
         <TrainingParameters
           modelName={modelName}

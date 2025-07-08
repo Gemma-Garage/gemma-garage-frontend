@@ -31,7 +31,7 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
-const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload, status }) => { // Added status prop
+const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) => {
   const [loading, setLoading] = useState(false);
   
   // Handle file selection
@@ -66,9 +66,6 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload, stat
     setLoading(false);
   };
 
-  // Use 'status' prop for the Alert display
-  const currentStatus = status || uploadStatus; 
-
   return (
     <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
       <Typography variant="h5" gutterBottom className="sessionName">
@@ -101,59 +98,31 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload, stat
             </Typography>
           </Box>
         )}
-        
+
         <Button
-          variant="contained"
-          color="primary"
           onClick={handleUpload}
           disabled={!datasetFile || loading}
+          variant="contained"
           sx={{ 
-            backgroundColor: "#6200ee", 
-            "&:hover": { backgroundColor: "#3700b3" },
-            minWidth: "150px" 
+            backgroundColor: "#4caf50", 
+            "&:hover": { backgroundColor: "#388e3c" },
+            color: 'white'
           }}
         >
-          {loading ? <CircularProgress size={24} color="inherit" /> : "Upload Dataset"}
+          {loading ? <CircularProgress size={24} /> : "Upload"}
         </Button>
-        
-        {/* Alert for displaying upload status */}
-        {currentStatus && (
+
+        {uploadStatus && (
           <Alert 
-            severity={
-              currentStatus.toLowerCase().includes("error") ? "error" : 
-              (currentStatus.toLowerCase().includes("successfully") || currentStatus.startsWith("Dataset uploaded:")) ? "success" : 
-              "info"
-            }
-            sx={{ width: "100%", mt: 2 }} 
-            icon={
-              (currentStatus.toLowerCase().includes("successfully") || currentStatus.startsWith("Dataset uploaded:")) ? 
-              <CheckCircleIcon fontSize="inherit" /> : 
-              undefined
-            }
+            severity={uploadStatus.startsWith("Error:") ? "error" : "success"}
+            sx={{ width: '100%', marginTop: 2 }}
           >
-            <AlertTitle>
-              {currentStatus.toLowerCase().includes("error") ? "Error" : 
-               (currentStatus.toLowerCase().includes("successfully") || currentStatus.startsWith("Dataset uploaded:")) ? "Success" : 
-               "Status"}
-            </AlertTitle>
-            {currentStatus}
+            <AlertTitle>{uploadStatus.startsWith("Error:") ? "Error" : "Success"}</AlertTitle>
+            {uploadStatus}
           </Alert>
         )}
-
-        <Typography variant="body2">
-            No dataset? Use sample {" "}
-            <Link 
-              href="https://drive.google.com/file/d/1EhLdwp54qjkNUBJCfOOEHwZIxB9TVpiB/view?usp=sharing" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              sx={{ fontWeight: "medium", color: "#0277bd", textDecoration: "underline" }}
-            >
-              dataset
-            </Link>
-      </Typography>
       </Box>
     </Paper>
-    
   );
 };
 
