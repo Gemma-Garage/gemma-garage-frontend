@@ -2,10 +2,11 @@
 import React from "react";
 import { AppBar, Toolbar, Typography, Link, Button, Box, useMediaQuery, IconButton } from "@mui/material";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { useNavigate, useLocation } from 'react-router-dom';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import DiamondIcon from '@mui/icons-material/Diamond';
-import DashboardIcon from '@mui/icons-material/Dashboard'; // Import DashboardIcon
-import { signOut } from 'firebase/auth'; // Import signOut
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import { signOut } from 'firebase/auth';
 import "../style/Header.css";
 
 const theme = createTheme({
@@ -19,17 +20,25 @@ const theme = createTheme({
   },
 });
 
-const Header = ({ currentUser, auth, selectedProjectId, onGoToDashboard }) => { // Added selectedProjectId and onGoToDashboard
+const Header = ({ currentUser, auth }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const isSmallScreen = useMediaQuery('(max-width:600px)');
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // User signed out, App.js will handle redirect or UI update
+      navigate('/login');
     } catch (error) {
       console.error("Error signing out: ", error);
     }
   };
+
+  const handleGoToDashboard = () => {
+    navigate('/home');
+  };
+
+  const isInProject = location.pathname.startsWith('/project/');
 
   return (
     <ThemeProvider theme={theme}>
@@ -51,10 +60,10 @@ const Header = ({ currentUser, auth, selectedProjectId, onGoToDashboard }) => { 
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {currentUser && selectedProjectId && (
+            {currentUser && isInProject && (
               <Button 
                 color="inherit" 
-                onClick={onGoToDashboard}
+                onClick={handleGoToDashboard}
                 startIcon={<DashboardIcon />}
                 sx={{ textTransform: 'none', mr: 2, fontWeight: 'bold', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)'} }}
               >
