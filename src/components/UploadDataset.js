@@ -34,9 +34,17 @@ const VisuallyHiddenInput = styled("input")({
 const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload, status }) => { // Added status prop
   const [loading, setLoading] = useState(false);
   
+  // Handle file selection
+  const handleFileSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (file && onFileChange) {
+      onFileChange(file);
+    }
+  };
+  
   // Determine file type icon
   const getFileTypeIcon = () => {
-    if (!datasetFile) return null;
+    if (!datasetFile || !datasetFile.name) return null;
     
     const extension = datasetFile.name.split('.').pop().toLowerCase();
     
@@ -78,10 +86,10 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload, stat
           }}
         >
           Select File
-          <VisuallyHiddenInput type="file" onChange={onFileChange} />
+          <VisuallyHiddenInput type="file" onChange={handleFileSelect} />
         </Button>
         
-        {datasetFile && (
+        {datasetFile && datasetFile.name && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Chip 
               icon={getFileTypeIcon()} 
