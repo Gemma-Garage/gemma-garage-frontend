@@ -119,12 +119,22 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload, stat
         {/* Alert for displaying upload status */}
         {currentStatus && (
           <Alert 
-            severity={currentStatus.toLowerCase().includes("error") ? "error" : currentStatus.toLowerCase().includes("successfully") ? "success" : "info"}
+            severity={
+              currentStatus.toLowerCase().includes("error") ? "error" : 
+              (currentStatus.toLowerCase().includes("successfully") || currentStatus.startsWith("Dataset uploaded:")) ? "success" : 
+              "info"
+            }
             sx={{ width: "100%", mt: 2 }} 
-            icon={currentStatus.toLowerCase().includes("successfully") ? <CheckCircleIcon fontSize="inherit" /> : undefined}
+            icon={
+              (currentStatus.toLowerCase().includes("successfully") || currentStatus.startsWith("Dataset uploaded:")) ? 
+              <CheckCircleIcon fontSize="inherit" /> : 
+              undefined
+            }
           >
             <AlertTitle>
-              {currentStatus.toLowerCase().includes("error") ? "Error" : currentStatus.toLowerCase().includes("successfully") ? "Success" : "Status"}
+              {currentStatus.toLowerCase().includes("error") ? "Error" : 
+               (currentStatus.toLowerCase().includes("successfully") || currentStatus.startsWith("Dataset uploaded:")) ? "Success" : 
+               "Status"}
             </AlertTitle>
             {currentStatus}
           </Alert>

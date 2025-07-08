@@ -13,6 +13,7 @@ import FinetuneControl from '../components/FinetuneControl';
 import LossGraph from '../components/LossGraph';
 import TestLLM from '../components/TestLLM';
 import DatasetPreview from '../components/DatasetPreview';
+import PretrainStepProgress from '../components/PretrainStepProgress';
 import { extractPretrainLogs, hasTrainingStarted } from "../utils/pretrainLogUtils";
 
 function ProjectPage({ currentUser }) {
@@ -83,17 +84,29 @@ function ProjectPage({ currentUser }) {
   }, [currentUser, projectId, navigate]);
 
   // All the handler functions from App.js
-  const handleFileChange = (file) => {
-    setDatasetFile(file);
-    setUploadStatus("");
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Reset any previous upload status
+      setUploadStatus("");
+      
+      // Validate file type
+      const fileExt = file.name.split('.').pop().toLowerCase();
+      if (!['json', 'csv', 'pdf', 'ppt', 'pptx', 'docx', 'html', 'txt'].includes(fileExt)) {
+        alert("Please upload a JSON, CSV, PDF, PPT, PPTX, DOCX, HTML, or TXT file.");
+        return;
+      }
+      
+      setDatasetFile(file);
+    }
   };
 
   const uploadDataset = async () => {
     if (!datasetFile) {
-      alert("Please select a dataset file first.");
+      alert("Please select a file.");
       return;
     }
-
+    
     const formData = new FormData();
     formData.append("file", datasetFile);
 
@@ -103,18 +116,27 @@ function ProjectPage({ currentUser }) {
         method: "POST",
         body: formData,
       });
-
-      if (response.ok) {
-        const result = await response.json();
-        setUploadStatus(`Dataset uploaded: ${result.filename}. Ready for training.`);
-        setTrainableDatasetName(result.filename);
-      } else {
+      
+      if (!response.ok) {
         const errorData = await response.json();
-        setUploadStatus(`Upload failed: ${errorData.detail || "Unknown error"}`);
+        throw new Error(errorData.detail || "Error uploading file");
+      }
+      
+      const data = await response.json();
+      
+      const fileExt = datasetFile.name.split('.').pop().toLowerCase();
+      if (fileExt === 'pdf') {
+        setUploadStatus("PDF processed successfully: " + data.file_location);
+      } else {
+        // Assuming data.file_location is the GCS path like "your-bucket-name/your-file.json"
+        // We only need "your-file.json" for the training request.
+        const fileName = data.file_location.split('/').pop();
+        setUploadStatus(`Dataset uploaded: ${fileName}. Ready for training.`);
+        // Store the filename for training, or ensure datasetFile.name is correctly set if it's used directly
       }
     } catch (error) {
-      console.error("Error uploading dataset:", error);
-      setUploadStatus(`Upload failed: ${error.message}`);
+      console.error("Error uploading file", error);
+      setUploadStatus("Error: " + error.message);
     }
   };
 
@@ -209,7 +231,7 @@ function ProjectPage({ currentUser }) {
                             newProg.total_steps = point.total_steps;
                         }
                         if (point.current_epoch !== undefined) {
-                            newProg.current_epoch = point.epoch;
+                            newProg.current_epoch = point.current_epoch; // Ensure this matches the backend field name, e.g., 'epoch' or 'current_epoch'
                         }
                         if (point.total_epochs !== undefined) {
                             newProg.total_epochs = point.total_epochs;
@@ -294,49 +316,57 @@ function ProjectPage({ currentUser }) {
         return;
     }
 
+    // Extract the filename from uploadStatus if available, otherwise use datasetFile.name
     let datasetPathForTraining;
-    if (uploadStatus.startsWith("Dataset uploaded: ")) {
-      datasetPathForTraining = uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "");
-    } else if (trainableDatasetName) {
-      datasetPathForTraining = trainableDatasetName;
-    } else if (augmentedDatasetFileName && selectedDatasetChoice === "augmented") {
-      datasetPathForTraining = augmentedDatasetFileName;
+    if (selectedDatasetChoice === "augmented" && augmentedDatasetFileName) {
+        datasetPathForTraining = augmentedDatasetFileName;
+    } else if (uploadStatus.startsWith("Dataset uploaded: ")) {
+        datasetPathForTraining = uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "");
+    } else if (datasetFile) {
+        datasetPathForTraining = datasetFile.name;
     } else {
-      alert("No valid dataset found for training.");
-      return;
+        alert("Dataset not specified correctly.");
+        return;
     }
 
-    const requestData = {
+
+    setTrainingStatus("Submitting training job...");
+    setLossData([]); // Clear previous loss data
+    setLastLogTimestamp(null); // Reset last log timestamp
+    lastLogTimestampRef.current = null;
+    setCurrentRequestId(null); // Reset request ID
+    requestIdRef.current = null;
+    setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 }); // Reset progress
+    stopPollingLogs(); // Clear any existing polling interval
+    setAllLogs([]); // Reset all logs for new job
+
+    const payload = {
       model_name: modelName,
-      dataset_path: datasetPathForTraining,
-      epochs: parseInt(epochs, 10) || 1,
-      learning_rate: parseFloat(learningRate),
-      lora_rank: parseInt(loraRank, 10),
-      dataset_choice: selectedDatasetChoice
+      dataset_path: datasetPathForTraining, // Use the extracted/stored filename
+      epochs: epochs,
+      learning_rate: learningRate,
+      lora_rank: loraRank,
+      dataset_choice: selectedDatasetChoice, // Pass the dataset choice (original/augmented)
     };
-
+    console.log("Starting fine-tuning with payload:", payload);
     try {
-      setTrainingStatus("Starting fine-tuning...");
-      setLossData([]);
-      setAllLogs([]);
-      setProgress({ current_step: 0, total_steps: 0, current_epoch: 0, total_epochs: 0 });
-      setWeightsUrl(null);
-      stopPollingLogs();
-
       const response = await fetch(`${API_BASE_URL}/finetune/train`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to start fine-tuning");
+        throw new Error(errorData.detail || "Failed to start training job");
       }
 
       const data = await response.json();
       setTrainingStatus(`Training job submitted. Request ID: ${data.request_id}. Polling for logs...`);
       
+      // Set state and refs
       setCurrentRequestId(data.request_id);
       requestIdRef.current = data.request_id;
       // Start with null timestamp to fetch all logs from the beginning
@@ -348,7 +378,7 @@ function ProjectPage({ currentUser }) {
         if (requestIdRef.current) {
           pollLogs(requestIdRef.current, lastLogTimestampRef.current);
         }
-      }, 5000);
+      }, 5000); // Poll every 5 seconds
 
     } catch (error) {
       console.error("Error starting fine-tuning:", error);
@@ -435,18 +465,13 @@ function ProjectPage({ currentUser }) {
           datasetFile={datasetFile}
           onFileChange={handleFileChange}
           uploadStatus={uploadStatus}
-          status={uploadStatus}
+          status={uploadStatus} // Pass status for consistency if UploadDataset uses it
           onUpload={uploadDataset}
         />
         
         <DatasetPreview 
           datasetFile={datasetFile}
-          dataset_path={
-            trainableDatasetName || 
-            (datasetFile && uploadStatus.startsWith("Dataset uploaded: ") 
-              ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") 
-              : undefined)
-          }
+          dataset_path={trainableDatasetName || (datasetFile ? (uploadStatus.startsWith("Dataset uploaded: ") ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : datasetFile.name) : null)}
           onDatasetChoiceChange={setSelectedDatasetChoice}
           selectedDatasetChoice={selectedDatasetChoice}
           onAugmentedDatasetReady={setAugmentedDatasetFileName}
@@ -462,6 +487,19 @@ function ProjectPage({ currentUser }) {
           onLearningRateChange={setLearningRate}
           onLoraRankChange={setLoraRank}
         />
+        
+        {/* Pre-training step progress bar: only show if not yet started training and there are pretrain logs */}
+        {(() => {
+          // Debug print for logs and extracted pretrain logs
+          // eslint-disable-next-line no-console
+          console.log('[App render] allLogs:', allLogs);
+          // eslint-disable-next-line no-console
+          console.log('[App render] extractPretrainLogs(allLogs):', extractPretrainLogs(allLogs));
+          // Show pretraining progress bar if there are pretrain logs and training hasn't started yet
+          return extractPretrainLogs(allLogs).length > 0 && !hasTrainingStarted(allLogs) && (
+            <PretrainStepProgress logs={extractPretrainLogs(allLogs)} />
+          );
+        })()}
         
         <FinetuneControl 
           onStart={startFinetuning}
