@@ -100,24 +100,33 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) =>
         )}
 
         <Button
+          variant="contained"
           onClick={handleUpload}
           disabled={!datasetFile || loading}
-          variant="contained"
           sx={{ 
-            backgroundColor: "#4caf50", 
-            "&:hover": { backgroundColor: "#388e3c" },
-            color: 'white'
+            backgroundColor: "#6200ee", 
+            "&:hover": { backgroundColor: "#3700b3" } 
           }}
         >
-          {loading ? <CircularProgress size={24} /> : "Upload"}
+          {loading ? (
+            <>
+              <CircularProgress size={24} color="inherit" sx={{ marginRight: 1 }} />
+              Uploading...
+            </>
+          ) : (
+            "Upload Dataset"
+          )}
         </Button>
-
+        
         {uploadStatus && (
           <Alert 
-            severity={uploadStatus.startsWith("Error:") ? "error" : "success"}
-            sx={{ width: '100%', marginTop: 2 }}
+            severity={uploadStatus.toLowerCase().includes("error") ? "error" : "success"}
+            iconMapping={{
+              success: <CheckCircleIcon fontSize="inherit" />,
+            }}
+            sx={{ width: "100%" }}
           >
-            <AlertTitle>{uploadStatus.startsWith("Error:") ? "Error" : "Success"}</AlertTitle>
+            <AlertTitle>{uploadStatus.toLowerCase().includes("error") ? "Error" : "Success"}</AlertTitle>
             {uploadStatus}
           </Alert>
         )}

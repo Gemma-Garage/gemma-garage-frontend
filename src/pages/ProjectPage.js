@@ -518,19 +518,6 @@ function ProjectPage({ currentUser }) {
           onLoraRankChange={setLoraRank}
         />
         
-        {/* Pre-training step progress bar: only show if not yet started training and there are pretrain logs */}
-        {(() => {
-          // Debug print for logs and extracted pretrain logs
-          // eslint-disable-next-line no-console
-          console.log('[App render] allLogs:', allLogs);
-          // eslint-disable-next-line no-console
-          console.log('[App render] extractPretrainLogs(allLogs):', extractPretrainLogs(allLogs));
-          // Show pretraining progress bar if there are pretrain logs and training hasn't started yet
-          return extractPretrainLogs(allLogs).length > 0 && !hasTrainingStarted(allLogs) && (
-            <PretrainStepProgress logs={extractPretrainLogs(allLogs)} />
-          );
-        })()}
-        
         <FinetuneControl 
           onStart={startFinetuning}
           wsStatus={trainingStatus}
