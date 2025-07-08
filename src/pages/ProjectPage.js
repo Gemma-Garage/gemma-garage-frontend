@@ -84,8 +84,7 @@ function ProjectPage({ currentUser }) {
   }, [currentUser, projectId, navigate]);
 
   // All the handler functions from App.js
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  const handleFileChange = (file) => {
     if (file) {
       // Reset any previous upload status
       setUploadStatus("");
