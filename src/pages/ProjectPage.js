@@ -441,7 +441,12 @@ function ProjectPage({ currentUser }) {
         
         <DatasetPreview 
           datasetFile={datasetFile}
-          dataset_path={trainableDatasetName || (datasetFile ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") : null)}
+          dataset_path={
+            trainableDatasetName || 
+            (datasetFile && uploadStatus.startsWith("Dataset uploaded: ") 
+              ? uploadStatus.replace("Dataset uploaded: ", "").replace(". Ready for training.", "") 
+              : undefined)
+          }
           onDatasetChoiceChange={setSelectedDatasetChoice}
           selectedDatasetChoice={selectedDatasetChoice}
           onAugmentedDatasetReady={setAugmentedDatasetFileName}

@@ -40,7 +40,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   const [qaPairsNbr, setQaPairsNbr] = useState(100);
 
   useEffect(() => {
-    if (dataset_path) {
+    if (dataset_path && dataset_path !== 'undefined' && dataset_path !== 'null') {
       loadOriginalDatasetPreview();
       // Reset augmentation states if original dataset changes
       setAugmentedDataPreview([]);
@@ -52,7 +52,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   }, [dataset_path]);
 
   const loadOriginalDatasetPreview = async () => {
-    if (!dataset_path) return;
+    if (!dataset_path || dataset_path === 'undefined' || dataset_path === 'null') return;
     
     setLoadingPreview(true);
     try {
