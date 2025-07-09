@@ -31,7 +31,7 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
-const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) => {
+const UploadDataset = ({ datasetFile, trainableDatasetName, onFileChange, uploadStatus, onUpload }) => {
   const [loading, setLoading] = useState(false);
   
   // Handle file selection
@@ -43,10 +43,10 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) =>
   };
   
   // Determine file type icon
-  const getFileTypeIcon = () => {
-    if (!datasetFile || !datasetFile.name) return null;
+  const getFileTypeIcon = (fileName) => {
+    if (!fileName) return null;
     
-    const extension = datasetFile.name.split('.').pop().toLowerCase();
+    const extension = fileName.split('.').pop().toLowerCase();
     
     switch (extension) {
       case 'pdf':
@@ -65,6 +65,9 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) =>
     await onUpload();
     setLoading(false);
   };
+
+  const displayFileName = datasetFile?.name || (trainableDatasetName ? trainableDatasetName.split('/').pop() : null);
+  const displayFileSize = datasetFile?.size;
 
   return (
     <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
@@ -86,16 +89,18 @@ const UploadDataset = ({ datasetFile, onFileChange, uploadStatus, onUpload }) =>
           <VisuallyHiddenInput type="file" onChange={handleFileSelect} />
         </Button>
         
-        {datasetFile && datasetFile.name && (
+        {displayFileName && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Chip 
-              icon={getFileTypeIcon()} 
-              label={datasetFile.name}
+              icon={getFileTypeIcon(displayFileName)} 
+              label={displayFileName}
               variant="outlined" 
             />
-            <Typography variant="caption">
-              {datasetFile.size ? `(${(datasetFile.size / 1024).toFixed(2)} KB)` : ''}
-            </Typography>
+            {displayFileSize && (
+              <Typography variant="caption">
+                {`(${(displayFileSize / 1024).toFixed(2)} KB)`}
+              </Typography>
+            )}
           </Box>
         )}
 

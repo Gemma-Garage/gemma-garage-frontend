@@ -495,6 +495,7 @@ function ProjectPage({ currentUser }) {
           <Typography variant="h5" gutterBottom>Project Controls</Typography>
           <UploadDataset 
             datasetFile={datasetFile}
+            trainableDatasetName={trainableDatasetName}
             onFileChange={handleFileChange}
             uploadStatus={uploadStatus}
             onUpload={handleUpload}
