@@ -506,6 +506,12 @@ function ProjectPage({ currentUser }) {
           Project: {selectedProjectData.displayName} (ID: {projectId})
         </Typography>
         
+        {/* Hugging Face Integration at the top */}
+        <HuggingFaceSettings 
+          currentUser={currentUser} 
+          projectId={projectId}
+        />
+        
         <Paper elevation={3} sx={{ padding: 3, marginBottom: 2 }}>
           <Typography variant="h5" gutterBottom>Project Controls</Typography>
           <UploadDataset 
@@ -569,7 +575,6 @@ function ProjectPage({ currentUser }) {
           currentRequestId={currentRequestId} 
           currentBaseModel={modelName}
         />
-        <HuggingFaceSettings currentUser={currentUser} />
       </div>
     </div>
   );

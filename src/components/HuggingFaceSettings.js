@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { API_BASE_URL } from '../api';
 
-const HuggingFaceSettings = ({ currentUser }) => {
+const HuggingFaceSettings = ({ currentUser, projectId }) => {
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,6 +31,19 @@ const HuggingFaceSettings = ({ currentUser }) => {
 
   useEffect(() => {
     checkConnectionStatus();
+    
+    // Check for OAuth callback success parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const hfConnected = urlParams.get('hf_connected');
+    if (hfConnected === 'true') {
+      // Remove the parameter from URL
+      const newUrl = new URL(window.location);
+      newUrl.searchParams.delete('hf_connected');
+      window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+      
+      // Recheck connection status after successful OAuth
+      setTimeout(checkConnectionStatus, 1000);
+    }
   }, []);
 
   const checkConnectionStatus = async () => {
@@ -52,23 +65,10 @@ const HuggingFaceSettings = ({ currentUser }) => {
     }
   };
 
-  const handleConnect = async () => {
-    try {
-      // Get the OAuth URL from the backend
-      const response = await fetch(`${API_BASE_URL}/oauth/huggingface/login`, {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Redirect to Hugging Face OAuth
-        window.location.href = data.oauth_url;
-      } else {
-        setError('Failed to initiate OAuth login');
-      }
-    } catch (err) {
-      setError('Failed to connect to Hugging Face');
-    }
+  const handleConnect = () => {
+    // Redirect to the HF OAuth login endpoint with project ID as request_id
+    const loginUrl = `${API_BASE_URL}/huggingface/login${projectId ? `?request_id=${projectId}` : ''}`;
+    window.location.href = loginUrl;
   };
 
   const handleDisconnect = async () => {
@@ -217,9 +217,23 @@ const HuggingFaceSettings = ({ currentUser }) => {
             variant="contained"
             onClick={handleConnect}
             disabled={loading}
-            sx={{ mb: 2 }}
+            sx={{ 
+              mb: 2,
+              bgcolor: '#FF6B35',
+              '&:hover': { bgcolor: '#E55A2B' },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 3,
+              py: 1.5
+            }}
           >
-            Sign in with Hugging Face
+            <img 
+              src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg" 
+              alt="Hugging Face"
+              style={{ width: 20, height: 20 }}
+            />
+            Connect to Hugging Face
           </Button>
           <Typography variant="body2" color="text.secondary">
             Click the button above to securely connect your Hugging Face account using OAuth.
