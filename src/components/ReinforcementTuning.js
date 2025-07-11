@@ -18,7 +18,7 @@ const ReinforcementTuning = () => {
     setIngestionResult(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/ingest`, {
+      const response = await fetch(`${API_BASE_URL}/ingest/ingest`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -48,7 +48,7 @@ const ReinforcementTuning = () => {
       <Typography variant="body1" sx={{ mb: 2 }}>
         Enter the URL of a GitHub repository to ingest its content for fine-tuning a coding agent.
       </Typography>
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
         <TextField
           fullWidth
           label="GitHub Repository URL"
@@ -61,7 +61,7 @@ const ReinforcementTuning = () => {
           variant="contained"
           onClick={handleIngest}
           disabled={loading || !repoUrl}
-          sx={{ height: '56px' }}
+          sx={{ height: '56px', flexShrink: 0 }}
         >
           {loading ? <CircularProgress size={24} /> : "Ingest"}
         </Button>
