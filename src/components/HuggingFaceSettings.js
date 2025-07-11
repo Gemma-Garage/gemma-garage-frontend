@@ -48,18 +48,32 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
 
   const checkConnectionStatus = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/oauth/huggingface/status`, {
+      console.log('Checking HF connection status...');
+      console.log('Current cookies:', document.cookie);
+      
+      const response = await fetch(`${API_BASE_URL}/huggingface/status`, {
         credentials: 'include' // Important for session cookies
       });
+      
+      console.log('HF status response:', response.status, response.statusText);
+      console.log('Response headers:', [...response.headers.entries()]);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('HF status data:', data);
         setConnectionStatus(data);
+        setError(null); // Clear any previous errors
       } else {
+        console.error('HF status check failed:', response.status, response.statusText);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('HF status error response:', errorText);
         setConnectionStatus({ connected: false });
+        setError(`Connection check failed: ${response.status} ${response.statusText}`);
       }
     } catch (err) {
       console.error('Error checking HF connection:', err);
-      setError('Failed to check connection status');
+      setError(`Failed to check connection status: ${err.message}`);
+      setConnectionStatus({ connected: false });
     } finally {
       setLoading(false);
     }
@@ -68,16 +82,18 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
   const handleConnect = () => {
     // Redirect to the HF OAuth login endpoint with project ID as request_id
     const loginUrl = `${API_BASE_URL}/huggingface/login${projectId ? `?request_id=${projectId}` : ''}`;
+    console.log('Redirecting to OAuth login:', loginUrl);
     window.location.href = loginUrl;
   };
 
   const handleDisconnect = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/oauth/huggingface/logout`, {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/huggingface/logout`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
       });
-      
+
       if (response.ok) {
         setConnectionStatus({ connected: false });
         setError(null);
@@ -85,21 +101,22 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
         setError('Failed to disconnect');
       }
     } catch (err) {
-      setError('Failed to disconnect from Hugging Face');
+      setError('Failed to disconnect');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleUploadModel = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/oauth/huggingface/upload_model`, {
+      const response = await fetch(`${API_BASE_URL}/huggingface/upload_model`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Important for session cookies
         body: JSON.stringify({
-          user_id: currentUser?.uid || 'anonymous',
           model_name: uploadForm.modelName,
           request_id: uploadForm.requestId,
           description: uploadForm.description,
@@ -133,7 +150,7 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
 
   if (loading) {
     return (
-      <Paper elevation={3} sx={{ p: 3, textAlign: 'center' }}>
+      <Paper elevation={3} sx={{ p: 3, textAlign: 'center', mb: 2 }}>
         <CircularProgress />
         <Typography sx={{ mt: 2 }}>Loading Hugging Face settings...</Typography>
       </Paper>
@@ -141,44 +158,21 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
   }
 
   return (
-    <Paper elevation={3} sx={{ p: 3 }}>
+    <Paper elevation={3} sx={{ p: 3, mb: 2 }}>
       <Typography variant="h6" gutterBottom>
         🤗 Hugging Face Integration
       </Typography>
       
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="body1" gutterBottom>
-          Connect your Hugging Face account to upload your fine-tuned models and use HF Inference API.
-        </Typography>
-      </Box>
-
       {connectionStatus?.connected ? (
         <Box>
           <Alert severity="success" sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="body2">
-                  Connected as <Chip label={connectionStatus.username} size="small" color="primary" />
-                </Typography>
-                {connectionStatus.user_info && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    {connectionStatus.user_info.name} ({connectionStatus.user_info.email})
-                    {connectionStatus.user_info.is_pro && ' • Pro User'}
-                  </Typography>
-                )}
-                {connectionStatus.expires_at && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    Token expires: {new Date(connectionStatus.expires_at).toLocaleString()}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
+            ✅ Connected to Hugging Face as <strong>{connectionStatus.username}</strong>
           </Alert>
 
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -210,6 +204,9 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
         </Box>
       ) : (
         <Box>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Connect your Hugging Face account to upload your fine-tuned models and use HF Inference API.
+          </Alert>
           <Alert severity="info" sx={{ mb: 2 }}>
             Your Hugging Face account is not connected.
           </Alert>
@@ -260,13 +257,13 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
               value={uploadForm.requestId}
               onChange={(e) => setUploadForm({ ...uploadForm, requestId: e.target.value })}
               sx={{ mb: 2 }}
-              helperText="The request ID from your fine-tuning job"
+              helperText="The fine-tuning request ID containing your model"
             />
             <TextField
               fullWidth
-              label="Description"
               multiline
               rows={3}
+              label="Description"
               value={uploadForm.description}
               onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
               sx={{ mb: 2 }}
@@ -278,13 +275,15 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
                   onChange={(e) => setUploadForm({ ...uploadForm, private: e.target.checked })}
                 />
               }
-              label="Private repository"
+              label="Make repository private"
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
-          <Button
+          <Button onClick={() => setUploadDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
             onClick={handleUploadModel}
             variant="contained"
             disabled={!uploadForm.modelName || !uploadForm.requestId || loading}
