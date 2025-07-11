@@ -18,10 +18,12 @@ import { API_BASE_URL } from '../api';
 
 const HuggingFaceTestPage = () => {
   const [connectionStatus, setConnectionStatus] = useState(null);
+  const [configStatus, setConfigStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    checkConfigStatus();
     checkConnectionStatus();
     
     // Check for OAuth callback success parameter
@@ -34,6 +36,18 @@ const HuggingFaceTestPage = () => {
       setTimeout(checkConnectionStatus, 1000);
     }
   }, []);
+
+  const checkConfigStatus = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/huggingface/config`);
+      if (response.ok) {
+        const data = await response.json();
+        setConfigStatus(data);
+      }
+    } catch (err) {
+      console.error('Error checking HF config:', err);
+    }
+  };
 
   const checkConnectionStatus = async () => {
     setLoading(true);
@@ -105,6 +119,43 @@ const HuggingFaceTestPage = () => {
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
+        )}
+
+        {configStatus && (
+          <Card variant="outlined" sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                🔧 OAuth Configuration Status
+              </Typography>
+              <Stack spacing={1}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip 
+                    label={`Client ID: ${configStatus.client_id_configured ? 'Configured' : 'Missing'}`}
+                    color={configStatus.client_id_configured ? 'success' : 'error'}
+                    size="small"
+                  />
+                  {configStatus.client_id_preview && (
+                    <Typography variant="caption" color="text.secondary">
+                      ({configStatus.client_id_preview})
+                    </Typography>
+                  )}
+                </Box>
+                <Chip 
+                  label={`Client Secret: ${configStatus.client_secret_configured ? 'Configured' : 'Missing'}`}
+                  color={configStatus.client_secret_configured ? 'success' : 'error'}
+                  size="small"
+                />
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Redirect URI:</strong> {configStatus.redirect_uri}
+                </Typography>
+                {(!configStatus.client_id_configured || !configStatus.client_secret_configured) && (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    OAuth is not fully configured. Please set the HUGGINGFACE_CLIENT_ID and HUGGINGFACE_CLIENT_SECRET environment variables.
+                  </Alert>
+                )}
+              </Stack>
+            </CardContent>
+          </Card>
         )}
 
         {connectionStatus ? (
