@@ -24,6 +24,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import ProjectPage from "./pages/ProjectPage";
+import ProjectRouter from "./pages/ProjectRouter";
 
 import "./style/App.css";
 
@@ -55,10 +56,10 @@ function AppContent() {
             } 
           />
           <Route 
-            path="/project/:projectId" 
+            path="/project/:projectId/*"
             element={
               <ProtectedRoute>
-                <ProjectPage currentUser={currentUser} />
+                <ProjectRouter currentUser={currentUser} />
               </ProtectedRoute>
             } 
           />
