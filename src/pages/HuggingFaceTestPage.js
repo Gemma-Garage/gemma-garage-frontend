@@ -26,14 +26,20 @@ const HuggingFaceTestPage = () => {
     checkConfigStatus();
     checkConnectionStatus();
     
-    // Check for OAuth callback success parameter
+    // Check for OAuth callback parameters
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get('success');
+    const error = urlParams.get('error');
+    
     if (success === 'true') {
       // Remove the success parameter from URL
       window.history.replaceState({}, document.title, window.location.pathname);
       // Recheck connection status after successful OAuth
       setTimeout(checkConnectionStatus, 1000);
+    } else if (error) {
+      setError(`OAuth error: ${decodeURIComponent(error)}`);
+      // Remove the error parameter from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
