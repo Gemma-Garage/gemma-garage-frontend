@@ -48,7 +48,7 @@ const ReinforcementTuning = () => {
       <Typography variant="body1" sx={{ mb: 2 }}>
         Enter the URL of a GitHub repository to ingest its content for fine-tuning a coding agent.
       </Typography>
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
         <TextField
           fullWidth
           label="GitHub Repository URL"
@@ -61,7 +61,6 @@ const ReinforcementTuning = () => {
           variant="contained"
           onClick={handleIngest}
           disabled={loading || !repoUrl}
-          sx={{ height: '56px', flexShrink: 0 }}
         >
           {loading ? <CircularProgress size={24} /> : "Ingest"}
         </Button>
