@@ -1,19 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Button } from '@mui/material';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { API_BASE_URL, API_INFERENCE_BASE_URL, WS_BASE_URL } from '../api';
+import UploadDataset from '../components/UploadDataset';
+import DatasetPreview from '../components/DatasetPreview';
+import TestLLM from '../components/TestLLM';
+import TestLLMWithHF from '../components/TestLLMWithHF';
+import HuggingFaceSettings from '../components/HuggingFaceSettings';
+import { Container, Typography, Box, Button, TextField, Paper, Grid, Alert, CircularProgress, LinearProgress, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import GetAppIcon from "@mui/icons-material/GetApp";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../firebase";
-import { API_BASE_URL } from "../api";
 
 // Import components
-import UploadDataset from '../components/UploadDataset';
 import TrainingParameters from '../components/TrainingParameters';
 import FinetuneControl from '../components/FinetuneControl';
 import LossGraph from '../components/LossGraph';
-import TestLLM from '../components/TestLLM';
-import DatasetPreview from '../components/DatasetPreview';
-import PretrainStepProgress from '../components/PretrainStepProgress';
 import { extractPretrainLogs, hasTrainingStarted } from "../utils/pretrainLogUtils";
 
 function ProjectPage({ currentUser }) {
@@ -549,6 +550,12 @@ function ProjectPage({ currentUser }) {
         )}
         
         <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
+        <TestLLMWithHF 
+          currentUser={currentUser}
+          currentRequestId={currentRequestId} 
+          currentBaseModel={modelName}
+        />
+        <HuggingFaceSettings currentUser={currentUser} />
       </div>
     </div>
   );
