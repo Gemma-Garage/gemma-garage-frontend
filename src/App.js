@@ -25,6 +25,7 @@ import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import ProjectPage from "./pages/ProjectPage";
 import ProjectRouter from "./pages/ProjectRouter";
+import HuggingFaceTestPage from "./pages/HuggingFaceTestPage";
 
 import "./style/App.css";
 
@@ -47,6 +48,7 @@ function AppContent() {
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', padding: '16px' }}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/huggingface-test" element={<HuggingFaceTestPage />} />
           <Route 
             path="/home" 
             element={

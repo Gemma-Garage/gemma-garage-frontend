@@ -35,7 +35,7 @@ const HuggingFaceSettings = ({ currentUser }) => {
 
   const checkConnectionStatus = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/huggingface/status`, {
+      const response = await fetch(`${API_BASE_URL}/oauth/huggingface/status`, {
         credentials: 'include' // Important for session cookies
       });
       if (response.ok) {
@@ -52,26 +52,54 @@ const HuggingFaceSettings = ({ currentUser }) => {
     }
   };
 
-  const handleConnect = () => {
-    // Redirect to the HF OAuth login endpoint provided by attach_huggingface_oauth
-    window.location.href = `${API_BASE_URL}/oauth/huggingface/login`;
+  const handleConnect = async () => {
+    try {
+      // Get the OAuth URL from the backend
+      const response = await fetch(`${API_BASE_URL}/oauth/huggingface/login`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Redirect to Hugging Face OAuth
+        window.location.href = data.oauth_url;
+      } else {
+        setError('Failed to initiate OAuth login');
+      }
+    } catch (err) {
+      setError('Failed to connect to Hugging Face');
+    }
   };
 
-  const handleDisconnect = () => {
-    // Redirect to the HF OAuth logout endpoint provided by attach_huggingface_oauth
-    window.location.href = `${API_BASE_URL}/oauth/huggingface/logout`;
+  const handleDisconnect = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/oauth/huggingface/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        setConnectionStatus({ connected: false });
+        setError(null);
+      } else {
+        setError('Failed to disconnect');
+      }
+    } catch (err) {
+      setError('Failed to disconnect from Hugging Face');
+    }
   };
 
   const handleUploadModel = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/huggingface/upload_model`, {
+      const response = await fetch(`${API_BASE_URL}/oauth/huggingface/upload_model`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Important for session cookies
         body: JSON.stringify({
+          user_id: currentUser?.uid || 'anonymous',
           model_name: uploadForm.modelName,
           request_id: uploadForm.requestId,
           description: uploadForm.description,

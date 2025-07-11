@@ -43,7 +43,7 @@ const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
           return;
         }
 
-        const hfResponse = await fetch(`${API_BASE_URL}/huggingface/inference`, {
+        const hfResponse = await fetch(`${API_BASE_URL}/oauth/huggingface/inference`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

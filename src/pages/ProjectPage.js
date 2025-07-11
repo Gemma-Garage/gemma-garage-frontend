@@ -44,6 +44,20 @@ function ProjectPage({ currentUser }) {
   const requestIdRef = useRef(null);
   const lastLogTimestampRef = useRef(null);
 
+  // Check for OAuth callback success
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('hf_connected') === 'true') {
+      // Clear the URL parameter
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      // Show success message
+      setUploadStatus("Successfully connected to Hugging Face!");
+      setTimeout(() => setUploadStatus(""), 3000);
+    }
+  }, []);
+
   // Load project data on mount
   useEffect(() => {
     const loadProject = async () => {
