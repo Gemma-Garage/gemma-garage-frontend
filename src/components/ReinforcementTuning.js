@@ -56,11 +56,20 @@ const ReinforcementTuning = () => {
           value={repoUrl}
           onChange={(e) => setRepoUrl(e.target.value)}
           disabled={loading}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              height: '56px', // Match the button height
+            },
+            '& .MuiInputLabel-root': {
+              lineHeight: '38px', // Adjust label position
+            },
+          }}
         />
         <Button
           variant="contained"
           onClick={handleIngest}
           disabled={loading || !repoUrl}
+          sx={{ height: '56px', flexShrink: 0 }}
         >
           {loading ? <CircularProgress size={24} /> : "Ingest"}
         </Button>
