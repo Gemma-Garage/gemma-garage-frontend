@@ -70,15 +70,6 @@ const Header = ({ currentUser, auth }) => {
                 Dashboard
               </Button>
             )}
-            {currentUser && (
-              <Button 
-                color="inherit" 
-                onClick={() => navigate('/huggingface-test')}
-                sx={{ textTransform: 'none', mr: 2, fontWeight: 'bold', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)'} }}
-              >
-                🤗 HF Test
-              </Button>
-            )}
             {currentUser ? (
               <>
                 <Typography sx={{ mr: 2, color: 'white' }}>
