@@ -8,6 +8,7 @@ import DatasetPreview from '../components/DatasetPreview';
 import TestLLM from '../components/TestLLM';
 import TestLLMWithHF from '../components/TestLLMWithHF';
 import HuggingFaceSettings from '../components/HuggingFaceSettings';
+import HuggingFaceUpload from '../components/HuggingFaceUpload';
 import { Container, Typography, Box, Button, TextField, Paper, Grid, Alert, CircularProgress, LinearProgress, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import GetAppIcon from "@mui/icons-material/GetApp";
 
@@ -39,6 +40,7 @@ function ProjectPage({ currentUser }) {
   const [selectedDatasetChoice, setSelectedDatasetChoice] = useState("original");
   const [augmentedDatasetFileName, setAugmentedDatasetFileName] = useState(null);
   const [allLogs, setAllLogs] = useState([]);
+  const [hfConnectionStatus, setHfConnectionStatus] = useState(null);
 
   const pollingIntervalRef = useRef(null);
   const requestIdRef = useRef(null);
@@ -510,6 +512,7 @@ function ProjectPage({ currentUser }) {
         <HuggingFaceSettings 
           currentUser={currentUser} 
           projectId={projectId}
+          onConnectionStatusChange={setHfConnectionStatus}
         />
         
         <Paper elevation={3} sx={{ padding: 3, marginBottom: 2 }}>
@@ -568,6 +571,14 @@ function ProjectPage({ currentUser }) {
             </Button>
           </Paper>
         )}
+        
+        {/* HuggingFace Upload Component - appears after download when training is complete */}
+        <HuggingFaceUpload 
+          currentRequestId={currentRequestId}
+          trainingStatus={trainingStatus}
+          modelName={modelName}
+          connectionStatus={hfConnectionStatus}
+        />
         
         <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
         <TestLLMWithHF 
