@@ -30,19 +30,27 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
   });
 
   useEffect(() => {
-    checkConnectionStatus();
-    
-    // Check for OAuth callback success parameter
+    // Check for OAuth callback success parameter and session token
     const urlParams = new URLSearchParams(window.location.search);
     const hfConnected = urlParams.get('hf_connected');
-    if (hfConnected === 'true') {
-      // Remove the parameter from URL
+    const sessionToken = urlParams.get('session_token');
+    
+    if (hfConnected === 'true' && sessionToken) {
+      // Store session token in localStorage for API calls
+      localStorage.setItem('hf_session_token', sessionToken);
+      console.log('Stored HF session token from OAuth callback:', sessionToken);
+      
+      // Remove the parameters from URL
       const newUrl = new URL(window.location);
       newUrl.searchParams.delete('hf_connected');
+      newUrl.searchParams.delete('session_token');
       window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
       
       // Recheck connection status after successful OAuth
       setTimeout(checkConnectionStatus, 1000);
+    } else {
+      // Regular check on component mount
+      checkConnectionStatus();
     }
   }, []);
 
@@ -51,8 +59,22 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
       console.log('Checking HF connection status...');
       console.log('Current cookies:', document.cookie);
       
+      // Get session token from localStorage
+      const sessionToken = localStorage.getItem('hf_session_token');
+      console.log('Session token from localStorage:', sessionToken);
+      
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Add session token to headers if available
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/huggingface/status`, {
-        credentials: 'include' // Important for session cookies
+        credentials: 'include', // Important for session cookies
+        headers
       });
       
       console.log('HF status response:', response.status, response.statusText);
@@ -89,12 +111,27 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
   const handleDisconnect = async () => {
     try {
       setLoading(true);
+      
+      // Get session token from localStorage
+      const sessionToken = localStorage.getItem('hf_session_token');
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Add session token to headers if available
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/huggingface/logout`, {
         method: 'POST',
         credentials: 'include',
+        headers
       });
 
       if (response.ok) {
+        // Clear stored session token
+        localStorage.removeItem('hf_session_token');
         setConnectionStatus({ connected: false });
         setError(null);
       } else {
@@ -110,11 +147,21 @@ const HuggingFaceSettings = ({ currentUser, projectId }) => {
   const handleUploadModel = async () => {
     try {
       setLoading(true);
+      
+      // Get session token from localStorage
+      const sessionToken = localStorage.getItem('hf_session_token');
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Add session token to headers if available
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/huggingface/upload_model`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include', // Important for session cookies
         body: JSON.stringify({
           model_name: uploadForm.modelName,

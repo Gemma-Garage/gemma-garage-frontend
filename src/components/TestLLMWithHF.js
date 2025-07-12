@@ -43,11 +43,20 @@ const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
           return;
         }
 
+        // Get session token from localStorage
+        const sessionToken = localStorage.getItem('hf_session_token');
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        
+        // Add session token to headers if available
+        if (sessionToken) {
+          headers['Authorization'] = `Bearer ${sessionToken}`;
+        }
+
         const hfResponse = await fetch(`${API_BASE_URL}/oauth/huggingface/inference`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
           credentials: 'include', // Important for session cookies
           body: JSON.stringify({
             model_name: hfModelName,
