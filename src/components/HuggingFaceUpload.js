@@ -22,6 +22,8 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [permissionsInfo, setPermissionsInfo] = useState(null);
+  const [checkingPermissions, setCheckingPermissions] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     modelName: '',
     description: 'Fine-tuned model from Gemma Garage',
@@ -42,6 +44,40 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
       }));
     }
   }, [currentRequestId, trainingStatus, modelName]);
+
+  const checkTokenPermissions = async () => {
+    try {
+      setCheckingPermissions(true);
+      setError(null);
+      
+      const sessionToken = localStorage.getItem('hf_session_token');
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/huggingface/token-permissions`, {
+        headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to check permissions');
+      }
+
+      const data = await response.json();
+      setPermissionsInfo(data);
+      
+    } catch (err) {
+      setError(`Failed to check permissions: ${err.message}`);
+    } finally {
+      setCheckingPermissions(false);
+    }
+  };
 
   const handleUploadModel = async () => {
     try {
@@ -113,8 +149,54 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
         
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
+            <Typography variant="body2" component="div">
+              <strong>Error:</strong> {error}
+            </Typography>
+            {error.includes("don't have the rights") && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" display="block">
+                  💡 <strong>Troubleshooting tips:</strong>
+                </Typography>
+                <ul style={{ fontSize: '0.75rem', margin: '4px 0', paddingLeft: '16px' }}>
+                  <li>Check your HF token has 'write-repos' permissions</li>
+                  <li>Verify your HuggingFace account is verified</li>
+                  <li>Try creating a test repository manually on HuggingFace.co first</li>
+                </ul>
+              </Box>
+            )}
           </Alert>
+        )}
+
+        {isConnected && (
+          <Box sx={{ mb: 2 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={checkTokenPermissions}
+              disabled={checkingPermissions}
+              sx={{ mb: 1 }}
+            >
+              {checkingPermissions ? <CircularProgress size={16} /> : 'Check Token Permissions'}
+            </Button>
+            
+            {permissionsInfo && (
+              <Alert 
+                severity={permissionsInfo.can_create_repos ? "success" : "warning"} 
+                sx={{ mt: 1, fontSize: '0.875rem' }}
+              >
+                <Typography variant="body2">
+                  <strong>User:</strong> {permissionsInfo.user} | 
+                  <strong> Role:</strong> {permissionsInfo.permissions.role} | 
+                  <strong> Can create repos:</strong> {permissionsInfo.can_create_repos ? "✅ Yes" : "❌ No"}
+                </Typography>
+                {!permissionsInfo.can_create_repos && (
+                  <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                    ⚠️ Your token doesn't have write permissions. Please reconnect with 'write-repos' scope.
+                  </Typography>
+                )}
+              </Alert>
+            )}
+          </Box>
         )}
 
         {!isConnected ? (
