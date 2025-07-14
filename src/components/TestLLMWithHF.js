@@ -54,7 +54,7 @@ const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
           headers['Authorization'] = `Bearer ${sessionToken}`;
         }
 
-        const hfResponse = await fetch(`${API_BASE_URL}/oauth/huggingface/inference`, {
+        const hfResponse = await fetch(`${API_BASE_URL}/huggingface/inference`, {
           method: 'POST',
           headers,
           credentials: 'include', // Important for session cookies

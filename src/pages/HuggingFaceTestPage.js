@@ -80,13 +80,30 @@ const HuggingFaceTestPage = () => {
   };
 
   const handleConnect = () => {
-    // Redirect to the HF OAuth login endpoint
-    window.location.href = `${API_BASE_URL}/oauth/huggingface/login`;
+    // Fix: Use /huggingface/login instead of /oauth/huggingface/login
+    window.location.href = `${API_BASE_URL}/huggingface/login`;
   };
 
-  const handleDisconnect = () => {
-    // Redirect to the HF OAuth logout endpoint
-    window.location.href = `${API_BASE_URL}/oauth/huggingface/logout`;
+  const handleDisconnect = async () => {
+    // Fix: Use async fetch for POST logout endpoint instead of redirect
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/huggingface/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (response.ok) {
+        localStorage.removeItem('hf_session_token');
+        await checkConnectionStatus(); // Refresh the connection status
+      } else {
+        setError('Failed to disconnect.');
+      }
+    } catch (err) {
+      console.error('Error disconnecting:', err);
+      setError('Failed to disconnect.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDate = (dateString) => {

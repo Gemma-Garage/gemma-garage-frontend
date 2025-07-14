@@ -93,7 +93,7 @@ const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange 
   };
 
   const handleConnect = () => {
-    // Redirect to the HF OAuth login endpoint with project ID as request_id
+    // Fix: Use the correct OAuth endpoint - /huggingface/login instead of /oauth/huggingface/login
     const loginUrl = `${API_BASE_URL}/huggingface/login${projectId ? `?request_id=${projectId}` : ''}`;
     console.log('Redirecting to OAuth login:', loginUrl);
     window.location.href = loginUrl;
