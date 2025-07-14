@@ -2,8 +2,151 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase'; // auth removed as currentUser is prop
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
-import { Container, Typography, Button, List, ListItem, ListItemButton, ListItemText, Paper, CircularProgress, Box, Divider } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import { 
+  Container, 
+  Typography, 
+  Button, 
+  Paper, 
+  CircularProgress, 
+  Box, 
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Chip,
+  Avatar,
+  IconButton,
+  Tooltip
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { 
+  AddCircleOutline as AddIcon,
+  SmartToy as AIIcon,
+  Schedule as TimeIcon,
+  PlayArrow as PlayIcon,
+  MoreVert as MoreIcon,
+  TrendingUp as TrendingIcon
+} from '@mui/icons-material';
+
+// Styled components for modern dashboard design
+const DashboardContainer = styled(Container)(({ theme }) => ({
+  marginTop: theme.spacing(4),
+  marginBottom: theme.spacing(4),
+}));
+
+const HeaderSection = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: theme.spacing(4),
+  [theme.breakpoints.down('sm')]: {
+    flexDirection: 'column',
+    gap: theme.spacing(2),
+    alignItems: 'stretch',
+  }
+}));
+
+const DashboardTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: 700,
+  color: '#1a1a1a',
+  fontSize: '2.5rem',
+  [theme.breakpoints.down('sm')]: {
+    fontSize: '2rem',
+    textAlign: 'center',
+  }
+}));
+
+const CreateButton = styled(Button)(({ theme }) => ({
+  background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+  borderRadius: '12px',
+  padding: '12px 24px',
+  fontSize: '1rem',
+  fontWeight: 600,
+  textTransform: 'none',
+  color: '#ffffff',
+  boxShadow: '0 4px 16px rgba(33, 150, 243, 0.3)',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 6px 20px rgba(33, 150, 243, 0.4)',
+  }
+}));
+
+const ProjectCard = styled(Card)(({ theme }) => ({
+  height: '100%',
+  borderRadius: '16px',
+  border: '1px solid #f0f0f0',
+  boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
+  transition: 'all 0.3s ease',
+  cursor: 'pointer',
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: '0 8px 28px rgba(0, 0, 0, 0.15)',
+    borderColor: '#2196f3',
+  }
+}));
+
+const ProjectAvatar = styled(Avatar)(({ theme }) => ({
+  background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+  width: 48,
+  height: 48,
+  marginBottom: theme.spacing(2),
+}));
+
+const ProjectTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: 600,
+  fontSize: '1.25rem',
+  color: '#1a1a1a',
+  marginBottom: theme.spacing(1),
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}));
+
+const ProjectDescription = styled(Typography)(({ theme }) => ({
+  color: '#666666',
+  fontSize: '0.875rem',
+  marginBottom: theme.spacing(2),
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+}));
+
+const StatusChip = styled(Chip)(({ status, theme }) => {
+  const getStatusColor = () => {
+    switch (status) {
+      case 'training': return { bg: '#fff3e0', color: '#f57c00', border: '#ffcc02' };
+      case 'completed': return { bg: '#e8f5e8', color: '#2e7d32', border: '#4caf50' };
+      case 'ready': return { bg: '#e3f2fd', color: '#1976d2', border: '#2196f3' };
+      default: return { bg: '#f5f5f5', color: '#666666', border: '#cccccc' };
+    }
+  };
+  
+  const colors = getStatusColor();
+  return {
+    backgroundColor: colors.bg,
+    color: colors.color,
+    border: `1px solid ${colors.border}`,
+    fontWeight: 500,
+    fontSize: '0.75rem',
+  };
+});
+
+const EmptyState = styled(Box)(({ theme }) => ({
+  textAlign: 'center',
+  padding: theme.spacing(6),
+  backgroundColor: '#fafafa',
+  borderRadius: '16px',
+  border: '2px dashed #e0e0e0',
+}));
+
+const EmptyStateIcon = styled(AIIcon)(({ theme }) => ({
+  fontSize: '4rem',
+  color: '#cccccc',
+  marginBottom: theme.spacing(2),
+}));
 
 const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, currentUser }) => {
   const [projects, setProjects] = useState([]);
@@ -45,63 +188,195 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
     }
   }, [currentUser]); // Re-run when currentUser changes
 
+  // Helper functions
+  const getProjectStatus = (project) => {
+    if (project.trainingStatusMessage?.includes('training')) return 'training';
+    if (project.weightsUrl) return 'completed';
+    if (project.requestId) return 'ready';
+    return 'created';
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'training': return 'Training';
+      case 'completed': return 'Completed';
+      case 'ready': return 'Ready';
+      default: return 'Created';
+    }
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'Never';
+    const date = timestamp.seconds ? new Date(timestamp.seconds * 1000) : new Date(timestamp);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  const getModelDisplayName = (baseModel) => {
+    if (!baseModel) return 'Unknown Model';
+    return baseModel.split('/').pop() || baseModel;
+  };
+
   if (loading) {
     return (
-      <Container sx={{ textAlign: 'center', mt: 5 }}>
-        <CircularProgress />
-        <Typography>Loading projects...</Typography>
-      </Container>
+      <DashboardContainer maxWidth="lg">
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center',
+          minHeight: '400px',
+          gap: 2
+        }}>
+          <CircularProgress size={48} />
+          <Typography variant="h6" color="text.secondary">
+            Loading your projects...
+          </Typography>
+        </Box>
+      </DashboardContainer>
     );
   }
 
   if (error) {
     return (
-      <Container sx={{ textAlign: 'center', mt: 5 }}>
-        <Typography color="error">{error}</Typography>
-      </Container>
+      <DashboardContainer maxWidth="lg">
+        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px' }}>
+          <Typography variant="h6" color="error" gutterBottom>
+            Unable to load projects
+          </Typography>
+          <Typography color="text.secondary">
+            {error}
+          </Typography>
+        </Paper>
+      </DashboardContainer>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h4" component="h1">
+    <DashboardContainer maxWidth="lg">
+      <HeaderSection>
+        <Box>
+          <DashboardTitle variant="h3">
             My Projects
+          </DashboardTitle>
+          <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 1 }}>
+            Manage and track your AI model fine-tuning projects
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddCircleOutlineIcon />}
-            onClick={handleCreateProjectOpen} // This will be connected in App.js
-          >
-            New Project
-          </Button>
         </Box>
-        <Divider sx={{ mb: 2 }} />
-        {projects.length === 0 ? (
-          <Typography sx={{ textAlign: 'center', mt: 3, color: 'text.secondary' }}>
-            You don't have any projects yet. Click "New Project" to get started!
+        <CreateButton
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleCreateProjectOpen}
+        >
+          New Project
+        </CreateButton>
+      </HeaderSection>
+
+      {projects.length === 0 ? (
+        <EmptyState>
+          <EmptyStateIcon />
+          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: '#666666' }}>
+            No projects yet
           </Typography>
-        ) : (
-          <List>
-            {projects.map((project) => (
-              <ListItem 
-                disablePadding
-                key={project.id} 
-                divider
-              >
-                <ListItemButton onClick={() => handleProjectSelect(project.id)}>
-                  <ListItemText 
-                    primary={project.displayName || 'Untitled Project'} 
-                    secondary={`ID: ${project.id} ${project.requestId ? `(Job: ${project.requestId})` : ''} - Base: ${project.baseModel || 'N/A'} - Last Trained: ${project.lastTrainedAt ? new Date(project.lastTrainedAt.seconds * 1000).toLocaleDateString() : 'Never'}`}
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        )}
-      </Paper>
-    </Container>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            Create your first AI model fine-tuning project to get started
+          </Typography>
+          <CreateButton
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleCreateProjectOpen}
+          >
+            Create Your First Project
+          </CreateButton>
+        </EmptyState>
+      ) : (
+        <Grid container spacing={3}>
+          {projects.map((project) => {
+            const status = getProjectStatus(project);
+            return (
+              <Grid item xs={12} sm={6} md={4} key={project.id}>
+                <ProjectCard onClick={() => handleProjectSelect(project.id)}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                      <ProjectAvatar>
+                        <AIIcon />
+                      </ProjectAvatar>
+                      <Tooltip title="More options">
+                        <IconButton size="small" sx={{ color: '#666666' }}>
+                          <MoreIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                    
+                    <ProjectTitle>
+                      {project.displayName || 'Untitled Project'}
+                    </ProjectTitle>
+                    
+                    <ProjectDescription>
+                      Fine-tuning {getModelDisplayName(project.baseModel)} • 
+                      {project.epochs || 1} epoch{(project.epochs || 1) !== 1 ? 's' : ''}
+                    </ProjectDescription>
+
+                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                      <StatusChip 
+                        status={status}
+                        label={getStatusLabel(status)}
+                        size="small"
+                      />
+                      {project.requestId && (
+                        <Chip 
+                          label={`Job ${project.requestId.slice(-6)}`}
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontSize: '0.75rem' }}
+                        />
+                      )}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#666666' }}>
+                      <TimeIcon sx={{ fontSize: '1rem' }} />
+                      <Typography variant="caption">
+                        Last trained: {formatDate(project.lastTrainedAt)}
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                  
+                  <CardActions sx={{ px: 3, pb: 2 }}>
+                    <Button 
+                      startIcon={<PlayIcon />}
+                      size="small"
+                      sx={{ 
+                        color: '#2196f3',
+                        fontWeight: 600,
+                        textTransform: 'none'
+                      }}
+                    >
+                      Open Project
+                    </Button>
+                    {status === 'completed' && (
+                      <Button 
+                        startIcon={<TrendingIcon />}
+                        size="small"
+                        sx={{ 
+                          color: '#4caf50',
+                          fontWeight: 600,
+                          textTransform: 'none'
+                        }}
+                      >
+                        View Results
+                      </Button>
+                    )}
+                  </CardActions>
+                </ProjectCard>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
+    </DashboardContainer>
   );
 };
 

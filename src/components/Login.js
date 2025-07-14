@@ -10,48 +10,48 @@ import { Email, Lock, Visibility, VisibilityOff, Login as LoginIcon } from '@mui
 const ModernTextField = styled(TextField)(({ theme }) => ({
   marginBottom: theme.spacing(2.5),
   '& .MuiOutlinedInput-root': {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#fafafa',
     borderRadius: '12px',
     transition: 'all 0.3s ease',
     '& fieldset': {
-      borderColor: 'rgba(255, 255, 255, 0.3)',
+      borderColor: '#e0e0e0',
       borderWidth: '1px',
     },
     '&:hover fieldset': {
-      borderColor: 'rgba(255, 255, 255, 0.5)',
+      borderColor: '#2196f3',
     },
     '&.Mui-focused fieldset': {
-      borderColor: '#ffffff',
+      borderColor: '#1976d2',
       borderWidth: '2px',
     },
     '&.Mui-focused': {
-      backgroundColor: 'rgba(255, 255, 255, 0.15)',
-      transform: 'translateY(-2px)',
-      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+      backgroundColor: '#ffffff',
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(33, 150, 243, 0.15)',
     }
   },
   '& .MuiInputLabel-root': {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#666666',
     fontWeight: 500,
     '&.Mui-focused': {
-      color: '#ffffff',
+      color: '#1976d2',
     }
   },
   '& .MuiOutlinedInput-input': {
-    color: '#ffffff',
+    color: '#1a1a1a',
     padding: '16px 14px',
     fontSize: '1rem',
     '&::placeholder': {
-      color: 'rgba(255, 255, 255, 0.6)',
+      color: '#999999',
     }
   },
   '& .MuiSvgIcon-root': {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
   }
 }));
 
 const ModernButton = styled(Button)(({ theme }) => ({
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
   borderRadius: '12px',
   padding: '14px 24px',
   fontSize: '1.1rem',
@@ -59,29 +59,29 @@ const ModernButton = styled(Button)(({ theme }) => ({
   textTransform: 'none',
   color: '#ffffff',
   border: 'none',
-  boxShadow: '0 8px 20px rgba(102, 126, 234, 0.4)',
+  boxShadow: '0 4px 16px rgba(33, 150, 243, 0.3)',
   transition: 'all 0.3s ease',
   marginTop: theme.spacing(2),
   marginBottom: theme.spacing(1),
   '&:hover': {
-    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-    transform: 'translateY(-3px)',
-    boxShadow: '0 12px 30px rgba(102, 126, 234, 0.6)',
+    background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 6px 20px rgba(33, 150, 243, 0.4)',
   },
   '&:active': {
     transform: 'translateY(-1px)',
-    boxShadow: '0 6px 15px rgba(102, 126, 234, 0.4)',
+    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)',
   },
   '&:disabled': {
-    background: 'rgba(255, 255, 255, 0.3)',
-    color: 'rgba(255, 255, 255, 0.6)',
+    background: '#cccccc',
+    color: '#666666',
     transform: 'none',
     boxShadow: 'none',
   }
 }));
 
 const FormTitle = styled(Typography)(({ theme }) => ({
-  color: '#ffffff',
+  color: '#1a1a1a',
   fontWeight: 600,
   marginBottom: theme.spacing(3),
   textAlign: 'center',
@@ -91,11 +91,11 @@ const FormTitle = styled(Typography)(({ theme }) => ({
 const ModernAlert = styled(Alert)(({ theme }) => ({
   marginBottom: theme.spacing(2),
   borderRadius: '12px',
-  backgroundColor: 'rgba(244, 67, 54, 0.1)',
-  border: '1px solid rgba(244, 67, 54, 0.3)',
-  color: '#ffffff',
+  backgroundColor: '#ffebee',
+  border: '1px solid #ffcdd2',
+  color: '#c62828',
   '& .MuiAlert-icon': {
-    color: '#ff6b6b',
+    color: '#f44336',
   }
 }));
 
@@ -173,7 +173,7 @@ const Login = () => {
                   aria-label="toggle password visibility"
                   onClick={togglePasswordVisibility}
                   edge="end"
-                  sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                  sx={{ color: '#666666' }}
                 >
                   {showPassword ? <VisibilityOff /> : <Visibility />}
                 </IconButton>

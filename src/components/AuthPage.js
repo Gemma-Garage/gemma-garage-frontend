@@ -9,40 +9,30 @@ import '../style/auth.css';
 // Styled components for modern design
 const ModernContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  background: '#ffffff',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   padding: theme.spacing(3),
   position: 'relative',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-  }
 }));
 
 const GlassCard = styled(Paper)(({ theme }) => ({
-  background: 'rgba(255, 255, 255, 0.15)',
-  backdropFilter: 'blur(20px)',
-  borderRadius: '24px',
-  border: '1px solid rgba(255, 255, 255, 0.2)',
+  background: '#ffffff',
+  borderRadius: '16px',
+  border: '1px solid #e0e0e0',
   padding: theme.spacing(4),
   minWidth: '440px',
   maxWidth: '500px',
   width: '100%',
-  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
   position: 'relative',
   zIndex: 1,
   animation: 'fadeIn 0.6s ease-out',
   transition: 'all 0.3s ease',
   '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
   },
   [theme.breakpoints.down('sm')]: {
     minWidth: 'auto',
@@ -54,36 +44,32 @@ const GlassCard = styled(Paper)(({ theme }) => ({
 const ModernTabs = styled(Tabs)(({ theme }) => ({
   marginBottom: theme.spacing(3),
   '& .MuiTabs-indicator': {
-    background: 'linear-gradient(90deg, #667eea, #764ba2)',
+    background: 'linear-gradient(90deg, #2196f3, #1976d2)',
     height: '3px',
     borderRadius: '3px',
   },
   '& .MuiTab-root': {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666666',
     fontWeight: 600,
     fontSize: '1.1rem',
     textTransform: 'none',
     minHeight: '56px',
     transition: 'all 0.3s ease',
     '&.Mui-selected': {
-      color: '#ffffff',
+      color: '#1976d2',
     },
     '&:hover': {
-      color: '#ffffff',
-      transform: 'translateY(-2px)',
+      color: '#2196f3',
+      transform: 'translateY(-1px)',
     }
   }
 }));
 
 const WelcomeTitle = styled(Typography)(({ theme }) => ({
-  color: '#ffffff',
+  color: '#1a1a1a',
   fontWeight: 700,
-  marginBottom: theme.spacing(3),
+  marginBottom: theme.spacing(1),
   textAlign: 'center',
-  background: 'linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)',
-  backgroundClip: 'text',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
   fontSize: '2.5rem',
   [theme.breakpoints.down('sm')]: {
     fontSize: '2rem',
@@ -91,11 +77,11 @@ const WelcomeTitle = styled(Typography)(({ theme }) => ({
 }));
 
 const SubTitle = styled(Typography)(({ theme }) => ({
-  color: 'rgba(255, 255, 255, 0.8)',
+  color: '#666666',
   textAlign: 'center',
   marginBottom: theme.spacing(4),
   fontSize: '1.1rem',
-  fontWeight: 300,
+  fontWeight: 400,
 }));
 
 function TabPanel(props) {
