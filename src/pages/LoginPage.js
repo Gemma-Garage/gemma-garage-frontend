@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box } from '@mui/material';
 import AuthPage from '../components/AuthPage';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,16 +13,8 @@ function LoginPage() {
     }
   }, [currentUser, navigate]);
 
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      minHeight: 'calc(100vh - 120px)' // Account for header/footer
-    }}>
-      <AuthPage />
-    </Box>
-  );
+  // Remove the Box wrapper since AuthPage now handles full-screen layout
+  return <AuthPage />;
 }
 
 export default LoginPage;

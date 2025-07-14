@@ -123,10 +123,8 @@ const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange 
       if (response.ok) {
         // Clear stored session token
         localStorage.removeItem('hf_session_token');
-        const disconnectedStatus = { connected: false };
-        setConnectionStatus(disconnectedStatus);
-        if (onConnectionStatusChange) onConnectionStatusChange(disconnectedStatus);
-        setError(null);
+        // Re-check status to confirm disconnection
+        await checkConnectionStatus();
       } else {
         setError('Failed to disconnect');
       }
