@@ -185,15 +185,15 @@ const LossGraph = ({ lossData }) => {
       {
         label: "Training Loss",
         data: processedData.map((d) => d.loss),
-        borderColor: "#6200ee", // Purple to match theme
+        borderColor: "var(--primary-color)", // Blue to match theme
         backgroundColor: "rgba(98, 0, 238, 0.1)",
         borderWidth: 3,
         pointRadius: Math.min(4, Math.max(2, 8 - Math.floor(processedData.length / 10))), // Smaller points for more data
-        pointBackgroundColor: "#6200ee",
+        pointBackgroundColor: "var(--primary-color)",
         pointBorderColor: "#ffffff",
         pointBorderWidth: 2,
         pointHoverRadius: 6,
-        pointHoverBackgroundColor: "#6200ee",
+        pointHoverBackgroundColor: "var(--primary-color)",
         pointHoverBorderColor: "#ffffff",
         pointHoverBorderWidth: 2,
         fill: true,

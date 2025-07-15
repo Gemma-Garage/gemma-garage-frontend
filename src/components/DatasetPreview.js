@@ -251,7 +251,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       ) : (
         <>
           <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-            <Typography variant="h6" gutterBottom sx={{ color: '#6200ee' }}>
+            <Typography variant="h6" gutterBottom sx={{ color: 'var(--primary-color)' }}>
               Data Augmentation with Gemini
             </Typography>
             <TextField
@@ -285,8 +285,8 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
               onClick={handleGenerateAugmentedDataset}
               disabled={isAugmenting || !dataset_path || !fineTuningTaskPrompt.trim()}
               sx={{
-                backgroundColor: "#6200ee",
-                "&:hover": { backgroundColor: "#3700b3" },
+                backgroundColor: "var(--primary-color)",
+                "&:hover": { backgroundColor: "var(--primary-hover)" },
                 "&:disabled": { backgroundColor: "#e0e0e0" },
                 mb: 1,
                 mr: 1,

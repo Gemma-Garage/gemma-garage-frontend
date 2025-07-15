@@ -1,8 +1,8 @@
 .button {
-    background-color: #6200ee;
+    background-color: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     padding: 10px 20px;
     font-size: 15px;
     cursor: pointer;
@@ -11,8 +11,8 @@
 }
   
 .button:hover {
-background-color: #3700b3;
-box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    background-color: var(--primary-hover);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
 }
 
 .sessionName{

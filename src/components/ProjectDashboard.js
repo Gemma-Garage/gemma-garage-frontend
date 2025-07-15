@@ -105,7 +105,7 @@ const ProjectTitle = styled(Typography)(({ theme }) => ({
 }));
 
 const ProjectDescription = styled(Typography)(({ theme }) => ({
-  color: '#666666',
+  color: 'var(--text-secondary)',
   fontSize: '0.875rem',
   marginBottom: theme.spacing(2),
   display: '-webkit-box',
@@ -120,7 +120,7 @@ const StatusChip = styled(Chip)(({ status, theme }) => {
       case 'training': return { bg: '#fff3e0', color: '#f57c00', border: '#ffcc02' };
       case 'completed': return { bg: '#e8f5e8', color: '#2e7d32', border: '#4caf50' };
       case 'ready': return { bg: '#e3f2fd', color: '#1976d2', border: '#2196f3' };
-      default: return { bg: '#f5f5f5', color: '#666666', border: '#cccccc' };
+      default: return { bg: '#ffffff', color: '#64748b', border: '#e2e8f0' };
     }
   };
   
@@ -278,7 +278,7 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
       {projects.length === 0 ? (
         <EmptyState>
           <EmptyStateIcon />
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: '#666666' }}>
+          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
             No projects yet
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
