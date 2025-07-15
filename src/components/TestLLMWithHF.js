@@ -191,10 +191,11 @@ const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
           <div 
             className="modern-card mt-3"
             style={{
-              backgroundColor: 'var(--bg-secondary)',
+              backgroundColor: 'var(--bg-primary)',
               maxHeight: '300px',
               overflow: 'auto',
-              fontFamily: 'monospace'
+              fontFamily: 'monospace',
+              border: '1px solid var(--border-color)'
             }}
           >
             <Typography

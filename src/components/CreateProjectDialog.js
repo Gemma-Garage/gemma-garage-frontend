@@ -157,7 +157,7 @@ const CreateProjectDialog = ({ open, onClose, onCreate }) => {
 
         <Box sx={{ 
           p: 2, 
-          backgroundColor: '#f8f9fa', 
+          backgroundColor: '#ffffff', 
           borderRadius: '12px',
           border: '1px solid #e9ecef'
         }}>

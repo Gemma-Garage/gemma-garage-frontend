@@ -10,7 +10,7 @@ import { Email, Lock, Visibility, VisibilityOff, Login as LoginIcon } from '@mui
 const ModernTextField = styled(TextField)(({ theme }) => ({
   marginBottom: theme.spacing(2.5),
   '& .MuiOutlinedInput-root': {
-    backgroundColor: '#fafafa',
+    backgroundColor: '#ffffff',
     borderRadius: '12px',
     transition: 'all 0.3s ease',
     '& fieldset': {

@@ -137,7 +137,7 @@ const StatusChip = styled(Chip)(({ status, theme }) => {
 const EmptyState = styled(Box)(({ theme }) => ({
   textAlign: 'center',
   padding: theme.spacing(6),
-  backgroundColor: '#fafafa',
+  backgroundColor: '#ffffff',
   borderRadius: '16px',
   border: '2px dashed #e0e0e0',
 }));

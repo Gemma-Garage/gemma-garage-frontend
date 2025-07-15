@@ -46,7 +46,7 @@ export default function PretrainStepProgress({ logs }) {
   }
 
   return (
-    <div className="modern-card mb-3" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+    <div className="modern-card mb-3">
       <div className="modern-card-header">
         <h3 className="modern-card-title">Fine-tuning Preparation Progress</h3>
       </div>

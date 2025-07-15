@@ -10,7 +10,7 @@ import { Email, Lock, Visibility, VisibilityOff, PersonAdd } from '@mui/icons-ma
 const ModernTextField = styled(TextField)(({ theme }) => ({
   marginBottom: theme.spacing(2.5),
   '& .MuiOutlinedInput-root': {
-    backgroundColor: '#fafafa',
+    backgroundColor: '#ffffff',
     borderRadius: '12px',
     transition: 'all 0.3s ease',
     '& fieldset': {
@@ -103,7 +103,7 @@ const PasswordRequirements = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1),
   marginBottom: theme.spacing(2),
   padding: theme.spacing(2),
-  backgroundColor: '#f5f5f5',
+  backgroundColor: '#ffffff',
   borderRadius: '8px',
   border: '1px solid #e0e0e0',
 }));

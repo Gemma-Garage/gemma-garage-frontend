@@ -6,7 +6,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: var(--font-family);
-  background-color: var(--bg-secondary);
+  background-color: #ffffff;
   color: var(--text-primary);
 }
 
@@ -15,7 +15,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--bg-secondary);
+  background: #ffffff;
 }
 
 /* Layout */
@@ -81,7 +81,7 @@ body {
   flex-grow: 1; /* Allows this section to take remaining width */
   padding: 20px;
   overflow-y: auto; /* Allows this section to scroll if content is tall */
-  background-color: #f9f9f9; /* Slight background differentiation */
+  background-color: #ffffff; /* Clean white background */
 }
 
 
