@@ -14,15 +14,16 @@ import {
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import Select from "react-select";
 import "../style/assets.css";
+import "../style/modern.css";
 
 // Custom theme to match the color scheme
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#6200ee',
+      main: '#2563eb',
     },
     secondary: {
-      main: '#3700b3',
+      main: '#1d4ed8',
     },
   },
 });
@@ -31,27 +32,29 @@ const theme = createTheme({
 const selectStyles = {
   control: (provided) => ({
     ...provided,
-    borderRadius: "4px",
-    borderColor: "#ccc",
+    borderRadius: "8px",
+    borderColor: "var(--border-color)",
     boxShadow: "none",
     "&:hover": {
-      borderColor: "#6200ee"
+      borderColor: "var(--primary-color)"
     },
-    padding: "2px",
-    minHeight: "56px"
+    padding: "4px",
+    minHeight: "48px",
+    fontSize: "1rem"
   }),
   option: (provided, state) => ({
     ...provided,
-    backgroundColor: state.isSelected ? "#6200ee" : state.isFocused ? "#f0e6ff" : null,
-    color: state.isSelected ? "white" : "#333",
+    backgroundColor: state.isSelected ? "var(--primary-color)" : state.isFocused ? "var(--bg-tertiary)" : null,
+    color: state.isSelected ? "white" : "var(--text-primary)",
     "&:hover": {
-      backgroundColor: state.isSelected ? "#6200ee" : "#f0e6ff"
+      backgroundColor: state.isSelected ? "var(--primary-color)" : "var(--bg-tertiary)"
     }
   }),
   menu: (provided) => ({
     ...provided,
-    borderRadius: "4px",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
+    borderRadius: "8px",
+    boxShadow: "var(--shadow-lg)",
+    border: "1px solid var(--border-color)"
   })
 };
 
@@ -106,16 +109,19 @@ const TrainingParameters = ({
   };
 
   return (
-    <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
-      <Typography variant="h5" gutterBottom className="sessionName">
-        Set Training Parameters
-      </Typography>
+    <ThemeProvider theme={theme}>
+      <div className="modern-card-header">
+        <Typography className="modern-card-title">Training Parameters</Typography>
+        <Typography className="modern-card-subtitle">
+          Configure your model and training settings for optimal performance
+        </Typography>
+      </div>
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        <FormControl fullWidth>
-          <FormLabel id="model-select-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
+        <div className="modern-form-group">
+          <label className="modern-form-label">
             Model Name
-          </FormLabel>
+          </label>
           <Select
             inputId="model-select"
             value={selectedOption}
@@ -126,12 +132,12 @@ const TrainingParameters = ({
             isSearchable={true}
             isDisabled={disabled}
           />
-        </FormControl>
+        </div>
 
-        <FormControl fullWidth>
-          <FormLabel id="lora-rank-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
+        <div className="modern-form-group">
+          <label className="modern-form-label">
             LoRA Rank (Parameter Efficiency)
-          </FormLabel>
+          </label>
           <Select
             inputId="lora-rank-select"
             value={selectedLoraRankOption}
@@ -142,17 +148,17 @@ const TrainingParameters = ({
             isSearchable={false}
             isDisabled={disabled}
           />
-          <Typography variant="caption" sx={{ mt: 1, color: "text.secondary" }}>
+          <Typography className="modern-text-sm modern-text-muted mt-sm">
             Lower rank = faster training but less expressive. Higher rank = better quality but more memory.
           </Typography>
-        </FormControl>
+        </div>
 
-        <FormControl fullWidth>
-          <FormLabel id="epochs-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
+        <div className="modern-form-group">
+          <label className="modern-form-label">
             Epochs
-          </FormLabel>
-          <TextField
-            id="epochs-input"
+          </label>
+          <input
+            className="modern-input"
             type="number"
             value={epochs}
             onChange={(e) => {
@@ -160,31 +166,23 @@ const TrainingParameters = ({
               // App.js will handle parsing and defaulting when the value is used.
               onEpochsChange(e.target.value);
             }}
-            variant="outlined"
-            InputProps={{
-              inputProps: { min: 1 } // HTML5 validation hint
-            }}
-            fullWidth
+            min="1"
             disabled={disabled}
           />
-        </FormControl>
+        </div>
 
-        <FormControl fullWidth>
-          <FormLabel id="learning-rate-label" sx={{ marginBottom: 1, color: "text.primary", fontWeight: "medium" }}>
+        <div className="modern-form-group">
+          <label className="modern-form-label">
             Learning Rate: {learningRate}
-          </FormLabel>
-          <TextField
-            id="learning-rate-input"
+          </label>
+          <input
+            className="modern-input"
             type="number"
             step="0.0001"
             value={learningRate}
             onChange={handleLearningRateTextChange} // Changed to use new handler
-            variant="outlined"
-            InputProps={{
-              inputProps: { min: 0.0001, max: 0.1, step: 0.0001 },
-              startAdornment: <InputAdornment position="start">λ</InputAdornment>,
-            }}
-            fullWidth
+            min="0.0001"
+            max="0.1"
             disabled={disabled}
           />
           <Slider 
@@ -193,12 +191,24 @@ const TrainingParameters = ({
             max={0.01}
             step={0.0001}
             onChange={(_, value) => onLearningRateChange(value)} // Changed to onLearningRateChange
-            sx={{ mt: 2 }}
+            sx={{ 
+              mt: 2,
+              color: 'var(--primary-color)',
+              '& .MuiSlider-thumb': {
+                backgroundColor: 'var(--primary-color)',
+              },
+              '& .MuiSlider-track': {
+                backgroundColor: 'var(--primary-color)',
+              },
+              '& .MuiSlider-rail': {
+                backgroundColor: 'var(--border-color)',
+              }
+            }}
             disabled={disabled}
           />
-        </FormControl>
+        </div>
       </Box>
-    </Paper>
+    </ThemeProvider>
   );
 };
 

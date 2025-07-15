@@ -12,10 +12,10 @@ import "../style/Header.css";
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#6200ee',
+      main: '#2563eb',
     },
     secondary: {
-      main: '#3700b3',
+      main: '#1d4ed8',
     },
   },
 });
@@ -43,51 +43,76 @@ const Header = ({ currentUser, auth }) => {
   return (
     <ThemeProvider theme={theme}>
       <AppBar position="static" sx={{ 
-        backgroundColor: '#6200ee', 
-        marginBottom: 2,
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+        backgroundColor: '#2563eb', 
+        marginBottom: 0,
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
       }}>
-        <Toolbar sx={{ justifyContent: 'space-between' }}>
+        <Toolbar sx={{ justifyContent: 'space-between', padding: '0 24px' }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <DiamondIcon sx={{ mr: 1 }} />
+            <DiamondIcon sx={{ mr: 1.5, fontSize: '28px' }} />
             <Typography 
               variant={isSmallScreen ? "h6" : "h5"} 
               component="div" 
-              sx={{ fontWeight: 'bold' }}
+              sx={{ 
+                fontWeight: 700,
+                fontSize: isSmallScreen ? '1.25rem' : '1.5rem',
+                letterSpacing: '-0.025em'
+              }}
             >
               Gemma Garage
             </Typography>
           </Box>
           
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {currentUser && isInProject && (
               <Button 
                 color="inherit" 
                 onClick={handleGoToDashboard}
                 startIcon={<DashboardIcon />}
-                sx={{ textTransform: 'none', mr: 2, fontWeight: 'bold', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)'} }}
+                sx={{ 
+                  textTransform: 'none', 
+                  fontWeight: 600, 
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    transform: 'translateY(-1px)'
+                  },
+                  transition: 'all 0.2s ease-in-out'
+                }}
               >
                 Dashboard
               </Button>
             )}
             {currentUser ? (
               <>
-                <Typography sx={{ mr: 2, color: 'white' }}>
+                <Typography sx={{ 
+                  mr: 2, 
+                  color: 'white', 
+                  fontWeight: 500,
+                  fontSize: '0.875rem'
+                }}>
                   Hi, {currentUser.displayName || currentUser.email}
                 </Typography>
                 <Button 
                   color="inherit" 
                   onClick={handleLogout}
-                  sx={{ textTransform: 'none', mr: 1, fontWeight: 'bold', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)'} }}
+                  sx={{ 
+                    textTransform: 'none', 
+                    fontWeight: 600,
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    '&:hover': { 
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      transform: 'translateY(-1px)'
+                    },
+                    transition: 'all 0.2s ease-in-out'
+                  }}
                 >
                   Logout
                 </Button>
               </>
-            ) : (
-              // Optionally, show Login/SignUp buttons here if not on AuthPage
-              // For now, this part is empty as AuthPage handles non-logged-in users
-              null 
-            )}
+            ) : null}
             <Button 
               color="inherit" 
               href="https://github.com/Gemma-Garage/" 
@@ -96,10 +121,14 @@ const Header = ({ currentUser, auth }) => {
               startIcon={isSmallScreen ? null : <GitHubIcon />}
               sx={{ 
                 textTransform: 'none',
-                fontWeight: 'bold',
+                fontWeight: 600,
+                borderRadius: '8px',
+                padding: '8px 16px',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                }
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  transform: 'translateY(-1px)'
+                },
+                transition: 'all 0.2s ease-in-out'
               }}
             >
               {isSmallScreen ? (
@@ -112,19 +141,22 @@ const Header = ({ currentUser, auth }) => {
         </Toolbar>
         
         <Box sx={{ 
-          backgroundColor: '#3700b3', 
-          padding: '4px 16px',
+          backgroundColor: '#1d4ed8', 
+          padding: '12px 24px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center' 
+          justifyContent: 'center',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
           <Typography 
             variant="body2" 
             component="div" 
             sx={{ 
-              color: 'white',
+              color: 'rgba(255, 255, 255, 0.9)',
               fontStyle: 'italic',
-              textAlign: 'center'
+              textAlign: 'center',
+              fontSize: '0.875rem',
+              fontWeight: 400
             }}
           >
             The go-to place for fine-tuning your LLMs 🤖 - now part of{' '} 
@@ -132,7 +164,14 @@ const Header = ({ currentUser, auth }) => {
             href="https://summerofcode.withgoogle.com/programs/2025/projects/yT16LTpy" 
             target="_blank" 
             rel="noopener noreferrer" 
-            sx={{ color: 'white', textDecoration: 'underline' }}>         
+            sx={{ 
+              color: 'white', 
+              textDecoration: 'underline',
+              fontWeight: 500,
+              '&:hover': {
+                textDecoration: 'none'
+              }
+            }}>         
             GSoC 2025 
             </Link>
           </Typography>

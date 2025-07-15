@@ -11,6 +11,7 @@ import HuggingFaceSettings from '../components/HuggingFaceSettings';
 import HuggingFaceUpload from '../components/HuggingFaceUpload';
 import { Container, Typography, Box, Button, TextField, Paper, Grid, Alert, CircularProgress, LinearProgress, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import GetAppIcon from "@mui/icons-material/GetApp";
+import '../style/modern.css';
 
 // Import components
 import TrainingParameters from '../components/TrainingParameters';
@@ -495,97 +496,147 @@ function ProjectPage({ currentUser }) {
 
   if (!selectedProjectData) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <Typography>Loading project...</Typography>
-      </Box>
+      <div className="modern-page">
+        <div className="modern-container">
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+            <div className="d-flex align-center gap-md">
+              <CircularProgress sx={{ color: 'var(--primary-color)' }} />
+              <Typography className="modern-text">Loading project...</Typography>
+            </div>
+          </Box>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="container" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-      <div className="main-content" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', margin: 2 }}>
-          Project: {selectedProjectData.displayName} (ID: {projectId})
-        </Typography>
-        
-        {/* Hugging Face Integration at the top */}
-        <HuggingFaceSettings 
-          currentUser={currentUser} 
-          projectId={projectId}
-          onConnectionStatusChange={setHfConnectionStatus}
-        />
-        
-        <Paper elevation={3} sx={{ padding: 3, marginBottom: 2 }}>
-          <Typography variant="h5" gutterBottom>Project Controls</Typography>
-          <UploadDataset 
-            datasetFile={datasetFile}
-            trainableDatasetName={trainableDatasetName}
-            onFileChange={handleFileChange}
-            uploadStatus={uploadStatus}
-            onUpload={handleUpload}
-          />
-          <DatasetPreview 
-            dataset_path={trainableDatasetName}
-            onDatasetChoiceChange={setSelectedDatasetChoice}
-            selectedDatasetChoice={selectedDatasetChoice}
-            onAugmentedDatasetReady={handleAugmentedDatasetReady}
-          />
-        </Paper>
-        
-        <TrainingParameters
-          modelName={modelName}
-          epochs={epochs}
-          learningRate={learningRate}
-          loraRank={loraRank}
-          onModelNameChange={setModelName}
-          onEpochsChange={handleEpochsChange}
-          onLearningRateChange={setLearningRate}
-          onLoraRankChange={setLoraRank}
-        />
-        
-        <FinetuneControl 
-          onStart={startFinetuning}
-          wsStatus={trainingStatus}
-          progress={progress}
-          allLogs={allLogs}
-        />
-        
-        <LossGraph lossData={lossData} />
-        
-        {/* Download button */}
-        {currentRequestId && trainingStatus.toLowerCase().includes("complete") && (
-          <Paper elevation={3} sx={{ padding: 3, marginTop: 2, marginBottom: 2, backgroundColor: "#f9f9f9" }}>
-            <Typography variant="h5" gutterBottom className="sessionName">
-              Download Fine-Tuned Model
-            </Typography>
-            <Button
-              variant="contained"
-              onClick={downloadWeights}
-              startIcon={<GetAppIcon />}
-              sx={{ 
-                backgroundColor: "#6200ee", 
-                "&:hover": { backgroundColor: "#3700b3" } 
-              }}
-            >
-              Download All Model Files (ZIP)
-            </Button>
-          </Paper>
-        )}
-        
-        {/* HuggingFace Upload Component - appears after download when training is complete */}
-        <HuggingFaceUpload 
-          currentRequestId={currentRequestId}
-          trainingStatus={trainingStatus}
-          modelName={modelName}
-          connectionStatus={hfConnectionStatus}
-        />
-        
-        <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
-        <TestLLMWithHF 
-          currentUser={currentUser}
-          currentRequestId={currentRequestId} 
-          currentBaseModel={modelName}
-        />
+    <div className="modern-page">
+      <div className="modern-page-header">
+        <div className="modern-container">
+          <Typography variant="h4" className="modern-title text-center mb-0">
+            {selectedProjectData.displayName}
+          </Typography>
+          <Typography className="modern-text text-center modern-text-muted">
+            Project ID: {projectId}
+          </Typography>
+        </div>
+      </div>
+      
+      <div className="modern-page-content">
+        <div className="modern-container">
+          {/* Hugging Face Integration */}
+          <div className="modern-card">
+            <HuggingFaceSettings 
+              currentUser={currentUser} 
+              projectId={projectId}
+              onConnectionStatusChange={setHfConnectionStatus}
+            />
+          </div>
+          
+          {/* Project Controls */}
+          <div className="modern-card">
+            <div className="modern-card-header">
+              <Typography className="modern-card-title">Dataset & Training</Typography>
+              <Typography className="modern-card-subtitle">
+                Upload your dataset and configure training parameters
+              </Typography>
+            </div>
+            
+            <UploadDataset 
+              datasetFile={datasetFile}
+              trainableDatasetName={trainableDatasetName}
+              onFileChange={handleFileChange}
+              uploadStatus={uploadStatus}
+              onUpload={handleUpload}
+            />
+            
+            <Box sx={{ mt: 3 }}>
+              <DatasetPreview 
+                dataset_path={trainableDatasetName}
+                onDatasetChoiceChange={setSelectedDatasetChoice}
+                selectedDatasetChoice={selectedDatasetChoice}
+                onAugmentedDatasetReady={handleAugmentedDatasetReady}
+              />
+            </Box>
+          </div>
+          
+          {/* Training Parameters */}
+          <div className="modern-card">
+            <TrainingParameters
+              modelName={modelName}
+              epochs={epochs}
+              learningRate={learningRate}
+              loraRank={loraRank}
+              onModelNameChange={setModelName}
+              onEpochsChange={handleEpochsChange}
+              onLearningRateChange={setLearningRate}
+              onLoraRankChange={setLoraRank}
+            />
+          </div>
+          
+          {/* Training Control */}
+          <div className="modern-card">
+            <FinetuneControl 
+              onStart={startFinetuning}
+              wsStatus={trainingStatus}
+              progress={progress}
+              allLogs={allLogs}
+            />
+          </div>
+          
+          {/* Loss Graph */}
+          <div className="modern-card">
+            <LossGraph lossData={lossData} />
+          </div>
+          
+          {/* Download Section */}
+          {currentRequestId && trainingStatus.toLowerCase().includes("complete") && (
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <Typography className="modern-card-title">Download Model</Typography>
+                <Typography className="modern-card-subtitle">
+                  Your model training is complete! Download your fine-tuned model files.
+                </Typography>
+              </div>
+              
+              <Button
+                variant="contained"
+                onClick={downloadWeights}
+                startIcon={<GetAppIcon />}
+                className="modern-btn modern-btn-primary"
+                sx={{ 
+                  backgroundColor: "var(--primary-color)", 
+                  "&:hover": { backgroundColor: "var(--primary-hover)" }
+                }}
+              >
+                Download All Model Files (ZIP)
+              </Button>
+            </div>
+          )}
+          
+          {/* HuggingFace Upload */}
+          <div className="modern-card">
+            <HuggingFaceUpload 
+              currentRequestId={currentRequestId}
+              trainingStatus={trainingStatus}
+              modelName={modelName}
+              connectionStatus={hfConnectionStatus}
+            />
+          </div>
+          
+          {/* Testing Section */}
+          <div className="modern-card">
+            <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
+          </div>
+          
+          <div className="modern-card">
+            <TestLLMWithHF 
+              currentUser={currentUser}
+              currentRequestId={currentRequestId} 
+              currentBaseModel={modelName}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

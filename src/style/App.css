@@ -1,9 +1,13 @@
+/* Import modern design system */
+@import './modern.css';
+
 /* Base Styles */
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Roboto', sans-serif;
-  background-color: #f5f5f5;
+  font-family: var(--font-family);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 /* App container */
@@ -11,6 +15,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background: var(--bg-secondary);
 }
 
 /* Layout */

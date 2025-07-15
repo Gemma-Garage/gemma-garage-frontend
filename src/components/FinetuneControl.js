@@ -14,6 +14,7 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PretrainStepProgress from "./PretrainStepProgress";
 import { extractPretrainLogs } from "../utils/pretrainLogUtils";
 import "../style/assets.css";
+import "../style/modern.css";
 
 const FinetuneControl = ({ onStart, wsStatus, progress, allLogs }) => {
   const [loading, setLoading] = useState(false);
@@ -49,32 +50,33 @@ const FinetuneControl = ({ onStart, wsStatus, progress, allLogs }) => {
   const overallProgressPercentage = calculateOverallProgress();
 
   return (
-    <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
-      <Typography variant="h5" gutterBottom className="sessionName">
-        Start Fine-Tuning
-      </Typography>
+    <div>
+      <div className="modern-card-header">
+        <Typography className="modern-card-title">Start Fine-Tuning</Typography>
+        <Typography className="modern-card-subtitle">
+          Begin training your model with the configured parameters
+        </Typography>
+      </div>
       
       <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-        {/* TextField for epochs removed */}
-        <Button
-          variant="contained"
-          startIcon={<PlayArrowIcon />}
+        <button
+          className={`modern-btn modern-btn-primary ${loading ? 'modern-btn-loading' : ''}`}
           onClick={handleStartFineTuning}
           disabled={loading}
-          sx={{ 
-            backgroundColor: "#6200ee", 
-            "&:hover": { backgroundColor: "#3700b3" } 
-          }}
         >
           {loading ? (
             <>
-              <CircularProgress size={24} color="inherit" sx={{ marginRight: 1 }} />
+              <CircularProgress size={16} color="inherit" sx={{ marginRight: 1 }} />
+              <PlayArrowIcon sx={{ fontSize: 16, mr: 1 }} />
               Fine-Tuning in Progress
             </>
           ) : (
-            "Start Fine-Tuning"
+            <>
+              <PlayArrowIcon sx={{ fontSize: 16 }} />
+              Start Fine-Tuning
+            </>
           )}
-        </Button>
+        </button>
         
         {/* Pretraining Progress Bar */}
         {extractPretrainLogs(allLogs || []).length > 0 && (
@@ -86,26 +88,32 @@ const FinetuneControl = ({ onStart, wsStatus, progress, allLogs }) => {
         {/* Training Progress Bar */} 
         {loading && progress && progress.total_steps > 0 && (
           <Box sx={{ width: '100%', mt: 1, mb: 1 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography className="modern-text-sm modern-text-muted mb-sm">
               {`Epoch: ${progress.current_epoch + 1}/${progress.total_epochs} | Step: ${progress.current_step}/${progress.total_steps}`}
             </Typography>
-            <LinearProgress variant="determinate" value={overallProgressPercentage} />
+            <div className="modern-progress">
+              <div 
+                className="modern-progress-bar" 
+                style={{ width: `${overallProgressPercentage}%` }}
+              ></div>
+            </div>
           </Box>
         )}
 
         {wsStatus && (
-          <Alert 
-            severity={wsStatus.toLowerCase().includes("error") ? "error" : wsStatus.toLowerCase().includes("complete") ? "success" : "info"}
-            sx={{ width: "100%" }}
-          >
-            <AlertTitle>
+          <div className={`modern-alert ${
+            wsStatus.toLowerCase().includes("error") ? "modern-alert-error" : 
+            wsStatus.toLowerCase().includes("complete") ? "modern-alert-success" : 
+            "modern-alert-info"
+          }`} style={{ width: "100%" }}>
+            <div style={{ fontWeight: 600, marginBottom: 'var(--spacing-xs)' }}>
               {wsStatus.toLowerCase().includes("error") ? "Error" : wsStatus.toLowerCase().includes("complete") ? "Success" : "Status"}
-            </AlertTitle>
+            </div>
             {wsStatus}
-          </Alert>
+          </div>
         )}
       </Box>
-    </Paper>
+    </div>
   );
 };
 

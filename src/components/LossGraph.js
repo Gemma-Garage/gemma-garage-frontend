@@ -4,15 +4,16 @@ import { Paper, Typography, Box, FormControlLabel, Switch, useMediaQuery } from 
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import InfoIcon from '@mui/icons-material/Info';
 import "../style/assets.css";
+import "../style/modern.css";
 
 // Custom theme to match the color scheme
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#6200ee',
+      main: '#2563eb',
     },
     secondary: {
-      main: '#3700b3',
+      main: '#1d4ed8',
     },
   },
 });
@@ -203,30 +204,42 @@ const LossGraph = ({ lossData }) => {
 
   return (
     <ThemeProvider theme={theme}>
-      <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
-          <Typography variant="h5" gutterBottom className="sessionName" sx={{ mb: 0 }}>
-            Real-Time Loss Graph
-          </Typography>
-          
-          {lossData.length > MAX_DISPLAY_POINTS && (
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={showAllPoints}
-                  onChange={(e) => setShowAllPoints(e.target.checked)}
-                  color="primary"
-                  size={isSmallScreen ? "small" : "medium"}
-                />
-              }
-              label={
-                <Typography variant={isSmallScreen ? "body2" : "body1"}>
-                  {showAllPoints ? "All points" : `Last ${MAX_DISPLAY_POINTS}`}
-                </Typography>
-              }
-            />
-          )}
-        </Box>
+      <div>
+        <div className="modern-card-header">
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div>
+              <Typography className="modern-card-title">Real-Time Loss Graph</Typography>
+              <Typography className="modern-card-subtitle">
+                Monitor your model's training progress
+              </Typography>
+            </div>
+            
+            {lossData.length > MAX_DISPLAY_POINTS && (
+              <FormControlLabel
+                control={
+                  <Switch 
+                    checked={showAllPoints}
+                    onChange={(e) => setShowAllPoints(e.target.checked)}
+                    sx={{
+                      '& .MuiSwitch-switchBase.Mui-checked': {
+                        color: 'var(--primary-color)',
+                      },
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                        backgroundColor: 'var(--primary-color)',
+                      },
+                    }}
+                    size={isSmallScreen ? "small" : "medium"}
+                  />
+                }
+                label={
+                  <Typography className={isSmallScreen ? "modern-text-sm" : "modern-text"}>
+                    {showAllPoints ? "All points" : `Last ${MAX_DISPLAY_POINTS}`}
+                  </Typography>
+                }
+              />
+            )}
+          </Box>
+        </div>
         
         {!lossData || lossData.length === 0 ? (
           <Box sx={{ 
@@ -234,12 +247,12 @@ const LossGraph = ({ lossData }) => {
             alignItems: 'center', 
             justifyContent: 'center', 
             padding: 4,
-            backgroundColor: 'rgba(0, 0, 0, 0.02)',
-            borderRadius: 1,
+            backgroundColor: 'var(--bg-tertiary)',
+            borderRadius: 'var(--radius-md)',
             minHeight: '300px'
           }}>
-            <InfoIcon sx={{ marginRight: 1, color: 'text.secondary' }} />
-            <Typography variant="body1" color="text.secondary">
+            <InfoIcon sx={{ marginRight: 1, color: 'var(--text-muted)' }} />
+            <Typography className="modern-text modern-text-muted">
               Loss data will appear here during fine-tuning
             </Typography>
           </Box>
@@ -253,14 +266,14 @@ const LossGraph = ({ lossData }) => {
           }}>
             <Line data={chartData} options={customOptions} redraw />
             
-            <Typography variant="body2" sx={{ mt: 1, textAlign: 'center', color: 'text.secondary' }}>
+            <Typography className="modern-text-sm modern-text-muted text-center mt-sm">
               {processedData.length < lossData.length ? 
                 `Displaying ${processedData.length} of ${lossData.length} total data points` : 
                 `Total data points: ${lossData.length}`}
             </Typography>
           </Box>
         )}
-      </Paper>
+      </div>
     </ThemeProvider>
   );
 };
