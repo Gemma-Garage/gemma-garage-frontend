@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Paper,
   Typography,
   Button,
   Box,
@@ -15,6 +14,7 @@ import {
   FormControlLabel,
   Chip
 } from '@mui/material';
+import '../style/modern.css';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { API_BASE_URL } from '../api';
 
@@ -142,13 +142,13 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
 
   return (
     <>
-      <Paper elevation={3} sx={{ padding: 3, marginTop: 2, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
-        <Typography variant="h5" gutterBottom className="sessionName">
-          Upload to Hugging Face
-        </Typography>
+      <div className="modern-card mt-3 mb-3">
+        <div className="modern-card-header">
+          <h2 className="modern-card-title">Upload to Hugging Face</h2>
+        </div>
         
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <div className="modern-alert modern-alert-error mb-3">
             <Typography variant="body2" component="div">
               <strong>Error:</strong> {error}
             </Typography>
@@ -164,7 +164,7 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
                 </ul>
               </Box>
             )}
-          </Alert>
+          </div>
         )}
 
         {isConnected && (
@@ -236,7 +236,7 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
             Upload your fine-tuned model directly to your Hugging Face profile
           </Typography>
         )}
-      </Paper>
+      </div>
 
       {/* Upload Model Dialog */}
       <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>

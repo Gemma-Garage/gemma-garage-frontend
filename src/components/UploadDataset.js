@@ -17,6 +17,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DataObjectIcon from "@mui/icons-material/DataObject";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import "../style/assets.css";
+import "../style/modern.css";
 
 // Styled component for the file input
 const VisuallyHiddenInput = styled("input")({
@@ -70,24 +71,23 @@ const UploadDataset = ({ datasetFile, trainableDatasetName, onFileChange, upload
   const displayFileSize = datasetFile?.size;
 
   return (
-    <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
-      <Typography variant="h5" gutterBottom className="sessionName">
-        Upload Dataset
-      </Typography>
+    <div>
+      <div className="modern-card-header">
+        <Typography className="modern-card-title">Upload Dataset</Typography>
+        <Typography className="modern-card-subtitle">
+          Upload your training data in JSON, CSV, PDF, PPT, DOCX, HTML, or TXT format
+        </Typography>
+      </div>
       
       <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-        <Button
-          component="label"
-          variant="contained"
-          startIcon={<CloudUploadIcon />}
-          sx={{ 
-            backgroundColor: "#6200ee", 
-            "&:hover": { backgroundColor: "#3700b3" } 
-          }}
+        <label 
+          className="modern-btn modern-btn-primary"
+          style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer' }}
         >
+          <CloudUploadIcon sx={{ fontSize: 16, mr: 1 }} />
           Select File
           <VisuallyHiddenInput type="file" onChange={handleFileSelect} />
-        </Button>
+        </label>
         
         {displayFileName && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -104,39 +104,31 @@ const UploadDataset = ({ datasetFile, trainableDatasetName, onFileChange, upload
           </Box>
         )}
 
-        <Button
-          variant="contained"
+        <button
+          className={`modern-btn modern-btn-primary ${loading ? 'modern-btn-loading' : ''}`}
           onClick={handleUpload}
           disabled={!datasetFile || loading}
-          sx={{ 
-            backgroundColor: "#6200ee", 
-            "&:hover": { backgroundColor: "#3700b3" } 
-          }}
         >
           {loading ? (
             <>
-              <CircularProgress size={24} color="inherit" sx={{ marginRight: 1 }} />
+              <CircularProgress size={16} color="inherit" sx={{ marginRight: 1 }} />
               Uploading...
             </>
           ) : (
             "Upload Dataset"
           )}
-        </Button>
+        </button>
         
         {uploadStatus && (
-          <Alert 
-            severity={uploadStatus.toLowerCase().includes("error") ? "error" : "success"}
-            iconMapping={{
-              success: <CheckCircleIcon fontSize="inherit" />,
-            }}
-            sx={{ width: "100%" }}
-          >
-            <AlertTitle>{uploadStatus.toLowerCase().includes("error") ? "Error" : "Success"}</AlertTitle>
+          <div className={`modern-alert ${uploadStatus.toLowerCase().includes("error") ? "modern-alert-error" : "modern-alert-success"}`} style={{ width: "100%" }}>
+            <div style={{ fontWeight: 600, marginBottom: 'var(--spacing-xs)' }}>
+              {uploadStatus.toLowerCase().includes("error") ? "Error" : "Success"}
+            </div>
             {uploadStatus}
-          </Alert>
+          </div>
         )}
       </Box>
-    </Paper>
+    </div>
   );
 };
 

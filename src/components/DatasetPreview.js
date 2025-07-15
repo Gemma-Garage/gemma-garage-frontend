@@ -21,6 +21,7 @@ import {
   Slider,
 } from "@mui/material";
 import { API_BASE_URL } from "../api";
+import "../style/modern.css";
 
 const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, selectedDatasetChoice, onAugmentedDatasetReady }) => {
   const [previewData, setPreviewData] = useState([]);
@@ -233,10 +234,15 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
 
   // UI rendering
   return (
-    <Paper elevation={3} sx={{ padding: 3, marginBottom: 2, backgroundColor: "#f9f9f9", borderRadius: "16px", boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)' }}>
-      <Typography variant="h5" gutterBottom className="sessionName">
-        Dataset Preview & Augmentation {datasetFile ? `(${datasetFile.name})` : ""}
-      </Typography>
+    <div>
+      <div className="modern-card-header">
+        <Typography className="modern-card-title">
+          Dataset Preview & Augmentation {datasetFile ? `(${datasetFile.name})` : ""}
+        </Typography>
+        <Typography className="modern-card-subtitle">
+          Preview your dataset and optionally create an augmented version for better training
+        </Typography>
+      </div>
 
       {!dataset_path ? (
         <Typography variant="body1" align="center" sx={{ py: 3 }}>
@@ -367,7 +373,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
           {/* Additional info or alerts can be added here if needed */}
         </>
       )}
-    </Paper>
+    </div>
   );
 };
 

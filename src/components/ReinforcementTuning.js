@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Paper, CircularProgress, Alert } from '@mui/material';
+import { Box, Button, TextField, Typography, CircularProgress, Alert } from '@mui/material';
+import '../style/modern.css';
 import { API_BASE_URL } from "../api";
 
 const ReinforcementTuning = () => {
@@ -41,17 +42,16 @@ const ReinforcementTuning = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-      <Paper elevation={3} sx={{ padding: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ textAlign: 'center', mb: 3 }}>
-          Reinforcement Fine-Tuning: Ingest Repository
-        </Typography>
+    <div className="page-container">
+      <div className="modern-card">
+        <div className="modern-card-header text-center">
+          <h1 className="modern-card-title">Reinforcement Fine-Tuning: Ingest Repository</h1>
+          <p className="modern-card-subtitle">
+            Enter the URL of a GitHub repository to ingest its content for fine-tuning a coding agent.
+          </p>
+        </div>
         
-        <Typography variant="body1" sx={{ mb: 4, textAlign: 'center', color: 'text.secondary' }}>
-          Enter the URL of a GitHub repository to ingest its content for fine-tuning a coding agent.
-        </Typography>
-        
-        <Box sx={{ mb: 3 }}>
+        <div className="modern-form-group">
           <TextField
             fullWidth
             label="GitHub Repository URL"
@@ -62,49 +62,49 @@ const ReinforcementTuning = () => {
             disabled={loading}
             sx={{ mb: 2 }}
           />
-          <Button
-            variant="contained"
+          <button
+            className={`modern-btn modern-btn-primary w-100 ${loading ? 'loading' : ''}`}
             onClick={handleIngest}
             disabled={loading || !repoUrl}
-            fullWidth
-            size="large"
-            sx={{ py: 1.5 }}
+            style={{ padding: '12px 24px' }}
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : "Ingest Repository"}
-          </Button>
-        </Box>
+          </button>
+        </div>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <div className="modern-alert modern-alert-error">
             {error}
-          </Alert>
+          </div>
         )}
 
         {ingestionResult && (
-          <Box sx={{ mt: 2 }}>
-            <Alert severity="success" sx={{ mb: 3 }}>
+          <div className="mt-4">
+            <div className="modern-alert modern-alert-success mb-3">
               {ingestionResult.message} GCS Path: {ingestionResult.gcs_path}
-            </Alert>
-            <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Ingestion Summary
-              </Typography>
+            </div>
+            
+            <div className="modern-card mb-3">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">Ingestion Summary</h3>
+              </div>
               <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                 {ingestionResult.summary}
               </Typography>
-            </Paper>
-            <Paper variant="outlined" sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Content Preview
-              </Typography>
+            </div>
+            
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">Content Preview</h3>
+              </div>
               <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', maxHeight: 300, overflow: 'auto' }}>
                 {ingestionResult.content_preview}
               </Typography>
-            </Paper>
-          </Box>
+            </div>
+          </div>
         )}
-      </Paper>
-    </Box>
+      </div>
+    </div>
   );
 };
 

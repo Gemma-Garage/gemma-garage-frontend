@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Paper,
   Typography,
   Button,
   Box,
   Alert,
-  CircularProgress,
-  Chip
+  CircularProgress
 } from '@mui/material';
 import { API_BASE_URL } from '../api';
+import '../style/modern.css';
 
 const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange }) => {
   const [connectionStatus, setConnectionStatus] = useState(null);
@@ -137,18 +136,21 @@ const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange 
 
   if (loading) {
     return (
-      <Paper elevation={3} sx={{ p: 3, textAlign: 'center', mb: 2 }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>Loading Hugging Face settings...</Typography>
-      </Paper>
+      <div className="modern-card text-center">
+        <CircularProgress sx={{ color: 'var(--primary-color)' }} />
+        <Typography className="modern-text mt-md">Loading Hugging Face settings...</Typography>
+      </div>
     );
   }
 
   return (
-    <Paper elevation={3} sx={{ p: 3, mb: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        🤗 Hugging Face Integration
-      </Typography>
+    <div>
+      <div className="modern-card-header">
+        <Typography className="modern-card-title">🤗 Hugging Face Integration</Typography>
+        <Typography className="modern-card-subtitle">
+          Connect your Hugging Face account to upload and share your fine-tuned models
+        </Typography>
+      </div>
       
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -217,7 +219,7 @@ const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange 
           </Typography>
         </Box>
       )}
-    </Paper>
+    </div>
   );
 };
 

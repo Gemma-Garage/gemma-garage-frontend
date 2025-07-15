@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Paper,
   Typography,
   TextField,
   Button,
@@ -14,6 +13,7 @@ import {
   FormControlLabel,
   Switch
 } from '@mui/material';
+import '../style/modern.css';
 import { API_BASE_URL, API_INFERENCE_BASE_URL } from '../api';
 
 const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
@@ -117,15 +117,16 @@ const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
   };
 
   return (
-    <Paper elevation={3} sx={{ padding: 3, marginTop: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        🧪 Test Your Model
-      </Typography>
+    <div className="modern-card">
+      <div className="modern-card-header">
+        <h3 className="modern-card-title">🧪 Test Your Model</h3>
+      </div>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <div className="modern-alert modern-alert-error mb-3">
           {error}
-        </Alert>
+          <button onClick={() => setError(null)} className="modern-alert-close">×</button>
+        </div>
       )}
 
       <Box sx={{ mb: 3 }}>
@@ -187,13 +188,13 @@ const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
           <Typography variant="h6" gutterBottom>
             Response:
           </Typography>
-          <Paper
-            elevation={1}
-            sx={{
-              p: 2,
-              backgroundColor: '#f5f5f5',
-              maxHeight: 300,
-              overflow: 'auto'
+          <div 
+            className="modern-card mt-3"
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              maxHeight: '300px',
+              overflow: 'auto',
+              fontFamily: 'monospace'
             }}
           >
             <Typography
@@ -203,16 +204,16 @@ const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
             >
               {response}
             </Typography>
-          </Paper>
+          </div>
         </Box>
       )}
 
       {!useHuggingFace && !currentRequestId && (
-        <Alert severity="info" sx={{ mt: 2 }}>
+        <div className="modern-alert modern-alert-info mt-3">
           Complete a fine-tuning job first to test your custom model, or enable Hugging Face inference to test any HF model.
-        </Alert>
+        </div>
       )}
-    </Paper>
+    </div>
   );
 };
 

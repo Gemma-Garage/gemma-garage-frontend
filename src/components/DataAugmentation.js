@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Typography, Paper, Button } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
+import '../style/modern.css';
 
 function DataAugmentation({ selectedProjectData }) {
   // Placeholder for data augmentation logic
@@ -13,27 +14,31 @@ function DataAugmentation({ selectedProjectData }) {
 
   if (!selectedProjectData) {
     return (
-      <Paper elevation={2} sx={{ p: 2, mt: 2 }}>
-        <Typography variant="h6">Data Augmentation</Typography>
-        <Typography variant="body1">Select a project to see data augmentation options.</Typography>
-      </Paper>
+      <div className="modern-card mt-3">
+        <div className="modern-card-header">
+          <h3 className="modern-card-title">Data Augmentation</h3>
+        </div>
+        <p>Select a project to see data augmentation options.</p>
+      </div>
     );
   }
 
   return (
-    <Paper elevation={2} sx={{ p: 2, mt: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Data Augmentation for: {selectedProjectData.displayName}
-      </Typography>
-      <Typography variant="body2" sx={{ mb: 2 }}>
-        Configure and run data augmentation tasks for your dataset.
-        (This is a placeholder component)
-      </Typography>
+    <div className="modern-card mt-3">
+      <div className="modern-card-header">
+        <h3 className="modern-card-title">
+          Data Augmentation for: {selectedProjectData.displayName}
+        </h3>
+        <p className="modern-card-subtitle">
+          Configure and run data augmentation tasks for your dataset.
+          (This is a placeholder component)
+        </p>
+      </div>
       {/* Add UI elements for data augmentation here */}
-      <Button variant="contained" onClick={handleAugmentData}>
+      <button className="modern-btn modern-btn-primary" onClick={handleAugmentData}>
         Start Augmentation
-      </Button>
-    </Paper>
+      </button>
+    </div>
   );
 }
 

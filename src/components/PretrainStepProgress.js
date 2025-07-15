@@ -1,5 +1,6 @@
 import React from "react";
-import { Box, Stepper, Step, StepLabel, Typography, Paper } from "@mui/material";
+import { Box, Stepper, Step, StepLabel, Typography } from "@mui/material";
+import '../style/modern.css';
 
 const PRETRAIN_STEPS = [
   "Job Submitted",
@@ -45,8 +46,10 @@ export default function PretrainStepProgress({ logs }) {
   }
 
   return (
-    <Paper elevation={2} sx={{ p: 2, mb: 2, background: "#f5f5f5" }}>
-      <Typography variant="h6" gutterBottom>Fine-tuning Preparation Progress</Typography>
+    <div className="modern-card mb-3" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="modern-card-header">
+        <h3 className="modern-card-title">Fine-tuning Preparation Progress</h3>
+      </div>
       <Stepper activeStep={activeStep} alternativeLabel>
         {PRETRAIN_STEPS.map((label, idx) => (
           <Step key={label} completed={activeStep > idx}>
@@ -57,6 +60,6 @@ export default function PretrainStepProgress({ logs }) {
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
         {statusMessage}
       </Typography>
-    </Paper>
+    </div>
   );
 }

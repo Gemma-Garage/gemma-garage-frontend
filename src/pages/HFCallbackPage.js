@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Paper, Typography, Box, Alert, CircularProgress } from '@mui/material';
+import { Typography, Box, Alert, CircularProgress } from '@mui/material';
+import '../style/modern.css';
 
 const HFCallbackPage = () => {
   const location = useLocation();
@@ -40,7 +41,7 @@ const HFCallbackPage = () => {
         p: 3
       }}
     >
-      <Paper elevation={3} sx={{ p: 4, textAlign: 'center', maxWidth: 500 }}>
+      <div className="modern-card text-center" style={{ maxWidth: '500px' }}>
         {status === 'processing' && (
           <>
             <CircularProgress sx={{ mb: 2 }} />
@@ -55,14 +56,14 @@ const HFCallbackPage = () => {
 
         {status === 'success' && (
           <>
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <div className="modern-alert modern-alert-success mb-3">
               <Typography variant="h6" gutterBottom>
                 🎉 Hugging Face Connected Successfully!
               </Typography>
               <Typography variant="body2">
                 Your Hugging Face account has been connected. You can now upload models and use HF inference.
               </Typography>
-            </Alert>
+            </div>
             <Typography variant="body2" color="text.secondary">
               Redirecting to dashboard in 3 seconds...
             </Typography>
@@ -71,20 +72,20 @@ const HFCallbackPage = () => {
 
         {status === 'error' && (
           <>
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <div className="modern-alert modern-alert-error mb-3">
               <Typography variant="h6" gutterBottom>
                 Connection Failed
               </Typography>
               <Typography variant="body2">
                 There was an error connecting your Hugging Face account. Please try again.
               </Typography>
-            </Alert>
+            </div>
             <Typography variant="body2" color="text.secondary">
               Redirecting to dashboard in 5 seconds...
             </Typography>
           </>
         )}
-      </Paper>
+      </div>
     </Box>
   );
 };
