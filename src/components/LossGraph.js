@@ -96,7 +96,11 @@ const LossGraph = ({ lossData }) => {
         }
       },
       tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1e293b',
+        bodyColor: '#64748b',
+        borderColor: '#e2e8f0',
+        borderWidth: 1,
         titleFont: {
           size: 16,
           weight: 'bold'
