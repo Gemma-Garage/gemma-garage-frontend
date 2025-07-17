@@ -218,23 +218,63 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   const renderDataTableInternal = (data, isLoading, type) => {
     const displayData = Array.isArray(data) ? data : [];
     
-    // Determine headers dynamically from the first item, assuming consistent structure
+    // Determine headers based on data type
     let headers = [];
-    if (displayData.length > 0) {
-        headers = Object.keys(displayData[0]);
-    } else if (type === "original" && previewData.length > 0) {
-        headers = Object.keys(previewData[0]);
-    } else if (type === "augmented" && augmentedDataPreview.length > 0) {
-        headers = Object.keys(augmentedDataPreview[0]);
-    }
+    let renderCellValue = (row, header) => {
+      const value = row[header];
+      return typeof value === 'object' ? JSON.stringify(value) : value;
+    };
 
+    if (type === "augmented" && displayData.length > 0) {
+      // For augmented data, check if it has question/answer structure or text structure
+      const firstRow = displayData[0];
+      if (firstRow.question && firstRow.answer) {
+        // QA pair format (from remote augmentation)
+        headers = ["question", "answer"];
+      } else if (firstRow.text) {
+        // Gemma format with text field - extract question/answer from text
+        headers = ["question", "answer"];
+        renderCellValue = (row, header) => {
+          if (header === "question" || header === "answer") {
+            // Parse the chat template to extract question/answer
+            const text = row.text || "";
+            const userMatch = text.match(/<start_of_turn>user\n(.*?)<end_of_turn>/s);
+            const modelMatch = text.match(/<start_of_turn>model\n(.*?)<end_of_turn>/s);
+            if (header === "question") {
+              return userMatch ? userMatch[1].trim() : "No question found";
+            } else {
+              return modelMatch ? modelMatch[1].trim() : "No answer found";
+            }
+          }
+          return row[header];
+        };
+      } else {
+        // Fallback to dynamic headers for augmented data
+        headers = Object.keys(firstRow);
+        renderCellValue = (row, header) => {
+          const value = row[header];
+          return typeof value === 'object' ? JSON.stringify(value) : value;
+        };
+      }
+    } else {
+      // For original data, use dynamic headers
+      if (displayData.length > 0) {
+        headers = Object.keys(displayData[0]);
+      } else if (type === "original" && previewData.length > 0) {
+        headers = Object.keys(previewData[0]);
+      }
+    }
 
     return (
       <TableContainer sx={{ maxHeight: 400, overflow: 'auto' }}>
          <Table size="small">
           <TableHead>
             <TableRow>
-              {headers.map(header => <TableCell key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableCell>)}
+              {headers.map(header => (
+                <TableCell key={header}>
+                  {header.charAt(0).toUpperCase() + header.slice(1)}
+                </TableCell>
+              ))}
               {headers.length === 0 && !isLoading && <TableCell>Data</TableCell>}
             </TableRow>
           </TableHead>
@@ -255,8 +295,16 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
             ) : (
               displayData.map((row, index) => (
                 <TableRow key={index}>
-                  {headers.map(header => <TableCell key={`${index}-${header}`}>{typeof row[header] === 'object' ? JSON.stringify(row[header]) : row[header]}</TableCell>)}
-                  {headers.length === 0 && <TableCell>{typeof row === 'object' ? JSON.stringify(row) : row}</TableCell>}
+                  {headers.map(header => (
+                    <TableCell key={`${index}-${header}`} sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {renderCellValue(row, header)}
+                    </TableCell>
+                  ))}
+                  {headers.length === 0 && (
+                    <TableCell>
+                      {typeof row === 'object' ? JSON.stringify(row) : row}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
