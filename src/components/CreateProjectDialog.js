@@ -8,11 +8,7 @@ import {
   TextField,
   Box,
   Typography,
-  Avatar,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select
+  Avatar
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { SmartToy as AIIcon, RocketLaunch as RocketIcon } from '@mui/icons-material';
@@ -70,15 +66,7 @@ const CreateButton = styled(ModernButton)(({ theme }) => ({
 
 const CreateProjectDialog = ({ open, onClose, onCreate }) => {
   const [projectName, setProjectName] = useState('');
-  const [baseModel, setBaseModel] = useState('google/gemma-2b');
   const [error, setError] = useState('');
-
-  const modelOptions = [
-    { value: 'google/gemma-2b', label: 'Gemma 2B', description: 'Fast and efficient' },
-    { value: 'google/gemma-7b', label: 'Gemma 7B', description: 'Balanced performance' },
-    { value: 'google/gemma-1.1-2b-it', label: 'Gemma 1.1 2B IT', description: 'Instruction tuned' },
-    { value: 'google/gemma-1.1-7b-it', label: 'Gemma 1.1 7B IT', description: 'Large instruction tuned' },
-  ];
 
   const handleSubmit = () => {
     if (!projectName.trim()) {
@@ -86,15 +74,13 @@ const CreateProjectDialog = ({ open, onClose, onCreate }) => {
       return;
     }
     setError('');
-    onCreate(projectName, baseModel);
+    onCreate(projectName);
     setProjectName('');
-    setBaseModel('google/gemma-2b');
     onClose();
   };
 
   const handleDialogClose = () => {
     setProjectName('');
-    setBaseModel('google/gemma-2b');
     setError('');
     onClose();
   };
@@ -131,29 +117,6 @@ const CreateProjectDialog = ({ open, onClose, onCreate }) => {
           error={!!error}
           helperText={error || 'Give your project a descriptive name'}
         />
-
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Base Model</InputLabel>
-          <Select
-            value={baseModel}
-            label="Base Model"
-            onChange={(e) => setBaseModel(e.target.value)}
-            sx={{ borderRadius: '12px' }}
-          >
-            {modelOptions.map((model) => (
-              <MenuItem key={model.value} value={model.value}>
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {model.label}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {model.description}
-                  </Typography>
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
 
         <Box sx={{ 
           p: 2, 
