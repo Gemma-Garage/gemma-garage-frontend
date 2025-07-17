@@ -57,10 +57,25 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
 
   // New effect to load augmented dataset when augmentedDatasetFileName prop is provided
   useEffect(() => {
+    console.log("[DatasetPreview] augmentedDatasetFileName prop changed:", augmentedDatasetFileName);
     if (augmentedDatasetFileName) {
       loadAugmentedDatasetPreview(augmentedDatasetFileName);
     }
   }, [augmentedDatasetFileName]);
+
+  // Sync the selectedDatasetChoice prop with internal state
+  useEffect(() => {
+    console.log("[DatasetPreview] selectedDatasetChoice prop changed:", selectedDatasetChoice);
+    if (selectedDatasetChoice) {
+      setDatasetChoice(selectedDatasetChoice);
+      // Also set the active tab based on the dataset choice
+      if (selectedDatasetChoice === 'augmented') {
+        setActiveTab(1);
+      } else {
+        setActiveTab(0);
+      }
+    }
+  }, [selectedDatasetChoice]);
 
   const loadOriginalDatasetPreview = async () => {
     if (!dataset_path || dataset_path === 'undefined' || dataset_path === 'null') return;
@@ -98,29 +113,33 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   const loadAugmentedDatasetPreview = async (augmentedDatasetPath) => {
     if (!augmentedDatasetPath || augmentedDatasetPath === 'undefined' || augmentedDatasetPath === 'null') return;
     
-    console.log("Loading augmented dataset preview from:", augmentedDatasetPath);
+    console.log("[DatasetPreview] Loading augmented dataset preview from:", augmentedDatasetPath);
     try {
       const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(augmentedDatasetPath)}`);
+      console.log("[DatasetPreview] Augmented dataset response status:", response.status);
       if (response.ok) {
         const data = await response.json();
+        console.log("[DatasetPreview] Augmented dataset response data:", data);
         if (data.preview && data.full_count !== undefined) {
           setAugmentedDataPreview(data.preview);
           setTotalAugmentedEntries(data.full_count);
+          console.log("[DatasetPreview] Set augmented preview with", data.preview.length, "items");
         } else if (Array.isArray(data)) { // Fallback
           setAugmentedDataPreview(data);
           setTotalAugmentedEntries(data.length);
+          console.log("[DatasetPreview] Set augmented preview (fallback) with", data.length, "items");
         } else {
           setAugmentedDataPreview([]);
           setTotalAugmentedEntries(0);
           console.warn("Unexpected preview data format for augmented dataset:", data);
         }
         
-        // Set the GCS path and notify parent
+        // Set the GCS path (don't call onAugmentedDatasetReady as it's already set in parent)
         setAugmentedDatasetGCSPath(augmentedDatasetPath);
-        onAugmentedDatasetReady(augmentedDatasetPath);
         
-        // Switch to augmented tab if we have data
-        if (data.preview && data.preview.length > 0) {
+        // Switch to augmented tab if we have data and choice is augmented
+        if (data.preview && data.preview.length > 0 && selectedDatasetChoice === 'augmented') {
+          console.log("[DatasetPreview] Switching to augmented tab");
           setActiveTab(1);
         }
       } else {
