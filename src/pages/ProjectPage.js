@@ -40,6 +40,7 @@ function ProjectPage({ currentUser }) {
   const [trainableDatasetName, setTrainableDatasetName] = useState(null);
   const [selectedDatasetChoice, setSelectedDatasetChoice] = useState("original");
   const [augmentedDatasetFileName, setAugmentedDatasetFileName] = useState(null);
+  const [trainedModelPath, setTrainedModelPath] = useState(null);
   const [allLogs, setAllLogs] = useState([]);
   const [hfConnectionStatus, setHfConnectionStatus] = useState(null);
 
@@ -77,6 +78,8 @@ function ProjectPage({ currentUser }) {
           // Load project settings
           setTrainableDatasetName(projectData.trainableDatasetName || null);
           setAugmentedDatasetFileName(projectData.augmentedDatasetFileName || null);
+          setTrainedModelPath(projectData.trainedModelPath || null);
+          setSelectedDatasetChoice(projectData.selectedDatasetChoice || "original");
           setEpochs(projectData.epochs || 1);
           setLearningRate(projectData.learningRate || 0.0002);
           setLoraRank(projectData.loraRank || 4);
@@ -154,19 +157,11 @@ function ProjectPage({ currentUser }) {
       // Clear any old augmented dataset state
       setAugmentedDatasetFileName(null);
 
-      // Also save to Firestore
-      if (currentUser && projectId) {
-          try {
-              const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
-              await updateDoc(projectDocRef, {
-                  trainableDatasetName: data.file_location,
-                  augmentedDatasetFileName: null // Clear old augmented data
-              });
-              console.log("Project updated with new trainable dataset name.");
-          } catch (error) {
-              console.error("Error updating project with trainable dataset name:", error);
-          }
-      }
+      // Save to Firestore
+      await saveProjectProgress({
+        trainableDatasetName: data.file_location,
+        augmentedDatasetFileName: null // Clear old augmented data
+      });
 
     } catch (error) {
       console.error("Error uploading file", error);
@@ -282,6 +277,18 @@ function ProjectPage({ currentUser }) {
                 if (point.weights_url) {
                     newWeightsUrl = point.weights_url;
                 }
+                // Save trained model path for future reference
+                if (point.model_path || point.weights_url) {
+                    const modelPath = point.model_path || point.weights_url;
+                    setTrainedModelPath(modelPath);
+                    // Save to Firestore immediately
+                    saveProjectProgress({ 
+                        trainedModelPath: modelPath,
+                        weightsUrl: newWeightsUrl,
+                        trainingStatusMessage: latestStatusMessage,
+                        requestId: currentRequestId
+                    });
+                }
             }
 
             // Check for loss data specifically for the graph
@@ -307,6 +314,15 @@ function ProjectPage({ currentUser }) {
             if (uniqueNewPointsToPlot.length > 0) {
                 const combinedData = [...prevLossData, ...uniqueNewPointsToPlot];
                 combinedData.sort((a, b) => new Date(a.rawTimestamp) - new Date(b.rawTimestamp));
+                
+                // Save loss data periodically (every 10 points to avoid too many writes)
+                if (combinedData.length % 10 === 0) {
+                  saveProjectProgress({ 
+                    lossData: combinedData,
+                    trainingStatusMessage: latestStatusMessage 
+                  });
+                }
+                
                 return combinedData;
             }
             return prevLossData;
@@ -335,6 +351,15 @@ function ProjectPage({ currentUser }) {
         stopPollingLogs();
         if (newWeightsUrl) {
           setWeightsUrl(newWeightsUrl);
+        }
+        // Save final training completion state
+        if (newWeightsUrl || trainedModelPath) {
+          saveProjectProgress({ 
+            weightsUrl: newWeightsUrl,
+            trainingStatusMessage: latestStatusMessage,
+            lossData: lossData,
+            trainingCompleted: true
+          });
         }
       }
 
@@ -405,6 +430,17 @@ function ProjectPage({ currentUser }) {
       setLastLogTimestamp(null);
       lastLogTimestampRef.current = null;
 
+      // Save training start to Firestore
+      await saveProjectProgress({
+        requestId: data.request_id,
+        trainingStatusMessage: `Training job submitted. Request ID: ${data.request_id}. Polling for logs...`,
+        baseModel: modelName,
+        epochs: epochs,
+        learningRate: learningRate,
+        loraRank: loraRank,
+        datasetChoice: selectedDatasetChoice
+      });
+
       // Start polling
       pollingIntervalRef.current = setInterval(() => {
         if (requestIdRef.current) {
@@ -463,20 +499,23 @@ function ProjectPage({ currentUser }) {
     };
   }, []);
 
+  const saveProjectProgress = async (updates) => {
+    if (currentUser && projectId) {
+      try {
+        const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
+        await updateDoc(projectDocRef, updates);
+        console.log("Project updated with:", updates);
+      } catch (error) {
+        console.error("Error updating project:", error);
+      }
+    }
+  };
+
   const handleAugmentedDatasetReady = async (augmentedGcsPath) => {
     setAugmentedDatasetFileName(augmentedGcsPath);
-
-    if (currentUser && projectId) {
-        try {
-            const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
-            await updateDoc(projectDocRef, {
-                augmentedDatasetFileName: augmentedGcsPath
-            });
-            console.log("Project updated with augmented dataset path.");
-        } catch (error) {
-            console.error("Error updating project with augmented dataset path:", error);
-        }
-    }
+    await saveProjectProgress({
+      augmentedDatasetFileName: augmentedGcsPath
+    });
   };
 
   const handleEpochsChange = (value) => {
@@ -485,11 +524,35 @@ function ProjectPage({ currentUser }) {
     } else {
       const num = parseInt(value, 10);
       if (!isNaN(num)) {
-        setEpochs(num < 1 && value !== "0" ? 1 : num);
+        const newEpochs = num < 1 && value !== "0" ? 1 : num;
+        setEpochs(newEpochs);
+        // Save parameter changes
+        saveProjectProgress({ epochs: newEpochs });
       } else if (value === "0") {
         setEpochs(0);
+        saveProjectProgress({ epochs: 0 });
       }
     }
+  };
+
+  const handleLearningRateChange = (value) => {
+    setLearningRate(value);
+    saveProjectProgress({ learningRate: value });
+  };
+
+  const handleLoraRankChange = (value) => {
+    setLoraRank(value);
+    saveProjectProgress({ loraRank: value });
+  };
+
+  const handleModelNameChange = (value) => {
+    setModelName(value);
+    saveProjectProgress({ baseModel: value });
+  };
+
+  const handleDatasetChoiceChange = (choice) => {
+    setSelectedDatasetChoice(choice);
+    saveProjectProgress({ selectedDatasetChoice: choice });
   };
 
   // ... other handlers would be copied from App.js
@@ -524,6 +587,35 @@ function ProjectPage({ currentUser }) {
       
       <div className="modern-page-content">
         <div className="modern-container">
+          {/* Project Status */}
+          {(trainableDatasetName || augmentedDatasetFileName || trainedModelPath) && (
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <Typography className="modern-card-title">Project Assets</Typography>
+                <Typography className="modern-card-subtitle">
+                  Saved datasets and trained models for this project
+                </Typography>
+              </div>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {trainableDatasetName && (
+                  <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+                    <strong>Original Dataset:</strong> {trainableDatasetName.split('/').pop()}
+                  </Alert>
+                )}
+                {augmentedDatasetFileName && (
+                  <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+                    <strong>Augmented Dataset:</strong> {augmentedDatasetFileName.split('/').pop()}
+                  </Alert>
+                )}
+                {trainedModelPath && (
+                  <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
+                    <strong>Trained Model:</strong> {trainedModelPath.split('/').pop()} ✅
+                  </Alert>
+                )}
+              </Box>
+            </div>
+          )}
+          
           {/* Hugging Face Integration */}
           <div className="modern-card">
             <HuggingFaceSettings 
@@ -553,9 +645,10 @@ function ProjectPage({ currentUser }) {
             <Box sx={{ mt: 3 }}>
               <DatasetPreview 
                 dataset_path={trainableDatasetName}
-                onDatasetChoiceChange={setSelectedDatasetChoice}
+                onDatasetChoiceChange={handleDatasetChoiceChange}
                 selectedDatasetChoice={selectedDatasetChoice}
                 onAugmentedDatasetReady={handleAugmentedDatasetReady}
+                augmentedDatasetFileName={augmentedDatasetFileName}
               />
             </Box>
           </div>
@@ -567,10 +660,10 @@ function ProjectPage({ currentUser }) {
               epochs={epochs}
               learningRate={learningRate}
               loraRank={loraRank}
-              onModelNameChange={setModelName}
+              onModelNameChange={handleModelNameChange}
               onEpochsChange={handleEpochsChange}
-              onLearningRateChange={setLearningRate}
-              onLoraRankChange={setLoraRank}
+              onLearningRateChange={handleLearningRateChange}
+              onLoraRankChange={handleLoraRankChange}
             />
           </div>
           
@@ -620,6 +713,7 @@ function ProjectPage({ currentUser }) {
               currentRequestId={currentRequestId}
               trainingStatus={trainingStatus}
               modelName={modelName}
+              trainedModelPath={trainedModelPath}
               connectionStatus={hfConnectionStatus}
             />
           </div>

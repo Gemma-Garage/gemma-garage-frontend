@@ -23,7 +23,7 @@ import {
 import { API_BASE_URL } from "../api";
 import "../style/modern.css";
 
-const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, selectedDatasetChoice, onAugmentedDatasetReady }) => {
+const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, selectedDatasetChoice, onAugmentedDatasetReady, augmentedDatasetFileName }) => {
   const [previewData, setPreviewData] = useState([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [totalEntries, setTotalEntries] = useState(0);
@@ -43,15 +43,24 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   useEffect(() => {
     if (dataset_path && dataset_path !== 'undefined' && dataset_path !== 'null') {
       loadOriginalDatasetPreview();
-      // Reset augmentation states if original dataset changes
-      setAugmentedDataPreview([]);
-      setAugmentedDatasetGCSPath(null);
-      onAugmentedDatasetReady(null); // Notify parent
-      setErrorAugmenting(null);
-      setFineTuningTaskPrompt("");
-      setTotalAugmentedEntries(0);
+      // Only reset augmentation states if original dataset changes and no saved augmented dataset
+      if (!augmentedDatasetFileName) {
+        setAugmentedDataPreview([]);
+        setAugmentedDatasetGCSPath(null);
+        onAugmentedDatasetReady(null); // Notify parent
+        setErrorAugmenting(null);
+        setFineTuningTaskPrompt("");
+        setTotalAugmentedEntries(0);
+      }
     }
   }, [dataset_path]);
+
+  // New effect to load augmented dataset when augmentedDatasetFileName prop is provided
+  useEffect(() => {
+    if (augmentedDatasetFileName) {
+      loadAugmentedDatasetPreview(augmentedDatasetFileName);
+    }
+  }, [augmentedDatasetFileName]);
 
   const loadOriginalDatasetPreview = async () => {
     if (!dataset_path || dataset_path === 'undefined' || dataset_path === 'null') return;
@@ -84,6 +93,46 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       setTotalEntries(0);
     }
     setLoadingPreview(false);
+  };
+
+  const loadAugmentedDatasetPreview = async (augmentedDatasetPath) => {
+    if (!augmentedDatasetPath || augmentedDatasetPath === 'undefined' || augmentedDatasetPath === 'null') return;
+    
+    console.log("Loading augmented dataset preview from:", augmentedDatasetPath);
+    try {
+      const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(augmentedDatasetPath)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.preview && data.full_count !== undefined) {
+          setAugmentedDataPreview(data.preview);
+          setTotalAugmentedEntries(data.full_count);
+        } else if (Array.isArray(data)) { // Fallback
+          setAugmentedDataPreview(data);
+          setTotalAugmentedEntries(data.length);
+        } else {
+          setAugmentedDataPreview([]);
+          setTotalAugmentedEntries(0);
+          console.warn("Unexpected preview data format for augmented dataset:", data);
+        }
+        
+        // Set the GCS path and notify parent
+        setAugmentedDatasetGCSPath(augmentedDatasetPath);
+        onAugmentedDatasetReady(augmentedDatasetPath);
+        
+        // Switch to augmented tab if we have data
+        if (data.preview && data.preview.length > 0) {
+          setActiveTab(1);
+        }
+      } else {
+        console.error("Error loading augmented dataset preview: Server returned", response.status);
+        setAugmentedDataPreview([]);
+        setTotalAugmentedEntries(0);
+      }
+    } catch (error) {
+      console.error("Error loading augmented dataset preview:", error);
+      setAugmentedDataPreview([]);
+      setTotalAugmentedEntries(0);
+    }
   };
 
   const handleGenerateAugmentedDataset = async () => {

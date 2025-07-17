@@ -18,7 +18,7 @@ import '../style/modern.css';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { API_BASE_URL } from '../api';
 
-const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connectionStatus }) => {
+const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, trainedModelPath, connectionStatus }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -32,18 +32,20 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
     baseModel: ''
   });
 
-  // Auto-populate upload form when training completes
+  // Auto-populate upload form when training completes or when we have a trained model path
   useEffect(() => {
-    if (currentRequestId && trainingStatus && trainingStatus.toLowerCase().includes("complete")) {
+    const hasCompletedTraining = (currentRequestId && trainingStatus && trainingStatus.toLowerCase().includes("complete")) || trainedModelPath;
+    
+    if (hasCompletedTraining) {
       setUploadForm(prev => ({
         ...prev,
-        requestId: currentRequestId,
+        requestId: currentRequestId || '',
         modelName: modelName ? `${modelName.replace('google/', '')}-fine-tuned` : 'gemma-fine-tuned',
         description: `Fine-tuned ${modelName || 'Gemma'} model from Gemma Garage`,
         baseModel: modelName || 'google/gemma-2b'
       }));
     }
-  }, [currentRequestId, trainingStatus, modelName]);
+  }, [currentRequestId, trainingStatus, modelName, trainedModelPath]);
 
   const checkTokenPermissions = async () => {
     try {
@@ -133,8 +135,10 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
     }
   };
 
-  // Don't show anything if training is not complete
-  if (!currentRequestId || !trainingStatus || !trainingStatus.toLowerCase().includes("complete")) {
+  // Don't show anything if training is not complete and we don't have a trained model path
+  const hasCompletedTraining = (currentRequestId && trainingStatus && trainingStatus.toLowerCase().includes("complete")) || trainedModelPath;
+  
+  if (!hasCompletedTraining) {
     return null;
   }
 
@@ -207,6 +211,11 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
         ) : (
           <Alert severity="success" sx={{ mb: 2 }}>
             ✅ Ready to upload your fine-tuned model to Hugging Face!
+            {trainedModelPath && !trainingStatus?.toLowerCase().includes("complete") && (
+              <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                Using previously trained model from: {trainedModelPath}
+              </Typography>
+            )}
           </Alert>
         )}
 
@@ -298,7 +307,7 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, connec
           <Button 
             onClick={handleUploadModel}
             variant="contained"
-            disabled={loading || !uploadForm.modelName.trim() || !uploadForm.requestId}
+            disabled={loading || !uploadForm.modelName.trim() || (!uploadForm.requestId && !trainedModelPath)}
           >
             {loading ? <CircularProgress size={20} /> : 'Upload'}
           </Button>
