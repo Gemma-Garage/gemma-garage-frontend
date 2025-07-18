@@ -37,9 +37,20 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
     const hasCompletedTraining = (currentRequestId && trainingStatus && trainingStatus.toLowerCase().includes("complete")) || trainedModelPath;
     
     if (hasCompletedTraining) {
+      // Extract request ID from trainedModelPath if currentRequestId is not available
+      let requestIdToUse = currentRequestId;
+      if (!requestIdToUse && trainedModelPath) {
+        // Extract request ID from path like: gs://bucket/model/request-id/final_model/
+        const pathParts = trainedModelPath.split('/');
+        const modelIndex = pathParts.findIndex(part => part === 'model');
+        if (modelIndex !== -1 && modelIndex + 1 < pathParts.length) {
+          requestIdToUse = pathParts[modelIndex + 1];
+        }
+      }
+      
       setUploadForm(prev => ({
         ...prev,
-        requestId: currentRequestId || '',
+        requestId: requestIdToUse || '',
         modelName: modelName ? `${modelName.replace('google/', '')}-fine-tuned` : 'gemma-fine-tuned',
         description: `Fine-tuned ${modelName || 'Gemma'} model from Gemma Garage`,
         baseModel: modelName || 'google/gemma-2b'
@@ -136,7 +147,17 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
   };
 
   // Don't show anything if training is not complete and we don't have a trained model path
-  const hasCompletedTraining = (currentRequestId && trainingStatus && trainingStatus.toLowerCase().includes("complete")) || trainedModelPath;
+  // Extract request ID from trainedModelPath if currentRequestId is not available
+  let requestIdToUse = currentRequestId;
+  if (!requestIdToUse && trainedModelPath) {
+    const pathParts = trainedModelPath.split('/');
+    const modelIndex = pathParts.findIndex(part => part === 'model');
+    if (modelIndex !== -1 && modelIndex + 1 < pathParts.length) {
+      requestIdToUse = pathParts[modelIndex + 1];
+    }
+  }
+  
+  const hasCompletedTraining = (requestIdToUse && trainingStatus && trainingStatus.toLowerCase().includes("complete")) || trainedModelPath;
   
   if (!hasCompletedTraining) {
     return null;

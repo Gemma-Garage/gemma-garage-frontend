@@ -112,6 +112,19 @@ function ProjectPage({ currentUser }) {
 
           if (projectData.requestId) {
             requestIdRef.current = projectData.requestId;
+            // If we have a request ID but no active polling, and training status suggests it's still running,
+            // restart polling to get updates
+            if (!pollingIntervalRef.current && 
+                projectData.trainingStatusMessage && 
+                !projectData.trainingStatusMessage.toLowerCase().includes("complete") &&
+                !projectData.trainingStatusMessage.toLowerCase().includes("error")) {
+              console.log("Restarting polling for existing training job:", projectData.requestId);
+              pollingIntervalRef.current = setInterval(() => {
+                if (requestIdRef.current) {
+                  pollLogs(requestIdRef.current, lastLogTimestampRef.current);
+                }
+              }, 5000);
+            }
           }
         } else {
           console.error("Project not found");
@@ -523,18 +536,39 @@ function ProjectPage({ currentUser }) {
   };
 
   const downloadWeights = async () => {
-    if (!currentRequestId) {
-      setTrainingStatus("Error: No request ID found for download.");
-      console.error("Download weights called without a currentRequestId.");
+    if (!currentRequestId && !trainedModelPath) {
+      setTrainingStatus("Error: No request ID or trained model path found for download.");
+      console.error("Download weights called without a currentRequestId or trainedModelPath.");
+      return;
+    }
+    
+    // If we have trainedModelPath but no currentRequestId, we need to extract the request ID from the path
+    // Typical path: gs://bucket/model/request-id/final_model/
+    const requestIdForDownload = currentRequestId || (trainedModelPath ? 
+      (() => {
+        const pathParts = trainedModelPath.split('/');
+        const modelIndex = pathParts.findIndex(part => part === 'model');
+        if (modelIndex !== -1 && modelIndex + 1 < pathParts.length) {
+          return pathParts[modelIndex + 1];
+        }
+        // Fallback: try to find a UUID-like string
+        return pathParts.find(part => part.length > 20 && part.includes('-')) || 
+               pathParts.pop().replace('final_model', '').replace(/[^a-zA-Z0-9-]/g, '');
+      })()
+    : null);
+    
+    if (!requestIdForDownload) {
+      setTrainingStatus("Error: Could not determine request ID for download.");
+      console.error("Could not extract request ID from trainedModelPath:", trainedModelPath);
       return;
     }
     setTrainingStatus("Preparing download ZIP for model artifacts...");
     try {
-      console.log("[Download] Calling backend /download_weights_zip with request_id:", currentRequestId);
+      console.log("[Download] Calling backend /download_weights_zip with request_id:", requestIdForDownload);
       const response = await fetch(`${API_BASE_URL}/download/download_weights_zip`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ request_id: currentRequestId })
+        body: JSON.stringify({ request_id: requestIdForDownload })
       });
       console.log("[Download] Backend response status:", response.status);
       if (!response.ok) {
@@ -547,7 +581,7 @@ function ProjectPage({ currentUser }) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `model_${currentRequestId}.zip`;
+      a.download = `model_${requestIdForDownload}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -771,7 +805,7 @@ function ProjectPage({ currentUser }) {
           </div>
           
           {/* Download Section */}
-          {currentRequestId && trainingStatus.toLowerCase().includes("complete") && (
+          {((currentRequestId && trainingStatus.toLowerCase().includes("complete")) || trainedModelPath) && (
             <div className="modern-card">
               <div className="modern-card-header">
                 <Typography className="modern-card-title">Download Model</Typography>
