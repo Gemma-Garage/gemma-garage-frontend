@@ -126,26 +126,11 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         let fullCount = 0;
         let summaryText = null;
         
-        if (data.preview && data.full_count !== undefined) {
-          // Standard preview format
-          previewData = data.preview;
-          fullCount = data.full_count;
-        } else if (Array.isArray(data)) {
-          // Direct array format
-          previewData = data;
-          fullCount = data.length;
-        } else if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
-          // QA pairs format with possible summary
-          previewData = data.qa_pairs;
-          fullCount = data.qa_pairs.length;
-          summaryText = data.summary || null;
-        } else if (data.summary && data.qa_pairs) {
-          // Data contains both summary and qa_pairs at root level
-          previewData = Array.isArray(data.qa_pairs) ? data.qa_pairs : [];
-          fullCount = Array.isArray(data.qa_pairs) ? data.qa_pairs.length : 0;
+        // Priority 1: Canonical structure - root level summary and qa_pairs
+        if (data.summary && data.qa_pairs) {
+          console.log("[DatasetPreview] Detected canonical structure with summary and qa_pairs at root");
           summaryText = data.summary;
-        } else {
-          // Single object or unknown format - check if it's the structure we see in screenshot
+          
           if (typeof data.qa_pairs === 'string') {
             // qa_pairs is a JSON string, parse it
             try {
@@ -153,8 +138,8 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
               if (Array.isArray(parsedQAPairs)) {
                 previewData = parsedQAPairs;
                 fullCount = parsedQAPairs.length;
-                summaryText = data.summary || null;
               } else {
+                console.warn("Parsed qa_pairs is not an array:", parsedQAPairs);
                 previewData = [];
                 fullCount = 0;
               }
@@ -163,11 +148,60 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
               previewData = [];
               fullCount = 0;
             }
+          } else if (Array.isArray(data.qa_pairs)) {
+            previewData = data.qa_pairs;
+            fullCount = data.qa_pairs.length;
           } else {
+            console.warn("qa_pairs is neither string nor array:", typeof data.qa_pairs);
             previewData = [];
             fullCount = 0;
-            console.warn("Unexpected preview data format for augmented dataset:", data);
           }
+        }
+        // Priority 2: Standard preview format (backend wraps data)
+        else if (data.preview && data.full_count !== undefined) {
+          console.log("[DatasetPreview] Detected standard preview format");
+          previewData = data.preview;
+          fullCount = data.full_count;
+          
+          // Check if the preview data contains a single object with summary and qa_pairs
+          if (previewData.length === 1 && previewData[0].summary && previewData[0].qa_pairs) {
+            const singleItem = previewData[0];
+            summaryText = singleItem.summary;
+            // Parse qa_pairs if it's a string
+            if (typeof singleItem.qa_pairs === 'string') {
+              try {
+                const parsedQAPairs = JSON.parse(singleItem.qa_pairs);
+                if (Array.isArray(parsedQAPairs)) {
+                  previewData = parsedQAPairs;
+                  fullCount = parsedQAPairs.length;
+                }
+              } catch (e) {
+                console.error("Failed to parse qa_pairs string:", e);
+              }
+            } else if (Array.isArray(singleItem.qa_pairs)) {
+              previewData = singleItem.qa_pairs;
+              fullCount = singleItem.qa_pairs.length;
+            }
+          }
+        }
+        // Priority 3: Direct qa_pairs array with optional summary
+        else if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
+          console.log("[DatasetPreview] Detected direct qa_pairs array format");
+          previewData = data.qa_pairs;
+          fullCount = data.qa_pairs.length;
+          summaryText = data.summary || null;
+        }
+        // Priority 4: Direct array format (fallback)
+        else if (Array.isArray(data)) {
+          console.log("[DatasetPreview] Detected direct array format");
+          previewData = data;
+          fullCount = data.length;
+        }
+        // Priority 5: Unknown format
+        else {
+          console.warn("Unexpected preview data format for augmented dataset:", data);
+          previewData = [];
+          fullCount = 0;
         }
         
         setAugmentedDataPreview(previewData);
@@ -281,8 +315,11 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       if (displayData.length > 0) {
         const firstRow = displayData[0];
         if (firstRow.question && firstRow.answer) {
-          // QA pair format (from remote augmentation)
-          processedData = displayData;
+          // QA pair format - ensure we only include question/answer fields
+          processedData = displayData.map(row => ({
+            question: row.question || "",
+            answer: row.answer || ""
+          }));
         } else if (firstRow.text) {
           // Gemma format with text field - extract question/answer from text
           processedData = displayData.map(row => {
