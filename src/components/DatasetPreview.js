@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Paper,
   Typography,
   Box,
   Button,
@@ -47,13 +46,13 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       if (!augmentedDatasetFileName) {
         setAugmentedDataPreview([]);
         setAugmentedDatasetGCSPath(null);
-        onAugmentedDatasetReady(null); // Notify parent
+        if (onAugmentedDatasetReady) onAugmentedDatasetReady(null); // Notify parent
         setErrorAugmenting(null);
         setFineTuningTaskPrompt("");
         setTotalAugmentedEntries(0);
       }
     }
-  }, [dataset_path]);
+  }, [dataset_path, loadOriginalDatasetPreview, augmentedDatasetFileName, onAugmentedDatasetReady]);
 
   // New effect to load augmented dataset when augmentedDatasetFileName prop is provided
   useEffect(() => {
@@ -61,23 +60,23 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     if (augmentedDatasetFileName) {
       loadAugmentedDatasetPreview(augmentedDatasetFileName);
     }
-  }, [augmentedDatasetFileName]);
+  }, [augmentedDatasetFileName, loadAugmentedDatasetPreview]);
 
   // Sync the selectedDatasetChoice prop with internal state
   useEffect(() => {
     console.log("[DatasetPreview] selectedDatasetChoice prop changed:", selectedDatasetChoice);
-    if (selectedDatasetChoice) {
+    if (selectedDatasetChoice && selectedDatasetChoice !== datasetChoice) {
       setDatasetChoice(selectedDatasetChoice);
       // Also set the active tab based on the dataset choice
-      if (selectedDatasetChoice === 'augmented') {
+      if (selectedDatasetChoice === 'augmented' && activeTab !== 1) {
         setActiveTab(1);
-      } else {
+      } else if (selectedDatasetChoice === 'original' && activeTab !== 0) {
         setActiveTab(0);
       }
     }
-  }, [selectedDatasetChoice]);
+  }, [selectedDatasetChoice, datasetChoice, activeTab]);
 
-  const loadOriginalDatasetPreview = async () => {
+  const loadOriginalDatasetPreview = useCallback(async () => {
     if (!dataset_path || dataset_path === 'undefined' || dataset_path === 'null') return;
     
     setLoadingPreview(true);
@@ -108,9 +107,9 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       setTotalEntries(0);
     }
     setLoadingPreview(false);
-  };
+  }, [dataset_path]);
 
-  const loadAugmentedDatasetPreview = async (augmentedDatasetPath) => {
+  const loadAugmentedDatasetPreview = useCallback(async (augmentedDatasetPath) => {
     if (!augmentedDatasetPath || augmentedDatasetPath === 'undefined' || augmentedDatasetPath === 'null') return;
     
     console.log("[DatasetPreview] Loading augmented dataset preview from:", augmentedDatasetPath);
@@ -227,7 +226,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       setAugmentedDataPreview([]);
       setTotalAugmentedEntries(0);
     }
-  };
+  }, [selectedDatasetChoice]);
 
   const handleGenerateAugmentedDataset = async () => {
     if (!dataset_path || !fineTuningTaskPrompt.trim()) {
@@ -345,8 +344,6 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       // For original data, use dynamic headers
       if (displayData.length > 0) {
         headers = Object.keys(displayData[0]);
-      } else if (type === "original" && previewData.length > 0) {
-        headers = Object.keys(previewData[0]);
       }
       processedData = displayData;
     }
@@ -414,7 +411,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         </Table>
       </TableContainer>
     );
-  }, [previewData, augmentedDatasetGCSPath, isAugmenting]); // Dependencies for useCallback
+  }, []); // No dependencies needed since function is now pure
 
   // Memoized table renderings to prevent unnecessary re-renders
   const originalDataTable = useMemo(() => 
@@ -440,17 +437,17 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
 
   // Only allow dataset choice if JSON file and augmentation exists, otherwise force to augmented
   useEffect(() => {
-    if (!isJsonFile && augmentedDatasetGCSPath) {
+    if (!isJsonFile && augmentedDatasetGCSPath && datasetChoice !== 'augmented') {
       setDatasetChoice('augmented');
     }
-  }, [isJsonFile, augmentedDatasetGCSPath]);
+  }, [isJsonFile, augmentedDatasetGCSPath, datasetChoice]);
 
   // Notify parent of dataset choice change (for fine-tuning)
   useEffect(() => {
     if (onDatasetChoiceChange) {
       onDatasetChoiceChange(datasetChoice);
     }
-  }, [datasetChoice, onDatasetChoiceChange]);
+  }, [datasetChoice]); // Intentionally not including onDatasetChoiceChange to prevent re-renders
 
   // When augmentation completes, notify parent with the new file name
   useEffect(() => {
@@ -459,7 +456,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       const fileName = augmentedDatasetGCSPath.split('/').pop();
       onAugmentedDatasetReady(fileName);
     }
-  }, [augmentedDatasetGCSPath, datasetChoice, onAugmentedDatasetReady]);
+  }, [augmentedDatasetGCSPath, datasetChoice]); // Intentionally not including onAugmentedDatasetReady to prevent re-renders
 
   // UI rendering
   return (
