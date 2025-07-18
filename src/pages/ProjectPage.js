@@ -409,10 +409,18 @@ function ProjectPage({ currentUser }) {
     } else {
       // Using original dataset
       if (!isOriginalJson) {
-        return {
-          isReady: false,
-          message: "Original dataset is not JSON. Please augment it first or upload a JSON file"
-        };
+        // If original is not JSON but augmented exists, suggest switching
+        if (augmentedDatasetFileName) {
+          return {
+            isReady: false,
+            message: "Original dataset is not JSON. Please switch to 'Augmented' option below or upload a JSON file"
+          };
+        } else {
+          return {
+            isReady: false,
+            message: "Original dataset is not JSON. Please augment it first or upload a JSON file"
+          };
+        }
       }
       return { isReady: true, message: "" };
     }
