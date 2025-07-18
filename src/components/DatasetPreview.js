@@ -120,25 +120,42 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       if (response.ok) {
         const data = await response.json();
         console.log("[DatasetPreview] Augmented dataset response data:", data);
+        
+        // Handle different data structures
+        let previewData = [];
+        let fullCount = 0;
+        let summaryText = null;
+        
         if (data.preview && data.full_count !== undefined) {
-          setAugmentedDataPreview(data.preview);
-          setTotalAugmentedEntries(data.full_count);
-          console.log("[DatasetPreview] Set augmented preview with", data.preview.length, "items");
-        } else if (Array.isArray(data)) { // Fallback
-          setAugmentedDataPreview(data);
-          setTotalAugmentedEntries(data.length);
-          console.log("[DatasetPreview] Set augmented preview (fallback) with", data.length, "items");
+          // Standard preview format
+          previewData = data.preview;
+          fullCount = data.full_count;
+        } else if (Array.isArray(data)) {
+          // Direct array format
+          previewData = data;
+          fullCount = data.length;
+        } else if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
+          // QA pairs format with possible summary
+          previewData = data.qa_pairs;
+          fullCount = data.qa_pairs.length;
+          summaryText = data.summary || null;
         } else {
-          setAugmentedDataPreview([]);
-          setTotalAugmentedEntries(0);
+          // Single object or unknown format
+          previewData = [];
+          fullCount = 0;
           console.warn("Unexpected preview data format for augmented dataset:", data);
         }
+        
+        setAugmentedDataPreview(previewData);
+        setTotalAugmentedEntries(fullCount);
+        setSummary(summaryText);
+        console.log("[DatasetPreview] Set augmented preview with", previewData.length, "items, summary:", summaryText);
         
         // Set the GCS path (don't call onAugmentedDatasetReady as it's already set in parent)
         setAugmentedDatasetGCSPath(augmentedDatasetPath);
         
         // Switch to augmented tab if we have data and choice is augmented
-        if (data.preview && data.preview.length > 0 && selectedDatasetChoice === 'augmented') {
+        if (previewData.length > 0 && selectedDatasetChoice === 'augmented') {
           console.log("[DatasetPreview] Switching to augmented tab");
           setActiveTab(1);
         }
@@ -216,7 +233,18 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   };
   
   const renderDataTableInternal = useCallback((data, isLoading, type) => {
-    const displayData = Array.isArray(data) ? data : [];
+    let displayData = Array.isArray(data) ? data : [];
+    
+    // Handle special case where data might be an object with qa_pairs
+    if (!Array.isArray(data) && data && typeof data === 'object') {
+      if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
+        displayData = data.qa_pairs;
+      } else if (data.preview && Array.isArray(data.preview)) {
+        displayData = data.preview;
+      } else {
+        displayData = [data];
+      }
+    }
     
     // Determine headers and data format
     let headers = [];
@@ -242,9 +270,12 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
           };
         });
       } else {
-        // Fallback to dynamic headers for augmented data
-        headers = Object.keys(firstRow);
-        processedData = displayData;
+        // Fallback - force question/answer structure for augmented data
+        headers = ["question", "answer"];
+        processedData = displayData.map((row, index) => ({
+          question: `Question ${index + 1}`,
+          answer: typeof row === 'object' ? JSON.stringify(row) : String(row || '')
+        }));
       }
     } else {
       // For original data, use dynamic headers
