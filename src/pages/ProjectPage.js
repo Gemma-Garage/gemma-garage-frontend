@@ -75,9 +75,9 @@ function ProjectPage({ currentUser }) {
           const projectData = { id: projectDocSnap.id, ...projectDocSnap.data() };
           setSelectedProjectData(projectData);
 
-          // Load project settings
-          setTrainableDatasetName(projectData.trainableDatasetName || null);
-          setAugmentedDatasetFileName(projectData.augmentedDatasetFileName || null);
+          // Load project settings - sanitize to ensure only filenames are used
+          setTrainableDatasetName(projectData.trainableDatasetName ? projectData.trainableDatasetName.split('/').pop() : null);
+          setAugmentedDatasetFileName(projectData.augmentedDatasetFileName ? projectData.augmentedDatasetFileName.split('/').pop() : null);
           setTrainedModelPath(projectData.trainedModelPath || null);
           
           // Smart dataset choice logic: prefer augmented if original is not JSON and augmented exists
