@@ -45,20 +45,18 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     
     setLoadingPreview(true);
     try {
-      console.log("Loading original dataset preview from:", encodeURIComponent(dataset_path));
       const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(dataset_path)}`);
       if (response.ok) {
         const data = await response.json();
         if (data.preview && data.full_count !== undefined) {
-          setPreviewData(data.preview);            // use full preview batch
+          setPreviewData(data.preview);
           setTotalEntries(data.full_count);
-        } else if (Array.isArray(data)) { // Fallback
-          setPreviewData(data);             // show all fetched items for scrolling
+        } else if (Array.isArray(data)) {
+          setPreviewData(data);
           setTotalEntries(data.length);
         } else {
           setPreviewData([]);
           setTotalEntries(0);
-          console.warn("Unexpected preview data format for original dataset:", data);
         }
       } else {
         console.error("Error loading original dataset preview: Server returned", response.status);
@@ -71,18 +69,15 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       setTotalEntries(0);
     }
     setLoadingPreview(false);
-  }, [dataset_path]);
+  }, []); // No dependencies to prevent re-renders
 
   const loadAugmentedDatasetPreview = useCallback(async (augmentedDatasetPath) => {
     if (!augmentedDatasetPath || augmentedDatasetPath === 'undefined' || augmentedDatasetPath === 'null') return;
     
-    console.log("[DatasetPreview] Loading augmented dataset preview from:", augmentedDatasetPath);
     try {
       const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(augmentedDatasetPath)}`);
-      console.log("[DatasetPreview] Augmented dataset response status:", response.status);
       if (response.ok) {
         const data = await response.json();
-        console.log("[DatasetPreview] Augmented dataset response data:", data);
         
         // Handle different data structures
         let previewData = [];
@@ -91,38 +86,25 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         
         // Priority 1: Canonical structure - root level summary and qa_pairs
         if (data.summary && data.qa_pairs) {
-          console.log("[DatasetPreview] Detected canonical structure with summary and qa_pairs at root");
           summaryText = data.summary;
           
           if (typeof data.qa_pairs === 'string') {
-            // qa_pairs is a JSON string, parse it
             try {
               const parsedQAPairs = JSON.parse(data.qa_pairs);
               if (Array.isArray(parsedQAPairs)) {
                 previewData = parsedQAPairs;
                 fullCount = parsedQAPairs.length;
-              } else {
-                console.warn("Parsed qa_pairs is not an array:", parsedQAPairs);
-                previewData = [];
-                fullCount = 0;
               }
             } catch (e) {
               console.error("Failed to parse qa_pairs string:", e);
-              previewData = [];
-              fullCount = 0;
             }
           } else if (Array.isArray(data.qa_pairs)) {
             previewData = data.qa_pairs;
             fullCount = data.qa_pairs.length;
-          } else {
-            console.warn("qa_pairs is neither string nor array:", typeof data.qa_pairs);
-            previewData = [];
-            fullCount = 0;
           }
         }
         // Priority 2: Standard preview format (backend wraps data)
         else if (data.preview && data.full_count !== undefined) {
-          console.log("[DatasetPreview] Detected standard preview format");
           previewData = data.preview;
           fullCount = data.full_count;
           
@@ -130,7 +112,6 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
           if (previewData.length === 1 && previewData[0].summary && previewData[0].qa_pairs) {
             const singleItem = previewData[0];
             summaryText = singleItem.summary;
-            // Parse qa_pairs if it's a string
             if (typeof singleItem.qa_pairs === 'string') {
               try {
                 const parsedQAPairs = JSON.parse(singleItem.qa_pairs);
@@ -149,37 +130,20 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         }
         // Priority 3: Direct qa_pairs array with optional summary
         else if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
-          console.log("[DatasetPreview] Detected direct qa_pairs array format");
           previewData = data.qa_pairs;
           fullCount = data.qa_pairs.length;
           summaryText = data.summary || null;
         }
         // Priority 4: Direct array format (fallback)
         else if (Array.isArray(data)) {
-          console.log("[DatasetPreview] Detected direct array format");
           previewData = data;
           fullCount = data.length;
-        }
-        // Priority 5: Unknown format
-        else {
-          console.warn("Unexpected preview data format for augmented dataset:", data);
-          previewData = [];
-          fullCount = 0;
         }
         
         setAugmentedDataPreview(previewData);
         setTotalAugmentedEntries(fullCount);
         setSummary(summaryText);
-        console.log("[DatasetPreview] Set augmented preview with", previewData.length, "items, summary:", summaryText);
-        
-        // Set the GCS path (don't call onAugmentedDatasetReady as it's already set in parent)
         setAugmentedDatasetGCSPath(augmentedDatasetPath);
-        
-        // Switch to augmented tab if we have data and choice is augmented
-        if (previewData.length > 0 && selectedDatasetChoice === 'augmented') {
-          console.log("[DatasetPreview] Switching to augmented tab");
-          setActiveTab(1);
-        }
       } else {
         console.error("Error loading augmented dataset preview: Server returned", response.status);
         setAugmentedDataPreview([]);
@@ -190,45 +154,27 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       setAugmentedDataPreview([]);
       setTotalAugmentedEntries(0);
     }
-  }, [selectedDatasetChoice]);
+  }, []); // No dependencies to prevent re-renders
 
-  // useEffect hooks come after function definitions
+  // useEffect hooks - simplified to prevent re-render loops
   useEffect(() => {
     if (dataset_path && dataset_path !== 'undefined' && dataset_path !== 'null') {
       loadOriginalDatasetPreview();
-      // Only reset augmentation states if original dataset changes and no saved augmented dataset
-      if (!augmentedDatasetFileName) {
-        setAugmentedDataPreview([]);
-        setAugmentedDatasetGCSPath(null);
-        if (onAugmentedDatasetReady) onAugmentedDatasetReady(null); // Notify parent
-        setErrorAugmenting(null);
-        setFineTuningTaskPrompt("");
-        setTotalAugmentedEntries(0);
-      }
     }
-  }, [dataset_path, loadOriginalDatasetPreview, augmentedDatasetFileName, onAugmentedDatasetReady]);
+  }, [dataset_path]); // Only depend on dataset_path
 
-  // New effect to load augmented dataset when augmentedDatasetFileName prop is provided
   useEffect(() => {
-    console.log("[DatasetPreview] augmentedDatasetFileName prop changed:", augmentedDatasetFileName);
-    if (augmentedDatasetFileName) {
+    if (augmentedDatasetFileName && augmentedDatasetFileName !== 'undefined' && augmentedDatasetFileName !== 'null') {
       loadAugmentedDatasetPreview(augmentedDatasetFileName);
     }
-  }, [augmentedDatasetFileName, loadAugmentedDatasetPreview]);
+  }, [augmentedDatasetFileName]); // Only depend on augmentedDatasetFileName
 
-  // Sync the selectedDatasetChoice prop with internal state
   useEffect(() => {
-    console.log("[DatasetPreview] selectedDatasetChoice prop changed:", selectedDatasetChoice);
     if (selectedDatasetChoice && selectedDatasetChoice !== datasetChoice) {
       setDatasetChoice(selectedDatasetChoice);
-      // Also set the active tab based on the dataset choice
-      if (selectedDatasetChoice === 'augmented' && activeTab !== 1) {
-        setActiveTab(1);
-      } else if (selectedDatasetChoice === 'original' && activeTab !== 0) {
-        setActiveTab(0);
-      }
+      setActiveTab(selectedDatasetChoice === 'augmented' ? 1 : 0);
     }
-  }, [selectedDatasetChoice, datasetChoice, activeTab]);
+  }, [selectedDatasetChoice]); // Only depend on selectedDatasetChoice - removed internal state dependencies
 
   const handleGenerateAugmentedDataset = async () => {
     if (!dataset_path || !fineTuningTaskPrompt.trim()) {
@@ -276,9 +222,12 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         setAugmentedDataPreview(data.preview_augmented_data.preview || []);
         setTotalAugmentedEntries(data.preview_augmented_data.full_count || (data.preview_augmented_data.preview || []).length);
         setAugmentedDatasetGCSPath(data.augmented_dataset_gcs_path);
-        onAugmentedDatasetReady(data.augmented_dataset_gcs_path); // Notify parent
         setSummary(data.summary || null);
-        // setActiveTab(1); // Switch to augmented data tab
+        
+        // Notify parent
+        if (onAugmentedDatasetReady) {
+          onAugmentedDatasetReady(data.augmented_dataset_gcs_path);
+        }
       } else {
         console.error("Augmentation response missing expected fields:", data);
         setErrorAugmenting("Augmentation completed but response format is unexpected.");
@@ -426,6 +375,17 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     [renderDataTableInternal, augmentedDataPreview, isAugmenting]
   );
 
+  // Helper: is JSON file
+  const isJsonFile = datasetFile && datasetFile.name && datasetFile.name.split('.').pop().toLowerCase() === 'json';
+
+  // Simple handlers for parent communication - no useEffect needed
+  const handleDatasetChoiceChange = (newChoice) => {
+    setDatasetChoice(newChoice);
+    if (onDatasetChoiceChange) {
+      onDatasetChoiceChange(newChoice);
+    }
+  };
+
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
     // Auto-load original dataset preview when tab is changed to "Original Dataset"
@@ -433,32 +393,6 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       loadOriginalDatasetPreview();
     }
   };
-
-  // Helper: is JSON file
-  const isJsonFile = datasetFile && datasetFile.name && datasetFile.name.split('.').pop().toLowerCase() === 'json';
-
-  // Only allow dataset choice if JSON file and augmentation exists, otherwise force to augmented
-  useEffect(() => {
-    if (!isJsonFile && augmentedDatasetGCSPath && datasetChoice !== 'augmented') {
-      setDatasetChoice('augmented');
-    }
-  }, [isJsonFile, augmentedDatasetGCSPath, datasetChoice]);
-
-  // Notify parent of dataset choice change (for fine-tuning)
-  useEffect(() => {
-    if (onDatasetChoiceChange) {
-      onDatasetChoiceChange(datasetChoice);
-    }
-  }, [datasetChoice]); // Intentionally not including onDatasetChoiceChange to prevent re-renders
-
-  // When augmentation completes, notify parent with the new file name
-  useEffect(() => {
-    if (augmentedDatasetGCSPath && datasetChoice === 'augmented' && onAugmentedDatasetReady) {
-      // Extract just the filename from the GCS path
-      const fileName = augmentedDatasetGCSPath.split('/').pop();
-      onAugmentedDatasetReady(fileName);
-    }
-  }, [augmentedDatasetGCSPath, datasetChoice]); // Intentionally not including onAugmentedDatasetReady to prevent re-renders
 
   // UI rendering
   return (
@@ -539,7 +473,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
               <RadioGroup
                 row
                 value={datasetChoice}
-                onChange={e => setDatasetChoice(e.target.value)}
+                onChange={e => handleDatasetChoiceChange(e.target.value)}
               >
                 <FormControlLabel value="original" control={<Radio />} label="Original Dataset" />
                 <FormControlLabel value="augmented" control={<Radio />} label="Augmented Dataset" />
