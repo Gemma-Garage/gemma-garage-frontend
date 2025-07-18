@@ -146,21 +146,28 @@ function ProjectPage({ currentUser }) {
       const data = await response.json();
       
       const fileExt = datasetFile.name.split('.').pop().toLowerCase();
+      const fileName = data.file_location.split('/').pop();
+
       if (fileExt === 'pdf') {
         setUploadStatus("PDF processed successfully: " + data.file_location);
       } else {
-        const fileName = data.file_location.split('/').pop();
         setUploadStatus(`Dataset uploaded: ${fileName}. Ready for training.`);
       }
       // After a successful upload, set the trainable dataset name
-      setTrainableDatasetName(data.file_location);
+      setTrainableDatasetName(fileName);
       // Clear any old augmented dataset state
       setAugmentedDatasetFileName(null);
 
+      // If the uploaded file is not a JSON, it must be augmented.
+      // Default the choice to 'augmented'.
+      const newDatasetChoice = fileExt !== 'json' ? 'augmented' : 'original';
+      setSelectedDatasetChoice(newDatasetChoice);
+
       // Save to Firestore
       await saveProjectProgress({
-        trainableDatasetName: data.file_location,
-        augmentedDatasetFileName: null // Clear old augmented data
+        trainableDatasetName: fileName,
+        augmentedDatasetFileName: null, // Clear old augmented data
+        selectedDatasetChoice: newDatasetChoice, // Save the choice
       });
 
     } catch (error) {
@@ -512,9 +519,10 @@ function ProjectPage({ currentUser }) {
   };
 
   const handleAugmentedDatasetReady = async (augmentedGcsPath) => {
-    setAugmentedDatasetFileName(augmentedGcsPath);
+    const augmentedFilename = augmentedGcsPath.split('/').pop();
+    setAugmentedDatasetFileName(augmentedFilename);
     await saveProjectProgress({
-      augmentedDatasetFileName: augmentedGcsPath
+      augmentedDatasetFileName: augmentedFilename
     });
   };
 
