@@ -48,10 +48,27 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
         }
       }
       
+      // Sanitize model name for HuggingFace repository naming
+      let sanitizedModelName = 'gemma-fine-tuned';
+      if (modelName) {
+        // Remove organization prefix and clean up the name
+        const cleanName = modelName.replace(/^(google\/|microsoft\/|meta\/|huggingface\/)/, '');
+        // Replace any remaining slashes or invalid characters
+        sanitizedModelName = cleanName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+        // Ensure it doesn't start or end with hyphens
+        sanitizedModelName = sanitizedModelName.replace(/^-+|-+$/g, '');
+        // Add fine-tuned suffix
+        sanitizedModelName = `${sanitizedModelName}-fine-tuned`;
+        // Ensure it's not too long (HF limit is 96 chars)
+        if (sanitizedModelName.length > 90) {
+          sanitizedModelName = sanitizedModelName.substring(0, 90) + '-fine-tuned';
+        }
+      }
+      
       setUploadForm(prev => ({
         ...prev,
         requestId: requestIdToUse || '',
-        modelName: modelName ? `${modelName.replace('google/', '')}-fine-tuned` : 'gemma-fine-tuned',
+        modelName: sanitizedModelName,
         description: `Fine-tuned ${modelName || 'Gemma'} model from Gemma Garage`,
         baseModel: modelName || 'google/gemma-2b'
       }));
@@ -92,7 +109,32 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
     }
   };
 
+  const validateModelName = (name) => {
+    // HuggingFace repository naming rules
+    const validPattern = /^[a-zA-Z0-9-]+$/;
+    if (!validPattern.test(name)) {
+      return "Model name can only contain letters, numbers, and hyphens";
+    }
+    if (name.startsWith('-') || name.endsWith('-')) {
+      return "Model name cannot start or end with a hyphen";
+    }
+    if (name.length > 96) {
+      return "Model name cannot be longer than 96 characters";
+    }
+    if (name.length < 1) {
+      return "Model name cannot be empty";
+    }
+    return null;
+  };
+
   const handleUploadModel = async () => {
+    // Validate model name before upload
+    const validationError = validateModelName(uploadForm.modelName);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
@@ -280,6 +322,10 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
               onChange={(e) => setUploadForm({ ...uploadForm, modelName: e.target.value })}
               sx={{ mb: 2 }}
               helperText="This will be the repository name on Hugging Face"
+              error={!!validateModelName(uploadForm.modelName)}
+              FormHelperTextProps={{
+                error: !!validateModelName(uploadForm.modelName)
+              }}
             />
             <TextField
               fullWidth
