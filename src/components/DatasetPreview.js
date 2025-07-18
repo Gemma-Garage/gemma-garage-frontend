@@ -319,7 +319,18 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         </Table>
       </TableContainer>
     );
-  }, [previewData]); // Dependencies for useCallback
+  }, [previewData, augmentedDatasetGCSPath, isAugmenting]); // Dependencies for useCallback
+
+  // Memoized table renderings to prevent unnecessary re-renders
+  const originalDataTable = useMemo(() => 
+    renderDataTableInternal(previewData, loadingPreview, 'original'), 
+    [renderDataTableInternal, previewData, loadingPreview]
+  );
+
+  const augmentedDataTable = useMemo(() => 
+    renderDataTableInternal(augmentedDataPreview, isAugmenting, 'augmented'), 
+    [renderDataTableInternal, augmentedDataPreview, isAugmenting]
+  );
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -472,7 +483,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                     </Alert>
                   )}
                   <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                    {useMemo(() => renderDataTableInternal(previewData, loadingPreview, 'original'), [previewData, loadingPreview])}
+                    {originalDataTable}
                   </TableContainer>
                 </>
               )}
@@ -487,7 +498,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                     Augmented Dataset Preview {augmentedDatasetGCSPath && `(from ${augmentedDatasetGCSPath})`}
                   </Typography>
                   <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                    {useMemo(() => renderDataTableInternal(augmentedDataPreview, isAugmenting, 'augmented'), [augmentedDataPreview, isAugmenting])}
+                    {augmentedDataTable}
                   </TableContainer>
                 </>
               )}
