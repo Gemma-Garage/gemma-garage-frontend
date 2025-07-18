@@ -139,11 +139,35 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
           previewData = data.qa_pairs;
           fullCount = data.qa_pairs.length;
           summaryText = data.summary || null;
+        } else if (data.summary && data.qa_pairs) {
+          // Data contains both summary and qa_pairs at root level
+          previewData = Array.isArray(data.qa_pairs) ? data.qa_pairs : [];
+          fullCount = Array.isArray(data.qa_pairs) ? data.qa_pairs.length : 0;
+          summaryText = data.summary;
         } else {
-          // Single object or unknown format
-          previewData = [];
-          fullCount = 0;
-          console.warn("Unexpected preview data format for augmented dataset:", data);
+          // Single object or unknown format - check if it's the structure we see in screenshot
+          if (typeof data.qa_pairs === 'string') {
+            // qa_pairs is a JSON string, parse it
+            try {
+              const parsedQAPairs = JSON.parse(data.qa_pairs);
+              if (Array.isArray(parsedQAPairs)) {
+                previewData = parsedQAPairs;
+                fullCount = parsedQAPairs.length;
+                summaryText = data.summary || null;
+              } else {
+                previewData = [];
+                fullCount = 0;
+              }
+            } catch (e) {
+              console.error("Failed to parse qa_pairs string:", e);
+              previewData = [];
+              fullCount = 0;
+            }
+          } else {
+            previewData = [];
+            fullCount = 0;
+            console.warn("Unexpected preview data format for augmented dataset:", data);
+          }
         }
         
         setAugmentedDataPreview(previewData);
@@ -250,32 +274,35 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     let headers = [];
     let processedData = displayData;
 
-    if (type === "augmented" && displayData.length > 0) {
-      // For augmented data, check if it has question/answer structure or text structure
-      const firstRow = displayData[0];
-      if (firstRow.question && firstRow.answer) {
-        // QA pair format (from remote augmentation)
-        headers = ["question", "answer"];
-        processedData = displayData;
-      } else if (firstRow.text) {
-        // Gemma format with text field - extract question/answer from text
-        headers = ["question", "answer"];
-        processedData = displayData.map(row => {
-          const text = row.text || "";
-          const userMatch = text.match(/<start_of_turn>user\n(.*?)<end_of_turn>/s);
-          const modelMatch = text.match(/<start_of_turn>model\n(.*?)<end_of_turn>/s);
-          return {
-            question: userMatch ? userMatch[1].trim() : "No question found",
-            answer: modelMatch ? modelMatch[1].trim() : "No answer found"
-          };
-        });
+    if (type === "augmented") {
+      // For augmented data, always use question/answer columns
+      headers = ["question", "answer"];
+      
+      if (displayData.length > 0) {
+        const firstRow = displayData[0];
+        if (firstRow.question && firstRow.answer) {
+          // QA pair format (from remote augmentation)
+          processedData = displayData;
+        } else if (firstRow.text) {
+          // Gemma format with text field - extract question/answer from text
+          processedData = displayData.map(row => {
+            const text = row.text || "";
+            const userMatch = text.match(/<start_of_turn>user\n(.*?)<end_of_turn>/s);
+            const modelMatch = text.match(/<start_of_turn>model\n(.*?)<end_of_turn>/s);
+            return {
+              question: userMatch ? userMatch[1].trim() : "No question found",
+              answer: modelMatch ? modelMatch[1].trim() : "No answer found"
+            };
+          });
+        } else {
+          // Fallback - force question/answer structure for augmented data
+          processedData = displayData.map((row, index) => ({
+            question: `Question ${index + 1}`,
+            answer: typeof row === 'object' ? JSON.stringify(row) : String(row || '')
+          }));
+        }
       } else {
-        // Fallback - force question/answer structure for augmented data
-        headers = ["question", "answer"];
-        processedData = displayData.map((row, index) => ({
-          question: `Question ${index + 1}`,
-          answer: typeof row === 'object' ? JSON.stringify(row) : String(row || '')
-        }));
+        processedData = [];
       }
     } else {
       // For original data, use dynamic headers
