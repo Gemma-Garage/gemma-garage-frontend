@@ -39,43 +39,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   const [datasetChoice, setDatasetChoice] = useState("original"); // 'original' or 'augmented'
   const [qaPairsNbr, setQaPairsNbr] = useState(100);
 
-  useEffect(() => {
-    if (dataset_path && dataset_path !== 'undefined' && dataset_path !== 'null') {
-      loadOriginalDatasetPreview();
-      // Only reset augmentation states if original dataset changes and no saved augmented dataset
-      if (!augmentedDatasetFileName) {
-        setAugmentedDataPreview([]);
-        setAugmentedDatasetGCSPath(null);
-        if (onAugmentedDatasetReady) onAugmentedDatasetReady(null); // Notify parent
-        setErrorAugmenting(null);
-        setFineTuningTaskPrompt("");
-        setTotalAugmentedEntries(0);
-      }
-    }
-  }, [dataset_path, loadOriginalDatasetPreview, augmentedDatasetFileName, onAugmentedDatasetReady]);
-
-  // New effect to load augmented dataset when augmentedDatasetFileName prop is provided
-  useEffect(() => {
-    console.log("[DatasetPreview] augmentedDatasetFileName prop changed:", augmentedDatasetFileName);
-    if (augmentedDatasetFileName) {
-      loadAugmentedDatasetPreview(augmentedDatasetFileName);
-    }
-  }, [augmentedDatasetFileName, loadAugmentedDatasetPreview]);
-
-  // Sync the selectedDatasetChoice prop with internal state
-  useEffect(() => {
-    console.log("[DatasetPreview] selectedDatasetChoice prop changed:", selectedDatasetChoice);
-    if (selectedDatasetChoice && selectedDatasetChoice !== datasetChoice) {
-      setDatasetChoice(selectedDatasetChoice);
-      // Also set the active tab based on the dataset choice
-      if (selectedDatasetChoice === 'augmented' && activeTab !== 1) {
-        setActiveTab(1);
-      } else if (selectedDatasetChoice === 'original' && activeTab !== 0) {
-        setActiveTab(0);
-      }
-    }
-  }, [selectedDatasetChoice, datasetChoice, activeTab]);
-
+  // Define functions first before they're used in useEffect
   const loadOriginalDatasetPreview = useCallback(async () => {
     if (!dataset_path || dataset_path === 'undefined' || dataset_path === 'null') return;
     
@@ -227,6 +191,44 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       setTotalAugmentedEntries(0);
     }
   }, [selectedDatasetChoice]);
+
+  // useEffect hooks come after function definitions
+  useEffect(() => {
+    if (dataset_path && dataset_path !== 'undefined' && dataset_path !== 'null') {
+      loadOriginalDatasetPreview();
+      // Only reset augmentation states if original dataset changes and no saved augmented dataset
+      if (!augmentedDatasetFileName) {
+        setAugmentedDataPreview([]);
+        setAugmentedDatasetGCSPath(null);
+        if (onAugmentedDatasetReady) onAugmentedDatasetReady(null); // Notify parent
+        setErrorAugmenting(null);
+        setFineTuningTaskPrompt("");
+        setTotalAugmentedEntries(0);
+      }
+    }
+  }, [dataset_path, loadOriginalDatasetPreview, augmentedDatasetFileName, onAugmentedDatasetReady]);
+
+  // New effect to load augmented dataset when augmentedDatasetFileName prop is provided
+  useEffect(() => {
+    console.log("[DatasetPreview] augmentedDatasetFileName prop changed:", augmentedDatasetFileName);
+    if (augmentedDatasetFileName) {
+      loadAugmentedDatasetPreview(augmentedDatasetFileName);
+    }
+  }, [augmentedDatasetFileName, loadAugmentedDatasetPreview]);
+
+  // Sync the selectedDatasetChoice prop with internal state
+  useEffect(() => {
+    console.log("[DatasetPreview] selectedDatasetChoice prop changed:", selectedDatasetChoice);
+    if (selectedDatasetChoice && selectedDatasetChoice !== datasetChoice) {
+      setDatasetChoice(selectedDatasetChoice);
+      // Also set the active tab based on the dataset choice
+      if (selectedDatasetChoice === 'augmented' && activeTab !== 1) {
+        setActiveTab(1);
+      } else if (selectedDatasetChoice === 'original' && activeTab !== 0) {
+        setActiveTab(0);
+      }
+    }
+  }, [selectedDatasetChoice, datasetChoice, activeTab]);
 
   const handleGenerateAugmentedDataset = async () => {
     if (!dataset_path || !fineTuningTaskPrompt.trim()) {
