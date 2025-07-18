@@ -79,7 +79,16 @@ function ProjectPage({ currentUser }) {
           setTrainableDatasetName(projectData.trainableDatasetName || null);
           setAugmentedDatasetFileName(projectData.augmentedDatasetFileName || null);
           setTrainedModelPath(projectData.trainedModelPath || null);
-          setSelectedDatasetChoice(projectData.selectedDatasetChoice || "original");
+          
+          // Smart dataset choice logic: if augmented exists and no explicit choice saved, prefer augmented
+          let datasetChoice = projectData.selectedDatasetChoice;
+          if (!datasetChoice && projectData.augmentedDatasetFileName) {
+            datasetChoice = "augmented";
+          } else if (!datasetChoice) {
+            datasetChoice = "original";
+          }
+          setSelectedDatasetChoice(datasetChoice);
+          
           setEpochs(projectData.epochs || 1);
           setLearningRate(projectData.learningRate || 0.0002);
           setLoraRank(projectData.loraRank || 4);
@@ -376,20 +385,51 @@ function ProjectPage({ currentUser }) {
     }
   };
 
+  // Check if fine-tuning is ready
+  const getTrainingReadiness = () => {
+    // No dataset uploaded at all
+    if (!trainableDatasetName) {
+      return {
+        isReady: false,
+        message: "Upload dataset to start fine-tuning"
+      };
+    }
+
+    // Check if original dataset is JSON
+    const isOriginalJson = trainableDatasetName.toLowerCase().endsWith('.json');
+    
+    if (selectedDatasetChoice === "augmented") {
+      if (!augmentedDatasetFileName) {
+        return {
+          isReady: false,
+          message: "Generate augmented dataset to start fine-tuning"
+        };
+      }
+      return { isReady: true, message: "" };
+    } else {
+      // Using original dataset
+      if (!isOriginalJson) {
+        return {
+          isReady: false,
+          message: "Original dataset is not JSON. Please augment it first or upload a JSON file"
+        };
+      }
+      return { isReady: true, message: "" };
+    }
+  };
+
   const startFinetuning = async () => {
+    const readiness = getTrainingReadiness();
+    if (!readiness.isReady) {
+      alert(readiness.message);
+      return;
+    }
+
     let datasetPathForTraining;
 
     if (selectedDatasetChoice === "augmented") {
-        if (!augmentedDatasetFileName) {
-            alert("Please generate an augmented dataset first, or select the original dataset.");
-            return;
-        }
         datasetPathForTraining = augmentedDatasetFileName;
     } else {
-        if (!trainableDatasetName) {
-            alert("Please upload a dataset first.");
-            return;
-        }
         datasetPathForTraining = trainableDatasetName;
     }
 
@@ -521,8 +561,13 @@ function ProjectPage({ currentUser }) {
   const handleAugmentedDatasetReady = async (augmentedGcsPath) => {
     const augmentedFilename = augmentedGcsPath.split('/').pop();
     setAugmentedDatasetFileName(augmentedFilename);
+    
+    // When augmented dataset is ready, automatically switch to using it
+    setSelectedDatasetChoice("augmented");
+    
     await saveProjectProgress({
-      augmentedDatasetFileName: augmentedFilename
+      augmentedDatasetFileName: augmentedFilename,
+      selectedDatasetChoice: "augmented" // Save the choice to use augmented
     });
   };
 
@@ -696,6 +741,7 @@ function ProjectPage({ currentUser }) {
               wsStatus={trainingStatus}
               progress={progress}
               allLogs={allLogs}
+              trainingReadiness={getTrainingReadiness()}
             />
           </div>
           
