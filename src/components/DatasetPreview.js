@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Paper,
   Typography,
@@ -215,15 +215,12 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     setIsAugmenting(false);
   };
   
-  const renderDataTableInternal = (data, isLoading, type) => {
+  const renderDataTableInternal = useCallback((data, isLoading, type) => {
     const displayData = Array.isArray(data) ? data : [];
     
-    // Determine headers based on data type
+    // Determine headers and data format
     let headers = [];
-    let renderCellValue = (row, header) => {
-      const value = row[header];
-      return typeof value === 'object' ? JSON.stringify(value) : value;
-    };
+    let processedData = displayData;
 
     if (type === "augmented" && displayData.length > 0) {
       // For augmented data, check if it has question/answer structure or text structure
@@ -231,30 +228,23 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       if (firstRow.question && firstRow.answer) {
         // QA pair format (from remote augmentation)
         headers = ["question", "answer"];
+        processedData = displayData;
       } else if (firstRow.text) {
         // Gemma format with text field - extract question/answer from text
         headers = ["question", "answer"];
-        renderCellValue = (row, header) => {
-          if (header === "question" || header === "answer") {
-            // Parse the chat template to extract question/answer
-            const text = row.text || "";
-            const userMatch = text.match(/<start_of_turn>user\n(.*?)<end_of_turn>/s);
-            const modelMatch = text.match(/<start_of_turn>model\n(.*?)<end_of_turn>/s);
-            if (header === "question") {
-              return userMatch ? userMatch[1].trim() : "No question found";
-            } else {
-              return modelMatch ? modelMatch[1].trim() : "No answer found";
-            }
-          }
-          return row[header];
-        };
+        processedData = displayData.map(row => {
+          const text = row.text || "";
+          const userMatch = text.match(/<start_of_turn>user\n(.*?)<end_of_turn>/s);
+          const modelMatch = text.match(/<start_of_turn>model\n(.*?)<end_of_turn>/s);
+          return {
+            question: userMatch ? userMatch[1].trim() : "No question found",
+            answer: modelMatch ? modelMatch[1].trim() : "No answer found"
+          };
+        });
       } else {
         // Fallback to dynamic headers for augmented data
         headers = Object.keys(firstRow);
-        renderCellValue = (row, header) => {
-          const value = row[header];
-          return typeof value === 'object' ? JSON.stringify(value) : value;
-        };
+        processedData = displayData;
       }
     } else {
       // For original data, use dynamic headers
@@ -263,7 +253,16 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       } else if (type === "original" && previewData.length > 0) {
         headers = Object.keys(previewData[0]);
       }
+      processedData = displayData;
     }
+
+    const renderCellValue = (row, header) => {
+      const value = row[header];
+      if (typeof value === 'object') {
+        return JSON.stringify(value);
+      }
+      return String(value || '');
+    };
 
     return (
       <TableContainer sx={{ maxHeight: 400, overflow: 'auto' }}>
@@ -285,7 +284,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                   <CircularProgress />
                 </TableCell>
               </TableRow>
-            ) : displayData.length === 0 ? (
+            ) : processedData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={headers.length || 1} align="center">
                   No data available{type === "augmented" ? " for augmentation preview" : ""}.
@@ -293,16 +292,24 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                 </TableCell>
               </TableRow>
             ) : (
-              displayData.map((row, index) => (
-                <TableRow key={index}>
+              processedData.map((row, index) => (
+                <TableRow key={`${type}-${index}`}>
                   {headers.map(header => (
-                    <TableCell key={`${index}-${header}`} sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <TableCell 
+                      key={`${type}-${index}-${header}`} 
+                      sx={{ 
+                        maxWidth: 300, 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
                       {renderCellValue(row, header)}
                     </TableCell>
                   ))}
                   {headers.length === 0 && (
                     <TableCell>
-                      {typeof row === 'object' ? JSON.stringify(row) : row}
+                      {typeof row === 'object' ? JSON.stringify(row) : String(row || '')}
                     </TableCell>
                   )}
                 </TableRow>
@@ -312,7 +319,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         </Table>
       </TableContainer>
     );
-  };
+  }, [previewData]); // Dependencies for useCallback
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -465,7 +472,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                     </Alert>
                   )}
                   <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                    {renderDataTableInternal(previewData, loadingPreview, 'original')}
+                    {useMemo(() => renderDataTableInternal(previewData, loadingPreview, 'original'), [previewData, loadingPreview])}
                   </TableContainer>
                 </>
               )}
@@ -480,7 +487,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                     Augmented Dataset Preview {augmentedDatasetGCSPath && `(from ${augmentedDatasetGCSPath})`}
                   </Typography>
                   <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                    {renderDataTableInternal(augmentedDataPreview, isAugmenting, 'augmented')}
+                    {useMemo(() => renderDataTableInternal(augmentedDataPreview, isAugmenting, 'augmented'), [augmentedDataPreview, isAugmenting])}
                   </TableContainer>
                 </>
               )}
