@@ -80,14 +80,26 @@ function ProjectPage({ currentUser }) {
           setAugmentedDatasetFileName(projectData.augmentedDatasetFileName || null);
           setTrainedModelPath(projectData.trainedModelPath || null);
           
-          // Smart dataset choice logic: if augmented exists and no explicit choice saved, prefer augmented
+          // Smart dataset choice logic: prefer augmented if original is not JSON and augmented exists
           let datasetChoice = projectData.selectedDatasetChoice;
-          if (!datasetChoice && projectData.augmentedDatasetFileName) {
+          const isOriginalJson = projectData.trainableDatasetName ? projectData.trainableDatasetName.toLowerCase().endsWith('.json') : false;
+          
+          // If original dataset is not JSON but augmented exists, force augmented choice
+          if (!isOriginalJson && projectData.augmentedDatasetFileName) {
+            datasetChoice = "augmented";
+          } else if (!datasetChoice && projectData.augmentedDatasetFileName) {
             datasetChoice = "augmented";
           } else if (!datasetChoice) {
             datasetChoice = "original";
           }
           setSelectedDatasetChoice(datasetChoice);
+          
+          // Save the corrected choice back to database if it was changed
+          if (datasetChoice !== projectData.selectedDatasetChoice) {
+            setTimeout(() => {
+              saveProjectProgress({ selectedDatasetChoice: datasetChoice });
+            }, 100);
+          }
           
           setEpochs(projectData.epochs || 1);
           setLearningRate(projectData.learningRate || 0.0002);
