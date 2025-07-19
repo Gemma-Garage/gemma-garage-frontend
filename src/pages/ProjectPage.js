@@ -48,10 +48,13 @@ function ProjectPage({ currentUser }) {
   const requestIdRef = useRef(null);
   const lastLogTimestampRef = useRef(null);
 
-  // Check for OAuth callback success
+  // Check for OAuth callback success or error
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('hf_connected') === 'true') {
+    const hfConnected = urlParams.get('hf_connected');
+    const oauthError = urlParams.get('error');
+    
+    if (hfConnected === 'true') {
       // Clear the URL parameter
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
@@ -59,6 +62,15 @@ function ProjectPage({ currentUser }) {
       // Show success message
       setUploadStatus("Successfully connected to Hugging Face!");
       setTimeout(() => setUploadStatus(""), 3000);
+    } else if (oauthError) {
+      // Clear the URL parameter
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      // Show error message
+      const decodedError = decodeURIComponent(oauthError);
+      setUploadStatus(`OAuth Error: ${decodedError}`);
+      setTimeout(() => setUploadStatus(""), 5000);
     }
   }, []);
 
