@@ -44,15 +44,15 @@ const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange 
       console.log('Checking HF connection status...');
       console.log('Current cookies:', document.cookie);
       
-      // Get session token from localStorage
+      // Get session token from localStorage as fallback
       const sessionToken = localStorage.getItem('hf_session_token');
-      console.log('Session token from localStorage:', sessionToken);
+      console.log('Session token from localStorage (fallback):', sessionToken);
       
       const headers = {
         'Content-Type': 'application/json'
       };
       
-      // Add session token to headers if available
+      // Add session token to headers if available (as fallback)
       if (sessionToken) {
         headers['Authorization'] = `Bearer ${sessionToken}`;
       }
