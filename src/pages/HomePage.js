@@ -21,7 +21,7 @@ function HomePage({ currentUser }) {
     navigate(`/project/${projectId}`);
   };
 
-  const handleCreateProject = async (projectName, modelName) => {
+  const handleCreateProject = async (projectName, tuningType = 0, modelName) => {
     if (!currentUser) {
       alert("You must be logged in to create a project.");
       return;
@@ -39,7 +39,8 @@ function HomePage({ currentUser }) {
         epochs: 1,
         learningRate: 0.0002,
         loraRank: 4,
-        trainingStatusMessage: "Project created. Ready for training."
+        trainingStatusMessage: "Project created. Ready for training.",
+        tuningType: typeof tuningType === 'number' ? tuningType : 0 // 0=supervised, 1=RL
       });
       console.log("Project created successfully with ID:", newProjectRef.id, " Name:", projectName);
       handleCreateProjectClose();

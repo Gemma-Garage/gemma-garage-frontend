@@ -8,7 +8,8 @@ import {
   TextField,
   Box,
   Typography,
-  Avatar
+  Avatar,
+  Radio, RadioGroup, FormControlLabel, FormControl, FormLabel
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { SmartToy as AIIcon, RocketLaunch as RocketIcon } from '@mui/icons-material';
@@ -67,6 +68,7 @@ const CreateButton = styled(ModernButton)(({ theme }) => ({
 const CreateProjectDialog = ({ open, onClose, onCreate }) => {
   const [projectName, setProjectName] = useState('');
   const [error, setError] = useState('');
+  const [tuningType, setTuningType] = useState('0'); // '0' = Supervised, '1' = RL
 
   const handleSubmit = () => {
     if (!projectName.trim()) {
@@ -74,8 +76,9 @@ const CreateProjectDialog = ({ open, onClose, onCreate }) => {
       return;
     }
     setError('');
-    onCreate(projectName);
+    onCreate(projectName, parseInt(tuningType, 10));
     setProjectName('');
+    setTuningType('0');
     onClose();
   };
 
@@ -117,7 +120,18 @@ const CreateProjectDialog = ({ open, onClose, onCreate }) => {
           error={!!error}
           helperText={error || 'Give your project a descriptive name'}
         />
-
+        <FormControl component="fieldset" sx={{ mb: 2 }}>
+          <FormLabel component="legend">Tuning Type</FormLabel>
+          <RadioGroup
+            row
+            value={tuningType}
+            onChange={(e) => setTuningType(e.target.value)}
+            name="tuning-type-group"
+          >
+            <FormControlLabel value="0" control={<Radio />} label="Supervised Fine-Tuning" />
+            <FormControlLabel value="1" control={<Radio />} label="Reinforcement Learning" />
+          </RadioGroup>
+        </FormControl>
         <Box sx={{ 
           p: 2, 
           backgroundColor: '#ffffff', 

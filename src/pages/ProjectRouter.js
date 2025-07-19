@@ -1,62 +1,44 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import ProjectPage from './ProjectPage'; // The existing supervised fine-tuning page
 import ReinforcementTuning from '../components/ReinforcementTuning';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import '../style/modern.css';
 
-const TuningChoice = () => {
+const ProjectRouter = ({ currentUser }) => {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
-  return (
-    <div className="page-container">
-      <div className="page-header text-center">
-        <h1 className="page-title">Choose Your Fine-Tuning Method</h1>
-        <p className="page-subtitle">
-          Select the type of fine-tuning that best suits your project goals.
-        </p>
-      </div>
-      
-      <div className="d-flex justify-center gap-4">
-        <div className="modern-card" style={{ width: '300px', textAlign: 'center' }}>
-          <div className="modern-card-header">
-            <h3 className="modern-card-title">Supervised Fine-Tuning</h3>
-          </div>
-          <p className="mb-3">
-            Ideal for training chatbots and other models on unstructured or structured text data.
-          </p>
-          <button 
-            className="modern-btn modern-btn-primary"
-            onClick={() => navigate(`/project/${projectId}/supervised`)}
-          >
-            Start Supervised Tuning
-          </button>
-        </div>
-        
-        <div className="modern-card" style={{ width: '300px', textAlign: 'center' }}>
-          <div className="modern-card-header">
-            <h3 className="modern-card-title">Reinforcement Fine-Tuning</h3>
-          </div>
-          <p className="mb-3">
-            Perfect for creating coding agents or other models that learn from feedback and interaction.
-          </p>
-          <button 
-            className="modern-btn modern-btn-primary"
-            onClick={() => navigate(`/project/${projectId}/reinforcement`)}
-          >
-            Start Reinforcement Tuning
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+  useEffect(() => {
+    const routeToCorrectPage = async () => {
+      if (!currentUser || !projectId) return;
+      try {
+        const projectDocRef = doc(db, 'users', currentUser.uid, 'projects', projectId);
+        const projectDocSnap = await getDoc(projectDocRef);
+        if (projectDocSnap.exists()) {
+          const projectData = projectDocSnap.data();
+          const tuningType = typeof projectData.tuningType === 'number' ? projectData.tuningType : 0;
+          if (tuningType === 1) {
+            navigate(`/project/${projectId}/reinforcement`, { replace: true });
+          } else {
+            navigate(`/project/${projectId}/supervised`, { replace: true });
+          }
+        } else {
+          navigate('/home');
+        }
+      } catch (err) {
+        console.error('Error loading project for routing:', err);
+        navigate('/home');
+      }
+    };
+    routeToCorrectPage();
+    // Only run on mount
+    // eslint-disable-next-line
+  }, [currentUser, projectId]);
 
-
-const ProjectRouter = ({ currentUser }) => {
   return (
     <Routes>
-      <Route path="/" element={<TuningChoice />} />
       <Route path="/supervised" element={<ProjectPage currentUser={currentUser} />} />
       <Route path="/reinforcement" element={<ReinforcementTuning />} />
     </Routes>
