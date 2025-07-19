@@ -283,6 +283,7 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
             <strong>Connect to Hugging Face first</strong> to upload your fine-tuned model. 
             Use the Hugging Face integration section above to connect your account.
           </Alert>
+
         ) : (
           <Alert severity="success" sx={{ mb: 2 }}>
             ✅ Ready to upload your fine-tuned model to Hugging Face!
