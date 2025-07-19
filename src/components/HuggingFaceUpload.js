@@ -231,6 +231,18 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
                 </ul>
               </Box>
             )}
+            {error.includes("rate limiting") && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" display="block">
+                  ⏰ <strong>Rate Limiting:</strong>
+                </Typography>
+                <ul style={{ fontSize: '0.75rem', margin: '4px 0', paddingLeft: '16px' }}>
+                  <li>HuggingFace is limiting API requests</li>
+                  <li>Please wait 2-5 minutes before trying again</li>
+                  <li>This is a temporary restriction from HuggingFace</li>
+                </ul>
+              </Box>
+            )}
           </div>
         )}
 
