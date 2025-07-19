@@ -15,58 +15,16 @@ const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange 
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Check for OAuth callback success parameter and session token
-    const urlParams = new URLSearchParams(window.location.search);
-    const hfConnected = urlParams.get('hf_connected');
-    const sessionToken = urlParams.get('session_token');
-    
-    if (hfConnected === 'true' && sessionToken) {
-      // Store session token in localStorage for API calls
-      localStorage.setItem('hf_session_token', sessionToken);
-      console.log('Stored HF session token from OAuth callback:', sessionToken);
-      
-      // Remove the parameters from URL
-      const newUrl = new URL(window.location);
-      newUrl.searchParams.delete('hf_connected');
-      newUrl.searchParams.delete('session_token');
-      window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
-      
-      // Recheck connection status after successful OAuth
-      setTimeout(checkConnectionStatus, 1000);
-    } else {
-      // Regular check on component mount
-      checkConnectionStatus();
-    }
+    // Check connection status on component mount
+    checkConnectionStatus();
   }, []);
 
   const checkConnectionStatus = async () => {
     try {
       console.log('Checking HF connection status...');
-      console.log('Current cookies:', document.cookie);
-      
-      // Get session token from localStorage as fallback
-      const sessionToken = localStorage.getItem('hf_session_token');
-      console.log('Session token from localStorage (fallback):', sessionToken);
-      
-      // Also check URL for session token (in case cookie didn't work)
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlSessionToken = urlParams.get('session_token');
-      console.log('Session token from URL:', urlSessionToken);
-      
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-      
-      // Add session token to headers if available (prioritize localStorage, then URL)
-      const tokenToUse = sessionToken || urlSessionToken;
-      if (tokenToUse) {
-        headers['Authorization'] = `Bearer ${tokenToUse}`;
-        console.log('Using session token in Authorization header:', tokenToUse);
-      }
       
       const response = await fetch(`${API_BASE_URL}/huggingface/status`, {
-        credentials: 'include', // Important for session cookies
-        headers
+        credentials: 'include' // Important for session cookies
       });
       
       console.log('HF status response:', response.status, response.statusText);
@@ -99,8 +57,8 @@ const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange 
   };
 
   const handleConnect = () => {
-    // Fix: Use the correct OAuth endpoint - /huggingface/login instead of /oauth/huggingface/login
-    const loginUrl = `${API_BASE_URL}/huggingface/login${projectId ? `?request_id=${projectId}` : ''}`;
+    // Use official OAuth endpoint
+    const loginUrl = `${API_BASE_URL}/oauth/huggingface/login`;
     console.log('Redirecting to OAuth login:', loginUrl);
     window.location.href = loginUrl;
   };
@@ -109,26 +67,12 @@ const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange 
     try {
       setLoading(true);
       
-      // Get session token from localStorage
-      const sessionToken = localStorage.getItem('hf_session_token');
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-      
-      // Add session token to headers if available
-      if (sessionToken) {
-        headers['Authorization'] = `Bearer ${sessionToken}`;
-      }
-      
-      const response = await fetch(`${API_BASE_URL}/huggingface/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers
+      const response = await fetch(`${API_BASE_URL}/oauth/huggingface/logout`, {
+        method: 'GET',
+        credentials: 'include'
       });
 
       if (response.ok) {
-        // Clear stored session token
-        localStorage.removeItem('hf_session_token');
         // Re-check status to confirm disconnection
         await checkConnectionStatus();
       } else {

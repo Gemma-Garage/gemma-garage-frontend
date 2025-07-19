@@ -80,17 +80,7 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
       setCheckingPermissions(true);
       setError(null);
       
-      const sessionToken = localStorage.getItem('hf_session_token');
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (sessionToken) {
-        headers['Authorization'] = `Bearer ${sessionToken}`;
-      }
-      
       const response = await fetch(`${API_BASE_URL}/huggingface/token-permissions`, {
-        headers,
         credentials: 'include',
       });
 
@@ -139,20 +129,11 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
       setLoading(true);
       setError(null);
       
-      // Get session token from localStorage as fallback
-      const sessionToken = localStorage.getItem('hf_session_token');
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-      
-      // Add session token to headers if available (as fallback)
-      if (sessionToken) {
-        headers['Authorization'] = `Bearer ${sessionToken}`;
-      }
-      
       const response = await fetch(`${API_BASE_URL}/huggingface/upload_model`, {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json'
+        },
         credentials: 'include', // Important for session cookies
         body: JSON.stringify({
           model_name: uploadForm.modelName,
