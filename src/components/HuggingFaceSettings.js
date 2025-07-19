@@ -48,13 +48,20 @@ const HuggingFaceSettings = ({ currentUser, projectId, onConnectionStatusChange 
       const sessionToken = localStorage.getItem('hf_session_token');
       console.log('Session token from localStorage (fallback):', sessionToken);
       
+      // Also check URL for session token (in case cookie didn't work)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlSessionToken = urlParams.get('session_token');
+      console.log('Session token from URL:', urlSessionToken);
+      
       const headers = {
         'Content-Type': 'application/json'
       };
       
-      // Add session token to headers if available (as fallback)
-      if (sessionToken) {
-        headers['Authorization'] = `Bearer ${sessionToken}`;
+      // Add session token to headers if available (prioritize localStorage, then URL)
+      const tokenToUse = sessionToken || urlSessionToken;
+      if (tokenToUse) {
+        headers['Authorization'] = `Bearer ${tokenToUse}`;
+        console.log('Using session token in Authorization header:', tokenToUse);
       }
       
       const response = await fetch(`${API_BASE_URL}/huggingface/status`, {
