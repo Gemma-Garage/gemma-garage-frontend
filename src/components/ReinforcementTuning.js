@@ -699,15 +699,26 @@ function ReinforcementTuning({ currentUser }) {
               onUpload={handleUpload}
             />
             
-            <Box sx={{ mt: 3 }}>
-              <DatasetPreview 
-                dataset_path={trainableDatasetName}
-                onDatasetChoiceChange={handleDatasetChoiceChange}
-                selectedDatasetChoice={selectedDatasetChoice}
-                onAugmentedDatasetReady={handleAugmentedDatasetReady}
-                augmentedDatasetFileName={augmentedDatasetFileName}
-              />
-            </Box>
+            {!trainableDatasetName && (
+              <Box sx={{ mt: 3 }}>
+                <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+                  <strong>Next Step:</strong> Upload a dataset above to get started with RL fine-tuning. 
+                  You can upload JSON, CSV, PDF, PPT, PPTX, DOCX, HTML, or TXT files.
+                </Alert>
+              </Box>
+            )}
+            
+            {trainableDatasetName && (
+              <Box sx={{ mt: 3 }}>
+                <DatasetPreview 
+                  dataset_path={trainableDatasetName}
+                  onDatasetChoiceChange={handleDatasetChoiceChange}
+                  selectedDatasetChoice={selectedDatasetChoice}
+                  onAugmentedDatasetReady={handleAugmentedDatasetReady}
+                  augmentedDatasetFileName={augmentedDatasetFileName}
+                />
+              </Box>
+            )}
           </div>
 
           {/* Custom Rubric */}
