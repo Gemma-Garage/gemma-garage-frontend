@@ -57,6 +57,16 @@ function ReinforcementTuning({ currentUser }) {
   const requestIdRef = useRef(null);
   const lastLogTimestampRef = useRef(null);
 
+  // Helper to check if training is active
+  const isTrainingActive = status =>
+    status && (
+      status.toLowerCase().includes("in progress") ||
+      status.toLowerCase().includes("submitted") ||
+      status.toLowerCase().includes("polling for logs")
+    ) &&
+    !status.toLowerCase().includes("complete") &&
+    !status.toLowerCase().includes("error");
+
   // Load project data on mount
   useEffect(() => {
     const loadProject = async () => {
@@ -108,16 +118,17 @@ function ReinforcementTuning({ currentUser }) {
 
           if (projectData.requestId) {
             requestIdRef.current = projectData.requestId;
-            if (!pollingIntervalRef.current && 
-                projectData.trainingStatusMessage && 
-                !projectData.trainingStatusMessage.toLowerCase().includes("complete") &&
-                !projectData.trainingStatusMessage.toLowerCase().includes("error")) {
+            // Only start polling if training is actually in progress
+            if (
+              !pollingIntervalRef.current &&
+              isTrainingActive(projectData.trainingStatusMessage)
+            ) {
               console.log("Restarting polling for existing RL training job:", projectData.requestId);
               pollingIntervalRef.current = setInterval(() => {
                 if (requestIdRef.current) {
                   pollLogs(requestIdRef.current, lastLogTimestampRef.current);
                 }
-              }, 5000);
+              }, 10000); // 10 seconds
             }
           }
         } else {
@@ -494,7 +505,7 @@ function ReinforcementTuning({ currentUser }) {
         if (requestIdRef.current) {
           pollLogs(requestIdRef.current, lastLogTimestampRef.current);
         }
-      }, 5000);
+      }, 10000); // 10 seconds
 
     } catch (error) {
       console.error("Error starting RL fine-tuning:", error);

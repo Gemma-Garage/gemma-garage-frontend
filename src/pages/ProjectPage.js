@@ -124,18 +124,17 @@ function ProjectPage({ currentUser }) {
 
           if (projectData.requestId) {
             requestIdRef.current = projectData.requestId;
-            // If we have a request ID but no active polling, and training status suggests it's still running,
-            // restart polling to get updates
-            if (!pollingIntervalRef.current && 
-                projectData.trainingStatusMessage && 
-                !projectData.trainingStatusMessage.toLowerCase().includes("complete") &&
-                !projectData.trainingStatusMessage.toLowerCase().includes("error")) {
+            // Only start polling if training is actually in progress
+            if (
+              !pollingIntervalRef.current &&
+              isTrainingActive(projectData.trainingStatusMessage)
+            ) {
               console.log("Restarting polling for existing training job:", projectData.requestId);
               pollingIntervalRef.current = setInterval(() => {
                 if (requestIdRef.current) {
                   pollLogs(requestIdRef.current, lastLogTimestampRef.current);
                 }
-              }, 5000);
+              }, 10000); // 10 seconds
             }
           }
         } else {
@@ -422,6 +421,16 @@ function ProjectPage({ currentUser }) {
     }
   };
 
+  // Helper to check if training is active
+  const isTrainingActive = status =>
+    status && (
+      status.toLowerCase().includes("in progress") ||
+      status.toLowerCase().includes("submitted") ||
+      status.toLowerCase().includes("polling for logs")
+    ) &&
+    !status.toLowerCase().includes("complete") &&
+    !status.toLowerCase().includes("error");
+
   // Check if fine-tuning is ready
   const getTrainingReadiness = () => {
     // No dataset uploaded at all
@@ -538,7 +547,7 @@ function ProjectPage({ currentUser }) {
         if (requestIdRef.current) {
           pollLogs(requestIdRef.current, lastLogTimestampRef.current);
         }
-      }, 5000); // Poll every 5 seconds
+      }, 10000); // 10 seconds
 
     } catch (error) {
       console.error("Error starting fine-tuning:", error);
