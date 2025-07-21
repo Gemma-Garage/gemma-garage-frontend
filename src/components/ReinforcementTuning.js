@@ -312,43 +312,29 @@ function ReinforcementTuning({ currentUser }) {
             }
         });
 
+        // In pollLogs, update lossData and rewardData state, but only call saveProjectProgress for these arrays when training is completed.
         if (newLossPointsForGraph.length > 0) {
           setLossData(prevLossData => {
             const existingRawTimestamps = new Set(prevLossData.map(p => p.rawTimestamp));
             const uniqueNewPointsToPlot = newLossPointsForGraph.filter(p => !existingRawTimestamps.has(p.rawTimestamp));
             if (uniqueNewPointsToPlot.length > 0) {
-                const combinedData = [...prevLossData, ...uniqueNewPointsToPlot];
-                combinedData.sort((a, b) => new Date(a.rawTimestamp) - new Date(b.rawTimestamp));
-                
-                if (combinedData.length % 10 === 0) {
-                  saveProjectProgress({ 
-                    lossData: combinedData,
-                    trainingStatusMessage: latestStatusMessage 
-                  });
-                }
-                
-                return combinedData;
+              let combinedData = [...prevLossData, ...uniqueNewPointsToPlot];
+              // Limit to last 200 points for performance
+              if (combinedData.length > 200) combinedData = combinedData.slice(combinedData.length - 200);
+              return combinedData;
             }
             return prevLossData;
           });
         }
-
         if (newRewardPointsForGraph.length > 0) {
           setRewardData(prevRewardData => {
             const existingRawTimestamps = new Set(prevRewardData.map(p => p.rawTimestamp));
             const uniqueNewPointsToPlot = newRewardPointsForGraph.filter(p => !existingRawTimestamps.has(p.rawTimestamp));
             if (uniqueNewPointsToPlot.length > 0) {
-                const combinedData = [...prevRewardData, ...uniqueNewPointsToPlot];
-                combinedData.sort((a, b) => new Date(a.rawTimestamp) - new Date(b.rawTimestamp));
-                
-                if (combinedData.length % 10 === 0) {
-                  saveProjectProgress({ 
-                    rewardData: combinedData,
-                    trainingStatusMessage: latestStatusMessage 
-                  });
-                }
-                
-                return combinedData;
+              let combinedData = [...prevRewardData, ...uniqueNewPointsToPlot];
+              // Limit to last 200 points for performance
+              if (combinedData.length > 200) combinedData = combinedData.slice(combinedData.length - 200);
+              return combinedData;
             }
             return prevRewardData;
           });
@@ -366,6 +352,7 @@ function ReinforcementTuning({ currentUser }) {
         lastLogTimestampRef.current = newTimestamp;
       }
       
+      // Only save lossData and rewardData to Firestore when training is completed
       if (trainingCompleted) {
         stopPollingLogs();
         if (newWeightsUrl) {
