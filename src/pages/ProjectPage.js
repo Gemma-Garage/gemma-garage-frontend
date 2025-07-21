@@ -47,6 +47,8 @@ function ProjectPage({ currentUser }) {
   const pollingIntervalRef = useRef(null);
   const requestIdRef = useRef(null);
   const lastLogTimestampRef = useRef(null);
+  // Add a ref to always have the latest lossData
+  const lossDataRef = useRef([]);
 
   // Check for OAuth callback success or error
   useEffect(() => {
@@ -367,13 +369,9 @@ function ProjectPage({ currentUser }) {
                 const combinedData = [...prevLossData, ...uniqueNewPointsToPlot];
                 combinedData.sort((a, b) => new Date(a.rawTimestamp) - new Date(b.rawTimestamp));
                 
-                // Save loss data periodically (every 10 points to avoid too many writes)
-                if (combinedData.length % 10 === 0) {
-                  saveProjectProgress({ 
-                    lossData: combinedData,
-                    trainingStatusMessage: latestStatusMessage 
-                  });
-                }
+                // Limit to last 200 points for performance
+                if (combinedData.length > 200) combinedData = combinedData.slice(combinedData.length - 200);
+                lossDataRef.current = combinedData;
                 
                 return combinedData;
             }
@@ -404,12 +402,15 @@ function ProjectPage({ currentUser }) {
         if (newWeightsUrl) {
           setWeightsUrl(newWeightsUrl);
         }
-        // Save final training completion state
+        // Only save lossData to Firestore when training is completed
+        const lossDataToSave = (lossDataRef.current && lossDataRef.current.length > 100)
+          ? lossDataRef.current.slice(lossDataRef.current.length - 100)
+          : lossDataRef.current;
         if (newWeightsUrl || trainedModelPath) {
           saveProjectProgress({ 
             weightsUrl: newWeightsUrl,
             trainingStatusMessage: latestStatusMessage,
-            lossData: lossData,
+            lossData: lossDataToSave,
             trainingCompleted: true
           });
         }
