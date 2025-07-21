@@ -40,7 +40,7 @@ const ProjectRouter = ({ currentUser }) => {
   return (
     <Routes>
       <Route path="/supervised" element={<ProjectPage currentUser={currentUser} />} />
-      <Route path="/reinforcement" element={<ReinforcementTuning />} />
+      <Route path="/reinforcement" element={<ReinforcementTuning currentUser={currentUser} />} />
     </Routes>
   );
 };
