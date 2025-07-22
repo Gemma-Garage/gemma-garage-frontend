@@ -706,7 +706,7 @@ function ReinforcementTuning({ currentUser }) {
               </Box>
             )}
             
-            {trainableDatasetName && (
+            {/* {trainableDatasetName && (
               <Box sx={{ mt: 3 }}>
                 <DatasetPreview 
                   dataset_path={trainableDatasetName}
@@ -716,7 +716,7 @@ function ReinforcementTuning({ currentUser }) {
                   augmentedDatasetFileName={augmentedDatasetFileName}
                 />
               </Box>
-            )}
+            )} */}
           </div>
 
           {/* Custom Rubric */}
