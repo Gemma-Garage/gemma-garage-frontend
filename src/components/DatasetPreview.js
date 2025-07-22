@@ -42,7 +42,16 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   // Define functions first before they're used in useEffect
   const loadOriginalDatasetPreview = useCallback(async () => {
     if (!dataset_path || dataset_path === 'undefined' || dataset_path === 'null') return;
-    
+
+    // Only preview if file is JSON
+    const isJson = dataset_path.toLowerCase().endsWith('.json');
+    if (!isJson) {
+      setPreviewData([]);
+      setTotalEntries(0);
+      setLoadingPreview(false);
+      return;
+    }
+
     setLoadingPreview(true);
     try {
       const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(dataset_path)}`);
@@ -511,7 +520,17 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                     </Alert>
                   )}
                   <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                    {originalDataTable}
+                    {loadingPreview ? (
+                      <CircularProgress size={24} />
+                    ) : previewData.length === 0 ? (
+                      dataset_path && !dataset_path.toLowerCase().endsWith('.json') ? (
+                        <Alert severity="info">No preview available for this file type.</Alert>
+                      ) : (
+                        <Alert severity="info">No preview available.</Alert>
+                      )
+                    ) : (
+                      originalDataTable
+                    )}
                   </TableContainer>
                 </>
               )}
