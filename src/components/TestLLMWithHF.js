@@ -12,15 +12,16 @@ import {
 import '../style/modern.css';
 import { API_BASE_URL } from '../api';
 
-const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) => {
+const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfModelPath }) => {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hfConnected, setHfConnected] = useState(false);
-  const [hfModelName, setHfModelName] = useState('');
   const [maxNewTokens, setMaxNewTokens] = useState(100);
   const [checkingStatus, setCheckingStatus] = useState(true);
+  // Model path is now read-only and comes from props or project data
+  const [modelPath, setModelPath] = useState(hfModelPath || '');
 
   // Check Hugging Face connection status on mount
   useEffect(() => {
@@ -30,9 +31,9 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
         const res = await fetch(`${API_BASE_URL}/huggingface/status`, { credentials: 'include' });
         const data = await res.json();
         setHfConnected(data.connected);
-        if (data.connected && currentUser && currentRequestId) {
-          // Default to user's own fine-tuned model if available
-          setHfModelName(`${data.username}/${currentRequestId}`);
+        // If a model path is provided via props, use it
+        if (hfModelPath) {
+          setModelPath(hfModelPath);
         }
       } catch (e) {
         setHfConnected(false);
@@ -41,7 +42,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
       }
     };
     checkStatus();
-  }, [currentUser, currentRequestId]);
+  }, [currentUser, currentRequestId, hfModelPath]);
 
   const handleConnectHF = () => {
     window.location.href = `${API_BASE_URL}/huggingface/login`;
@@ -52,8 +53,8 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
       setError('Please enter a prompt');
       return;
     }
-    if (!hfModelName.trim()) {
-      setError('Please enter a Hugging Face model name');
+    if (!modelPath.trim()) {
+      setError('No Hugging Face model path available. Upload your model first.');
       return;
     }
     setLoading(true);
@@ -65,7 +66,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          model_name: hfModelName,
+          model_name: modelPath,
           prompt: prompt,
           max_new_tokens: maxNewTokens
         }),
@@ -100,6 +101,16 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
     );
   }
 
+  if (!modelPath) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Upload your model to Hugging Face before testing inference.
+        </Alert>
+      </Box>
+    );
+  }
+
   return (
     <div className="modern-card">
       <div className="modern-card-header">
@@ -114,11 +125,10 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
       <Box sx={{ mb: 3 }}>
         <TextField
           fullWidth
-          label="Hugging Face Model Name"
-          value={hfModelName}
-          onChange={(e) => setHfModelName(e.target.value)}
-          placeholder="username/model-name"
-          helperText="Enter the full model name from Hugging Face (e.g., your-username/your-model)"
+          label="Hugging Face Model Path"
+          value={modelPath}
+          InputProps={{ readOnly: true }}
+          helperText="This is the model you uploaded to Hugging Face."
           sx={{ mb: 2 }}
         />
         <TextField
@@ -143,7 +153,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
       <Button
         variant="contained"
         onClick={handleTest}
-        disabled={loading || !prompt.trim() || !hfModelName.trim()}
+        disabled={loading || !prompt.trim() || !modelPath.trim()}
         sx={{ mb: 2 }}
       >
         {loading ? <CircularProgress size={24} /> : 'Generate Response'}
