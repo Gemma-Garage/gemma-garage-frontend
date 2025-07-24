@@ -10,7 +10,7 @@ import {
   Switch
 } from '@mui/material';
 import '../style/modern.css';
-import { API_BASE_URL } from '../api';
+import { API_BASE_URL, API_INFERENCE_BASE_URL } from '../api';
 
 const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfModelPath }) => {
   const [prompt, setPrompt] = useState('');
@@ -61,7 +61,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
     setError(null);
     setResponse('');
     try {
-      const hfResponse = await fetch(`${API_BASE_URL}/huggingface/inference`, {
+      const hfResponse = await fetch(`${API_INFERENCE_BASE_URL}/inference`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
