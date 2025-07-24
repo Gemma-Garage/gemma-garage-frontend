@@ -372,6 +372,9 @@ function ProjectPage({ currentUser }) {
                 if (combinedData.length > 200) combinedData = combinedData.slice(combinedData.length - 200);
                 lossDataRef.current = combinedData;
                 
+                // Save to Firestore on every update
+                saveProjectProgress({ lossData: combinedData });
+                
                 return combinedData;
             }
             return prevLossData;
