@@ -5,8 +5,6 @@ import { db } from '../firebase';
 import { API_BASE_URL, API_INFERENCE_BASE_URL, WS_BASE_URL } from '../api';
 import UploadDataset from '../components/UploadDataset';
 import DatasetPreview from '../components/DatasetPreview';
-import TestLLM from '../components/TestLLM';
-import TestLLMWithHF from '../components/TestLLMWithHF';
 import HuggingFaceSettings from '../components/HuggingFaceSettings';
 import HuggingFaceUpload from '../components/HuggingFaceUpload';
 import { Container, Typography, Box, Button, TextField, Paper, Grid, Alert, CircularProgress, LinearProgress, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
@@ -18,6 +16,7 @@ import TrainingParameters from '../components/TrainingParameters';
 import FinetuneControl from '../components/FinetuneControl';
 import LossGraph from '../components/LossGraph';
 import { extractPretrainLogs, hasTrainingStarted } from "../utils/pretrainLogUtils";
+import UnifiedInference from '../components/TestLLMWithHF';
 
 function ProjectPage({ currentUser }) {
   const { projectId } = useParams();
@@ -864,11 +863,7 @@ function ProjectPage({ currentUser }) {
           
           {/* Testing Section */}
           <div className="modern-card">
-            <TestLLM currentRequestId={currentRequestId} currentBaseModel={modelName} />
-          </div>
-          
-          <div className="modern-card">
-            <TestLLMWithHF 
+            <UnifiedInference 
               currentUser={currentUser}
               currentRequestId={currentRequestId} 
               currentBaseModel={modelName}

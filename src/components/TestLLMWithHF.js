@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Typography,
   TextField,
@@ -6,163 +6,130 @@ import {
   Box,
   Alert,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   FormControlLabel,
   Switch
 } from '@mui/material';
 import '../style/modern.css';
-import { API_BASE_URL, API_INFERENCE_BASE_URL } from '../api';
+import { API_BASE_URL } from '../api';
 
-const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
+const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) => {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [useHuggingFace, setUseHuggingFace] = useState(false);
+  const [hfConnected, setHfConnected] = useState(false);
   const [hfModelName, setHfModelName] = useState('');
   const [maxNewTokens, setMaxNewTokens] = useState(100);
+  const [checkingStatus, setCheckingStatus] = useState(true);
+
+  // Check Hugging Face connection status on mount
+  useEffect(() => {
+    const checkStatus = async () => {
+      setCheckingStatus(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/huggingface/status`, { credentials: 'include' });
+        const data = await res.json();
+        setHfConnected(data.connected);
+        if (data.connected && currentUser && currentRequestId) {
+          // Default to user's own fine-tuned model if available
+          setHfModelName(`${data.username}/${currentRequestId}`);
+        }
+      } catch (e) {
+        setHfConnected(false);
+      } finally {
+        setCheckingStatus(false);
+      }
+    };
+    checkStatus();
+  }, [currentUser, currentRequestId]);
+
+  const handleConnectHF = () => {
+    window.location.href = `${API_BASE_URL}/huggingface/login`;
+  };
 
   const handleTest = async () => {
     if (!prompt.trim()) {
-      setError("Please enter a prompt");
+      setError('Please enter a prompt');
       return;
     }
-
+    if (!hfModelName.trim()) {
+      setError('Please enter a Hugging Face model name');
+      return;
+    }
     setLoading(true);
     setError(null);
     setResponse('');
-
     try {
-      if (useHuggingFace) {
-        // Use Hugging Face Inference API
-        if (!hfModelName.trim()) {
-          setError("Please enter a Hugging Face model name");
-          return;
-        }
-
-        // Get session token from localStorage
-        const sessionToken = localStorage.getItem('hf_session_token');
-        const headers = {
-          'Content-Type': 'application/json'
-        };
-        
-        // Add session token to headers if available
-        if (sessionToken) {
-          headers['Authorization'] = `Bearer ${sessionToken}`;
-        }
-
-        const hfResponse = await fetch(`${API_BASE_URL}/huggingface/inference`, {
-          method: 'POST',
-          headers,
-          credentials: 'include', // Important for session cookies
-          body: JSON.stringify({
-            model_name: hfModelName,
-            prompt: prompt,
-            max_new_tokens: maxNewTokens
-          }),
-        });
-
-        if (!hfResponse.ok) {
-          const errorData = await hfResponse.json();
-          throw new Error(errorData.detail || 'Hugging Face inference failed');
-        }
-
-        const hfData = await hfResponse.json();
-        setResponse(hfData.response);
-
-      } else {
-        // Use original Gemma Garage inference
-        if (!currentRequestId) {
-          setError("No request ID found. Please complete fine-tuning first.");
-          return;
-        }
-
-        const predictResponse = await fetch(`${API_INFERENCE_BASE_URL}/inference/predict`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            prompt: prompt,
-            request_id: currentRequestId,
-            base_model: currentBaseModel
-          }),
-        });
-
-        if (!predictResponse.ok) {
-          const errorBody = await predictResponse.text();
-          throw new Error(`API call failed with status ${predictResponse.status}: ${errorBody}`);
-        }
-
-        const data = await predictResponse.json();
-
-        if (data.response) {
-          setResponse(data.response);
-        } else if (data.error) {
-          setResponse(`Error: ${data.error}`);
-        } else {
-          setResponse("Received an unexpected response format.");
-        }
+      const hfResponse = await fetch(`${API_BASE_URL}/huggingface/inference`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          model_name: hfModelName,
+          prompt: prompt,
+          max_new_tokens: maxNewTokens
+        }),
+      });
+      if (!hfResponse.ok) {
+        const errorData = await hfResponse.json();
+        throw new Error(errorData.detail || 'Hugging Face inference failed');
       }
-
+      const hfData = await hfResponse.json();
+      setResponse(hfData.response);
     } catch (err) {
-      console.error("API call error", err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  if (checkingStatus) {
+    return <Box sx={{ p: 3, textAlign: 'center' }}><CircularProgress /></Box>;
+  }
+
+  if (!hfConnected) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          You must connect your Hugging Face account to use inference.
+        </Alert>
+        <Button variant="contained" onClick={handleConnectHF}>
+          Connect Hugging Face
+        </Button>
+      </Box>
+    );
+  }
+
   return (
     <div className="modern-card">
       <div className="modern-card-header">
-        <h3 className="modern-card-title">🧪 Test Your Model</h3>
+        <h3 className="modern-card-title">🤖 Test Your Model (Hugging Face Inference)</h3>
       </div>
-
       {error && (
         <div className="modern-alert modern-alert-error mb-3">
           {error}
           <button onClick={() => setError(null)} className="modern-alert-close">×</button>
         </div>
       )}
-
       <Box sx={{ mb: 3 }}>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={useHuggingFace}
-              onChange={(e) => setUseHuggingFace(e.target.checked)}
-            />
-          }
-          label="Use Hugging Face Inference API"
+        <TextField
+          fullWidth
+          label="Hugging Face Model Name"
+          value={hfModelName}
+          onChange={(e) => setHfModelName(e.target.value)}
+          placeholder="username/model-name"
+          helperText="Enter the full model name from Hugging Face (e.g., your-username/your-model)"
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          type="number"
+          label="Max New Tokens"
+          value={maxNewTokens}
+          onChange={(e) => setMaxNewTokens(parseInt(e.target.value) || 100)}
+          inputProps={{ min: 1, max: 1000 }}
+          sx={{ width: 200 }}
         />
       </Box>
-
-      {useHuggingFace && (
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            fullWidth
-            label="Hugging Face Model Name"
-            value={hfModelName}
-            onChange={(e) => setHfModelName(e.target.value)}
-            placeholder="username/model-name"
-            helperText="Enter the full model name from Hugging Face (e.g., microsoft/DialoGPT-medium)"
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            type="number"
-            label="Max New Tokens"
-            value={maxNewTokens}
-            onChange={(e) => setMaxNewTokens(parseInt(e.target.value) || 100)}
-            inputProps={{ min: 1, max: 1000 }}
-            sx={{ width: 200 }}
-          />
-        </Box>
-      )}
-
       <TextField
         fullWidth
         multiline
@@ -173,16 +140,14 @@ const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
         disabled={loading}
         sx={{ mb: 2 }}
       />
-
       <Button
         variant="contained"
         onClick={handleTest}
-        disabled={loading || !prompt.trim() || (useHuggingFace && !hfModelName.trim())}
+        disabled={loading || !prompt.trim() || !hfModelName.trim()}
         sx={{ mb: 2 }}
       >
         {loading ? <CircularProgress size={24} /> : 'Generate Response'}
       </Button>
-
       {response && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="h6" gutterBottom>
@@ -208,14 +173,8 @@ const TestLLMWithHF = ({ currentUser, currentRequestId, currentBaseModel }) => {
           </div>
         </Box>
       )}
-
-      {!useHuggingFace && !currentRequestId && (
-        <div className="modern-alert modern-alert-info mt-3">
-          Complete a fine-tuning job first to test your custom model, or enable Hugging Face inference to test any HF model.
-        </div>
-      )}
     </div>
   );
 };
 
-export default TestLLMWithHF;
+export default UnifiedInference;
