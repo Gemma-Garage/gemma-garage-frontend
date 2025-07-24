@@ -20,7 +20,7 @@ import { API_BASE_URL } from '../api';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
-const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingStatus, modelName, trainedModelPath, connectionStatus }) => {
+const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingStatus, modelName, trainedModelPath, connectionStatus, onModelUploaded }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -168,6 +168,7 @@ const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingS
       if (currentUser && projectId && data.repo_name) {
         const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
         await updateDoc(projectDocRef, { hfModelPath: data.repo_name });
+        if (onModelUploaded) onModelUploaded();
       }
       
     } catch (err) {
