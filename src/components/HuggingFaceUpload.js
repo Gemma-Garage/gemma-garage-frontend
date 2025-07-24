@@ -17,8 +17,10 @@ import {
 import '../style/modern.css';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { API_BASE_URL } from '../api';
+import { db } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
-const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, trainedModelPath, connectionStatus }) => {
+const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingStatus, modelName, trainedModelPath, connectionStatus }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -161,6 +163,12 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
       
       // Show success message
       alert(`Model uploaded successfully! Repository: ${data.repo_url}`);
+      
+      // Save Hugging Face model path to Firestore
+      if (currentUser && projectId && data.repo_name) {
+        const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
+        await updateDoc(projectDocRef, { hfModelPath: data.repo_name });
+      }
       
     } catch (err) {
       setError(err.message);

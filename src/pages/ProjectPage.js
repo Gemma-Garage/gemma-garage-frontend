@@ -856,6 +856,8 @@ function ProjectPage({ currentUser }) {
           {/* HuggingFace Upload */}
           <div className="modern-card">
             <HuggingFaceUpload 
+              currentUser={currentUser}
+              projectId={projectId}
               currentRequestId={currentRequestId}
               trainingStatus={trainingStatus}
               modelName={modelName}
@@ -870,6 +872,7 @@ function ProjectPage({ currentUser }) {
               currentUser={currentUser}
               currentRequestId={currentRequestId} 
               currentBaseModel={modelName}
+              hfModelPath={selectedProjectData?.hfModelPath}
             />
           </div>
         </div>
