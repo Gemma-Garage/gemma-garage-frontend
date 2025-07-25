@@ -71,11 +71,13 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
           max_new_tokens: maxNewTokens
         }),
       });
-      if (!hfResponse.ok) {
-        const errorData = await hfResponse.json();
-        throw new Error(errorData.detail || 'Hugging Face inference failed');
-      }
       const hfData = await hfResponse.json();
+      if (!hfResponse.ok) {
+        throw new Error(hfData.detail || hfData.error || 'Hugging Face inference failed');
+      }
+      if (hfData.error) {
+        throw new Error(hfData.error);
+      }
       setResponse(hfData.response);
     } catch (err) {
       setError(err.message);
