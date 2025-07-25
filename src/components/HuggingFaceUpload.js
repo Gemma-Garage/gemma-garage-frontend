@@ -143,7 +143,7 @@ const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingS
       setError(null);
       setUploadProgress(prev => ({ ...prev, step: 0, message: prev.steps[0] }));
       
-      // Simulate progress updates
+      // Simulate progress updates with longer time for model merging
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           const nextStep = Math.min(prev.step + 1, prev.steps.length - 1);
@@ -153,7 +153,7 @@ const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingS
             message: prev.steps[nextStep]
           };
         });
-      }, 2000); // Update every 2 seconds
+      }, 60000); // Update every 1 minute (60 seconds) for model merging
       
       const response = await fetch(`${API_BASE_URL}/huggingface/upload_model`, {
         method: 'POST',
