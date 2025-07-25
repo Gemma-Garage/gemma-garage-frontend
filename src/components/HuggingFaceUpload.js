@@ -26,6 +26,17 @@ const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingS
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [permissionsInfo, setPermissionsInfo] = useState(null);
   const [checkingPermissions, setCheckingPermissions] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({
+    step: 0,
+    message: '',
+    steps: [
+      'Preparing model for upload...',
+      'Merging LoRA adapter into base model...',
+      'Downloading model from Google Cloud Storage...',
+      'Uploading model to Hugging Face...',
+      'Creating repository and finalizing...'
+    ]
+  });
   const [uploadForm, setUploadForm] = useState({
     modelName: '',
     description: 'Fine-tuned model from Gemma Garage',
@@ -130,6 +141,19 @@ const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingS
     try {
       setLoading(true);
       setError(null);
+      setUploadProgress(prev => ({ ...prev, step: 0, message: prev.steps[0] }));
+      
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          const nextStep = Math.min(prev.step + 1, prev.steps.length - 1);
+          return {
+            ...prev,
+            step: nextStep,
+            message: prev.steps[nextStep]
+          };
+        });
+      }, 2000); // Update every 2 seconds
       
       const response = await fetch(`${API_BASE_URL}/huggingface/upload_model`, {
         method: 'POST',
@@ -145,6 +169,9 @@ const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingS
           base_model: uploadForm.baseModel,
         }),
       });
+
+      clearInterval(progressInterval);
+      setUploadProgress(prev => ({ ...prev, step: prev.steps.length - 1, message: 'Upload completed!' }));
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -175,6 +202,7 @@ const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingS
       setError(err.message);
     } finally {
       setLoading(false);
+      setUploadProgress(prev => ({ ...prev, step: 0, message: '' }));
     }
   };
 
@@ -305,6 +333,31 @@ const HuggingFaceUpload = ({ currentUser, projectId, currentRequestId, trainingS
             "Upload Model to Hugging Face"
           )}
         </Button>
+
+        {loading && uploadProgress.message && (
+          <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+              Upload Progress:
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {uploadProgress.message}
+            </Typography>
+            <Box sx={{ mt: 1, display: 'flex', gap: 0.5 }}>
+              {uploadProgress.steps.map((step, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: index <= uploadProgress.step ? '#FF6B35' : '#e0e0e0',
+                    transition: 'background-color 0.3s ease'
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
 
         {isConnected && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
