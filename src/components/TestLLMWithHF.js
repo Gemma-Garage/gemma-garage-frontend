@@ -60,26 +60,48 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
     setLoading(true);
     setError(null);
     setResponse('');
+    
+    const requestPayload = {
+      model_name: modelPath,
+      prompt: prompt,
+      max_new_tokens: maxNewTokens
+    };
+    
+    console.log('🔍 [Inference Debug] Making request to:', `${API_INFERENCE_BASE_URL}/inference`);
+    console.log('🔍 [Inference Debug] Request payload:', requestPayload);
+    
     try {
       const hfResponse = await fetch(`${API_INFERENCE_BASE_URL}/inference`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          model_name: modelPath,
-          prompt: prompt,
-          max_new_tokens: maxNewTokens
-        }),
+        body: JSON.stringify(requestPayload),
       });
+      
+      console.log('🔍 [Inference Debug] Response status:', hfResponse.status);
+      console.log('🔍 [Inference Debug] Response headers:', Object.fromEntries(hfResponse.headers.entries()));
+      
       const hfData = await hfResponse.json();
+      console.log('🔍 [Inference Debug] Full response data:', hfData);
+      console.log('🔍 [Inference Debug] Response data type:', typeof hfData);
+      console.log('🔍 [Inference Debug] Response data keys:', Object.keys(hfData));
+      
       if (!hfResponse.ok) {
+        console.error('🔍 [Inference Debug] Response not OK, throwing error');
         throw new Error(hfData.detail || hfData.error || 'Hugging Face inference failed');
       }
+      
       if (hfData.error) {
+        console.error('🔍 [Inference Debug] Response contains error field:', hfData.error);
         throw new Error(hfData.error);
       }
+      
+      console.log('🔍 [Inference Debug] Setting response to:', hfData.response);
       setResponse(hfData.response);
     } catch (err) {
+      console.error('🔍 [Inference Debug] Caught error:', err);
+      console.error('🔍 [Inference Debug] Error message:', err.message);
+      console.error('🔍 [Inference Debug] Error stack:', err.stack);
       setError(err.message);
     } finally {
       setLoading(false);
