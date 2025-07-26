@@ -136,7 +136,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
   return (
     <div className="modern-card">
       <div className="modern-card-header">
-        <h3 className="modern-card-title">🤖 Test Your Model (Local Inference)</h3>
+        <h3 className="modern-card-title">🤖 Test Your Model & HF Info</h3>
       </div>
       {error && (
         <div className="modern-alert modern-alert-error mb-3">
@@ -158,7 +158,15 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
           label="Base Model"
           value={currentBaseModel || "google/gemma-3-1b-pt"}
           InputProps={{ readOnly: true }}
-          helperText={`This is the base model used for training. (Debug: currentBaseModel="${currentBaseModel}")`}
+          helperText="This is the base model used for training."
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          fullWidth
+          label="Hugging Face Model"
+          value={hfModelPath || 'Not uploaded to HF yet'}
+          InputProps={{ readOnly: true }}
+          helperText={hfModelPath ? "This is your model uploaded to Hugging Face." : "Upload your model to Hugging Face to get a model name."}
           sx={{ mb: 2 }}
         />
         <TextField
