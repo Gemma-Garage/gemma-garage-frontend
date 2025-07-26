@@ -21,7 +21,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
   const [maxNewTokens, setMaxNewTokens] = useState(100);
   const [checkingStatus, setCheckingStatus] = useState(true);
   // Model path is now read-only and comes from props or project data
-  const [modelPath, setModelPath] = useState(hfModelPath || '');
+  // Note: We're not using modelPath anymore, using currentRequestId instead
 
   // Check Hugging Face connection status on mount
   useEffect(() => {
@@ -31,10 +31,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
         const res = await fetch(`${API_BASE_URL}/huggingface/status`, { credentials: 'include' });
         const data = await res.json();
         setHfConnected(data.connected);
-        // If a model path is provided via props, use it
-        if (hfModelPath) {
-          setModelPath(hfModelPath);
-        }
+        // Note: We're not using modelPath anymore, using currentRequestId instead
       } catch (e) {
         setHfConnected(false);
       } finally {
@@ -53,8 +50,8 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
       setError('Please enter a prompt');
       return;
     }
-    if (!modelPath.trim()) {
-      setError('No Hugging Face model path available. Upload your model first.');
+    if (!currentRequestId) {
+      setError('No training request ID available. Please complete training first.');
       return;
     }
     setLoading(true);
@@ -62,7 +59,8 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
     setResponse('');
     
     const requestPayload = {
-      model_name: modelPath,
+      request_id: currentRequestId,
+      base_model: currentBaseModel || "google/gemma-3-1b-pt",
       prompt: prompt,
       max_new_tokens: maxNewTokens
     };
@@ -125,11 +123,11 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
     );
   }
 
-  if (!modelPath) {
+  if (!currentRequestId) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Alert severity="info" sx={{ mb: 2 }}>
-          Upload your model to Hugging Face before testing inference.
+          Complete training to test inference with your model.
         </Alert>
       </Box>
     );
@@ -138,7 +136,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
   return (
     <div className="modern-card">
       <div className="modern-card-header">
-        <h3 className="modern-card-title">🤖 Test Your Model (Hugging Face Inference)</h3>
+        <h3 className="modern-card-title">🤖 Test Your Model (Local Inference)</h3>
       </div>
       {error && (
         <div className="modern-alert modern-alert-error mb-3">
@@ -149,10 +147,18 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
       <Box sx={{ mb: 3 }}>
         <TextField
           fullWidth
-          label="Hugging Face Model Path"
-          value={modelPath}
+          label="Training Request ID"
+          value={currentRequestId || ''}
           InputProps={{ readOnly: true }}
-          helperText="This is the model you uploaded to Hugging Face."
+          helperText="This is the request ID from your training job."
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          fullWidth
+          label="Base Model"
+          value={currentBaseModel || "google/gemma-3-1b-pt"}
+          InputProps={{ readOnly: true }}
+          helperText="This is the base model used for training."
           sx={{ mb: 2 }}
         />
         <TextField
@@ -177,7 +183,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
       <Button
         variant="contained"
         onClick={handleTest}
-        disabled={loading || !prompt.trim() || !modelPath.trim()}
+        disabled={loading || !prompt.trim() || !currentRequestId}
         sx={{ mb: 2 }}
       >
         {loading ? <CircularProgress size={24} /> : 'Generate Response'}
