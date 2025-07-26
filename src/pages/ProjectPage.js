@@ -121,7 +121,14 @@ function ProjectPage({ currentUser }) {
           setLossData(projectData.lossData || []);
           setWeightsUrl(projectData.weightsUrl || null);
           setCurrentRequestId(projectData.requestId || null);
-          setModelName(projectData.baseModel || "google/gemma-3-1b-pt");
+          // Load base model from project data, with fallback to default
+          const baseModel = projectData.baseModel || "google/gemma-3-1b-pt";
+          console.log("🔍 [ProjectPage Debug] Loading base model from project data:", {
+            projectDataBaseModel: projectData.baseModel,
+            fallbackModel: "google/gemma-3-1b-pt",
+            finalModel: baseModel
+          });
+          setModelName(baseModel);
 
           if (projectData.requestId) {
             requestIdRef.current = projectData.requestId;
@@ -880,6 +887,11 @@ function ProjectPage({ currentUser }) {
           
           {/* Testing Section */}
           <div className="modern-card">
+            {console.log("🔍 [ProjectPage Debug] Passing to UnifiedInference:", {
+              currentRequestId,
+              modelName,
+              hfModelPath: selectedProjectData?.hfModelPath
+            })}
             <UnifiedInference 
               currentUser={currentUser}
               currentRequestId={currentRequestId} 
