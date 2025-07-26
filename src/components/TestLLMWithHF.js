@@ -158,7 +158,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
           label="Base Model"
           value={currentBaseModel || "google/gemma-3-1b-pt"}
           InputProps={{ readOnly: true }}
-          helperText="This is the base model used for training."
+          helperText={`This is the base model used for training. (Debug: currentBaseModel="${currentBaseModel}")`}
           sx={{ mb: 2 }}
         />
         <TextField
