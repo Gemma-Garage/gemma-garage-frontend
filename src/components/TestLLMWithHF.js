@@ -5,21 +5,19 @@ import {
   Button,
   Box,
   Alert,
-  CircularProgress,
-  FormControlLabel,
-  Switch
+  CircularProgress
 } from '@mui/material';
 import '../style/modern.css';
-import { API_BASE_URL } from '../api';
+import { API_BASE_URL, API_INFERENCE_BASE_URL } from '../api';
 
-const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) => {
+const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfModelPath }) => {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [maxNewTokens, setMaxNewTokens] = useState(100);
   const [hfConnected, setHfConnected] = useState(false);
   const [hfModelName, setHfModelName] = useState('');
-  const [maxNewTokens, setMaxNewTokens] = useState(100);
   const [checkingStatus, setCheckingStatus] = useState(true);
 
   // Check Hugging Face connection status on mount
@@ -30,7 +28,10 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
         const res = await fetch(`${API_BASE_URL}/huggingface/status`, { credentials: 'include' });
         const data = await res.json();
         setHfConnected(data.connected);
-        if (data.connected && currentUser && currentRequestId) {
+        if (data.connected && hfModelPath) {
+          // Use the HF model path if available
+          setHfModelName(hfModelPath);
+        } else if (data.connected && currentUser && currentRequestId) {
           // Default to user's own fine-tuned model if available
           setHfModelName(`${data.username}/${currentRequestId}`);
         }
@@ -41,42 +42,58 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
       }
     };
     checkStatus();
-  }, [currentUser, currentRequestId]);
+  }, [currentUser, currentRequestId, hfModelPath]);
 
   const handleConnectHF = () => {
     window.location.href = `${API_BASE_URL}/huggingface/login`;
   };
 
   const handleTest = async () => {
-    if (!prompt.trim()) {
-      setError('Please enter a prompt');
-      return;
-    }
     if (!hfModelName.trim()) {
       setError('Please enter a Hugging Face model name');
       return;
     }
+    if (!prompt.trim()) {
+      setError('Please enter a prompt');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setResponse('');
+    
+    const requestPayload = {
+      model_name: hfModelName,
+      prompt: prompt,
+      max_new_tokens: maxNewTokens
+    };
+    
+    console.log('🔍 [Inference Debug] Sending request to:', `${API_INFERENCE_BASE_URL}/inference`);
+    console.log('🔍 [Inference Debug] Request payload:', requestPayload);
+    
     try {
-      const hfResponse = await fetch(`${API_BASE_URL}/huggingface/inference`, {
+      const response = await fetch(`${API_INFERENCE_BASE_URL}/inference`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          model_name: hfModelName,
-          prompt: prompt,
-          max_new_tokens: maxNewTokens
-        }),
+        body: JSON.stringify(requestPayload),
       });
-      if (!hfResponse.ok) {
-        const errorData = await hfResponse.json();
-        throw new Error(errorData.detail || 'Hugging Face inference failed');
+      
+      console.log('🔍 [Inference Debug] Response status:', response.status);
+      console.log('🔍 [Inference Debug] Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log('🔍 [Inference Debug] Response contains error field:', errorData);
+        throw new Error(errorData.error || errorData.detail || 'Inference failed');
       }
-      const hfData = await hfResponse.json();
-      setResponse(hfData.response);
+      
+      const data = await response.json();
+      console.log('🔍 [Inference Debug] Response data:', data);
+      setResponse(data.response);
     } catch (err) {
+      console.log('🔍 [Inference Debug] Caught error:', err);
+      console.log('🔍 [Inference Debug] Error message:', err.message);
+      console.log('🔍 [Inference Debug] Error stack:', err.stack);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -104,6 +121,9 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel }) =
     <div className="modern-card">
       <div className="modern-card-header">
         <h3 className="modern-card-title">🤖 Test Your Model (Hugging Face Inference)</h3>
+        <p className="modern-card-subtitle">
+          Test your fine-tuned model using Hugging Face Hub. Requires HF login and uploaded model.
+        </p>
       </div>
       {error && (
         <div className="modern-alert modern-alert-error mb-3">

@@ -18,7 +18,7 @@ import '../style/modern.css';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { API_BASE_URL } from '../api';
 
-const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, trainedModelPath, connectionStatus }) => {
+const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, trainedModelPath, connectionStatus, onModelUploaded }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -158,6 +158,12 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
         requestId: '',
         baseModel: ''
       });
+      
+      // Save the model name to project data
+      if (onModelUploaded) {
+        const hfModelPath = data.repo_url.replace('https://huggingface.co/', '');
+        onModelUploaded(hfModelPath);
+      }
       
       // Show success message
       alert(`Model uploaded successfully! Repository: ${data.repo_url}`);

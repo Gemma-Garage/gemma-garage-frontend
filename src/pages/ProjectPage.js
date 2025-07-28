@@ -683,6 +683,23 @@ function ProjectPage({ currentUser }) {
     saveProjectProgress({ selectedDatasetChoice: choice });
   };
 
+  const handleModelUploaded = async (hfModelPath) => {
+    await saveProjectProgress({ hfModelPath });
+    // Reload project data to get the updated HF model path
+    await reloadProjectData();
+  };
+
+  // Add reloadProjectData function
+  const reloadProjectData = async () => {
+    if (!currentUser || !projectId) return;
+    const projectDocRef = doc(db, "users", currentUser.uid, "projects", projectId);
+    const projectDocSnap = await getDoc(projectDocRef);
+    if (projectDocSnap.exists()) {
+      const projectData = { id: projectDocSnap.id, ...projectDocSnap.data() };
+      setSelectedProjectData(projectData);
+    }
+  };
+
   // ... other handlers would be copied from App.js
 
   if (!selectedProjectData) {
@@ -858,6 +875,7 @@ function ProjectPage({ currentUser }) {
               modelName={modelName}
               trainedModelPath={trainedModelPath}
               connectionStatus={hfConnectionStatus}
+              onModelUploaded={handleModelUploaded}
             />
           </div>
           
@@ -867,6 +885,7 @@ function ProjectPage({ currentUser }) {
               currentUser={currentUser}
               currentRequestId={currentRequestId} 
               currentBaseModel={modelName}
+              hfModelPath={selectedProjectData?.hfModelPath}
             />
           </div>
         </div>
