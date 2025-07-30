@@ -5,7 +5,8 @@ import {
   Button,
   Box,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Grid
 } from '@mui/material';
 import '../style/modern.css';
 import { API_BASE_URL, API_INFERENCE_BASE_URL } from '../api';
@@ -13,8 +14,11 @@ import { API_BASE_URL, API_INFERENCE_BASE_URL } from '../api';
 const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfModelPath }) => {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
+  const [baseResponse, setBaseResponse] = useState('');
   const [loading, setLoading] = useState(false);
+  const [baseLoading, setBaseLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [baseError, setBaseError] = useState(null);
   const [maxNewTokens, setMaxNewTokens] = useState(100);
   const [hfConnected, setHfConnected] = useState(false);
   const [hfModelName, setHfModelName] = useState('');
@@ -59,37 +63,64 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
     }
     
     setLoading(true);
+    setBaseLoading(true);
     setError(null);
+    setBaseError(null);
     setResponse('');
+    setBaseResponse('');
     
-    const requestPayload = {
+    const baseModel = currentBaseModel || "unsloth/gemma-3-1b-it";
+    
+    // Call both endpoints in parallel
+    const fineTunedPayload = {
       model_name: hfModelName,
+      prompt: prompt,
+      max_new_tokens: maxNewTokens,
+      base_model: baseModel
+    };
+    
+    const baseModelPayload = {
+      base_model: baseModel,
       prompt: prompt,
       max_new_tokens: maxNewTokens
     };
     
-    console.log('🔍 [Inference Debug] Sending request to:', `${API_INFERENCE_BASE_URL}/inference`);
-    console.log('🔍 [Inference Debug] Request payload:', requestPayload);
+    console.log('🔍 [Inference Debug] Sending fine-tuned request to:', `${API_INFERENCE_BASE_URL}/inference`);
+    console.log('🔍 [Inference Debug] Fine-tuned payload:', fineTunedPayload);
+    console.log('🔍 [Inference Debug] Sending base model request to:', `${API_INFERENCE_BASE_URL}/base-inference`);
+    console.log('🔍 [Inference Debug] Base model payload:', baseModelPayload);
     
     try {
-      const response = await fetch(`${API_INFERENCE_BASE_URL}/inference`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestPayload),
-      });
+      // Call both endpoints in parallel
+      const [fineTunedResponse, baseModelResponse] = await Promise.all([
+        fetch(`${API_INFERENCE_BASE_URL}/inference`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fineTunedPayload),
+        }),
+        fetch(`${API_INFERENCE_BASE_URL}/base-inference`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(baseModelPayload),
+        })
+      ]);
       
-      console.log('🔍 [Inference Debug] Response status:', response.status);
-      console.log('🔍 [Inference Debug] Response headers:', Object.fromEntries(response.headers.entries()));
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log('🔍 [Inference Debug] Response contains error field:', errorData);
-        throw new Error(errorData.error || errorData.detail || 'Inference failed');
+      // Handle fine-tuned model response
+      if (!fineTunedResponse.ok) {
+        const errorData = await fineTunedResponse.json();
+        throw new Error(errorData.error || errorData.detail || 'Fine-tuned model inference failed');
       }
+      const fineTunedData = await fineTunedResponse.json();
+      setResponse(fineTunedData.response);
       
-      const data = await response.json();
-      console.log('🔍 [Inference Debug] Response data:', data);
-      setResponse(data.response);
+      // Handle base model response
+      if (!baseModelResponse.ok) {
+        const errorData = await baseModelResponse.json();
+        throw new Error(errorData.error || errorData.detail || 'Base model inference failed');
+      }
+      const baseModelData = await baseModelResponse.json();
+      setBaseResponse(baseModelData.response);
+      
     } catch (err) {
       console.log('🔍 [Inference Debug] Caught error:', err);
       console.log('🔍 [Inference Debug] Error message:', err.message);
@@ -97,6 +128,7 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
       setError(err.message);
     } finally {
       setLoading(false);
+      setBaseLoading(false);
     }
   };
 
@@ -120,9 +152,9 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
   return (
     <div className="modern-card">
       <div className="modern-card-header">
-        <h3 className="modern-card-title">🤖 Test Your Model (Hugging Face Inference)</h3>
+        <h3 className="modern-card-title">🤖 Compare Fine-tuned vs Base Model</h3>
         <p className="modern-card-subtitle">
-          Test your fine-tuned model using Hugging Face Hub. Requires HF login and uploaded model.
+          Test your fine-tuned model against the base model. Requires HF login and uploaded model.
         </p>
       </div>
       {error && (
@@ -163,34 +195,81 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
       <Button
         variant="contained"
         onClick={handleTest}
-        disabled={loading || !prompt.trim() || !hfModelName.trim()}
+        disabled={loading || baseLoading || !prompt.trim() || !hfModelName.trim()}
         sx={{ mb: 2 }}
       >
-        {loading ? <CircularProgress size={24} /> : 'Generate Response'}
+        {(loading || baseLoading) ? <CircularProgress size={24} /> : 'Generate Responses'}
       </Button>
-      {response && (
+      
+      {(response || baseResponse) && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Response:
+            Comparison:
           </Typography>
-          <div 
-            className="modern-card mt-3"
-            style={{
-              backgroundColor: 'var(--bg-primary)',
-              maxHeight: '300px',
-              overflow: 'auto',
-              fontFamily: 'monospace',
-              border: '1px solid var(--border-color)'
-            }}
-          >
-            <Typography
-              variant="body1"
-              component="pre"
-              sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}
-            >
-              {response}
-            </Typography>
-          </div>
+          
+          <Grid container spacing={2}>
+            {/* Fine-tuned Model Response */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
+                🤖 Fine-tuned Model Response:
+              </Typography>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
+                <div 
+                  className="modern-card mt-3"
+                  style={{
+                    backgroundColor: 'var(--bg-primary)',
+                    maxHeight: '300px',
+                    overflow: 'auto',
+                    fontFamily: 'monospace',
+                    border: '1px solid var(--border-color)'
+                  }}
+                >
+                  <Typography
+                    variant="body1"
+                    component="pre"
+                    sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}
+                  >
+                    {response || 'No response yet'}
+                  </Typography>
+                </div>
+              )}
+            </Grid>
+            
+            {/* Base Model Response */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>
+                🏠 Base Model Response:
+              </Typography>
+              {baseLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
+                <div 
+                  className="modern-card mt-3"
+                  style={{
+                    backgroundColor: 'var(--bg-primary)',
+                    maxHeight: '300px',
+                    overflow: 'auto',
+                    fontFamily: 'monospace',
+                    border: '1px solid var(--border-color)'
+                  }}
+                >
+                  <Typography
+                    variant="body1"
+                    component="pre"
+                    sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}
+                  >
+                    {baseResponse || 'No response yet'}
+                  </Typography>
+                </div>
+              )}
+            </Grid>
+          </Grid>
         </Box>
       )}
     </div>
