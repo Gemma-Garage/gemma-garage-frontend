@@ -49,7 +49,10 @@ const UnifiedInference = ({ currentUser, currentRequestId, currentBaseModel, hfM
   }, [currentUser, currentRequestId, hfModelPath]);
 
   const handleConnectHF = () => {
-    window.location.href = `${API_BASE_URL}/huggingface/login`;
+    // Pass the current request ID to redirect back to the project page
+    const loginUrl = `${API_BASE_URL}/huggingface/login${currentRequestId ? `?request_id=${currentRequestId}` : ''}`;
+    console.log('Redirecting to OAuth login:', loginUrl);
+    window.location.href = loginUrl;
   };
 
   const handleTest = async () => {
