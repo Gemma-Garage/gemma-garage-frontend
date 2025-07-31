@@ -1,7 +1,7 @@
 // src/components/ProjectDashboard.js
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase'; // auth removed as currentUser is prop
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { 
   Container, 
   Typography, 
@@ -16,7 +16,14 @@ import {
   Chip,
   Avatar,
   IconButton,
-  Tooltip
+  Tooltip,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { 
@@ -25,7 +32,8 @@ import {
   Schedule as TimeIcon,
   PlayArrow as PlayIcon,
   MoreVert as MoreIcon,
-  TrendingUp as TrendingIcon
+  TrendingUp as TrendingIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 
 // Styled components for modern dashboard design
@@ -120,6 +128,7 @@ const StatusChip = styled(Chip)(({ status, theme }) => {
       case 'training': return { bg: '#fff3e0', color: '#f57c00', border: '#ffcc02' };
       case 'completed': return { bg: '#e8f5e8', color: '#2e7d32', border: '#4caf50' };
       case 'ready': return { bg: '#e3f2fd', color: '#1976d2', border: '#2196f3' };
+      case 'never_trained': return { bg: '#f5f5f5', color: '#666666', border: '#e0e0e0' };
       default: return { bg: '#ffffff', color: '#64748b', border: '#e2e8f0' };
     }
   };
@@ -152,6 +161,10 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
 
   useEffect(() => {
     if (currentUser && currentUser.uid) {
@@ -188,19 +201,71 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
     }
   }, [currentUser]); // Re-run when currentUser changes
 
+  // Delete project handlers
+  const handleMenuOpen = (event, project) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setSelectedProject(project);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedProject(null);
+  };
+
+  const handleDeleteClick = () => {
+    handleMenuClose();
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedProject || !currentUser) return;
+    
+    setDeletingProject(true);
+    try {
+      const projectRef = doc(db, `users/${currentUser.uid}/projects/${selectedProject.id}`);
+      await deleteDoc(projectRef);
+      setDeleteDialogOpen(false);
+      setSelectedProject(null);
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      alert("Failed to delete project: " + error.message);
+    } finally {
+      setDeletingProject(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setSelectedProject(null);
+  };
+
   // Helper functions
   const getProjectStatus = (project) => {
-    if (project.trainingStatusMessage?.includes('training')) return 'training';
-    if (project.weightsUrl) return 'completed';
-    if (project.requestId) return 'ready';
-    return 'created';
+    // Check if training is currently in progress
+    if (project.trainingStatusMessage?.toLowerCase().includes('training') || 
+        project.trainingStatusMessage?.toLowerCase().includes('in progress') ||
+        project.trainingStatusMessage?.toLowerCase().includes('polling for logs')) {
+      return 'training';
+    }
+    // Check if training is completed
+    if (project.weightsUrl || project.trainingStatusMessage?.toLowerCase().includes('complete')) {
+      return 'completed';
+    }
+    // Check if training has been started but not completed
+    if (project.requestId) {
+      return 'ready';
+    }
+    // Default: project created but never trained
+    return 'never_trained';
   };
 
   const getStatusLabel = (status) => {
     switch (status) {
       case 'training': return 'Training';
       case 'completed': return 'Completed';
-      case 'ready': return 'Ready';
+      case 'ready': return 'Training Ready';
+      case 'never_trained': return 'Never Trained';
       default: return 'Created';
     }
   };
@@ -305,7 +370,11 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
                         <AIIcon />
                       </ProjectAvatar>
                       <Tooltip title="More options">
-                        <IconButton size="small" sx={{ color: '#666666' }}>
+                        <IconButton 
+                          size="small" 
+                          sx={{ color: '#666666' }}
+                          onClick={(e) => handleMenuOpen(e, project)}
+                        >
                           <MoreIcon />
                         </IconButton>
                       </Tooltip>
@@ -376,6 +445,71 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
           })}
         </Grid>
       )}
+
+      {/* Project Options Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+            minWidth: '180px'
+          }
+        }}
+      >
+        <MenuItem 
+          onClick={handleDeleteClick}
+          sx={{ 
+            color: '#d32f2f',
+            '&:hover': { backgroundColor: '#ffebee' }
+          }}
+        >
+          <DeleteIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+          Delete Project
+        </MenuItem>
+      </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            minWidth: '400px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          Delete Project
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete "{selectedProject?.displayName}"? 
+            This action cannot be undone and will permanently remove all project data.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, gap: 1 }}>
+          <Button 
+            onClick={handleDeleteCancel}
+            variant="outlined"
+            disabled={deletingProject}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm}
+            variant="contained"
+            color="error"
+            disabled={deletingProject}
+            startIcon={deletingProject ? <CircularProgress size={16} /> : <DeleteIcon />}
+          >
+            {deletingProject ? 'Deleting...' : 'Delete Project'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </DashboardContainer>
   );
 };

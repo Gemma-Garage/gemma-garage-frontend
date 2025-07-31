@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProjectDashboard from '../components/ProjectDashboard';
 import CreateProjectDialog from '../components/CreateProjectDialog';
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 
 function HomePage({ currentUser }) {
@@ -26,6 +26,23 @@ function HomePage({ currentUser }) {
       alert("You must be logged in to create a project.");
       return;
     }
+
+    // Check for duplicate project names
+    try {
+      const projectsCollectionRef = collection(db, "users", currentUser.uid, "projects");
+      const duplicateQuery = query(projectsCollectionRef, where("displayName", "==", projectName));
+      const duplicateSnapshot = await getDocs(duplicateQuery);
+      
+      if (!duplicateSnapshot.empty) {
+        alert("A project with this name already exists. Please choose a different name.");
+        return;
+      }
+    } catch (error) {
+      console.error("Error checking for duplicate project names:", error);
+      alert("Error checking for duplicate project names: " + error.message);
+      return;
+    }
+
     try {
       const projectsCollectionRef = collection(db, "users", currentUser.uid, "projects");
       const newProjectRef = await addDoc(projectsCollectionRef, {
