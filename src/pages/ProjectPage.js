@@ -410,7 +410,8 @@ function ProjectPage({ currentUser }) {
             weightsUrl: newWeightsUrl,
             trainingStatusMessage: latestStatusMessage,
             lossData: lossDataToSave,
-            trainingCompleted: true
+            trainingCompleted: true,
+            lastTrainedAt: new Date() // Set the completion time
           });
         }
       }

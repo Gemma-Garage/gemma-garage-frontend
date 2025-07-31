@@ -127,7 +127,7 @@ const StatusChip = styled(Chip)(({ status, theme }) => {
     switch (status) {
       case 'training': return { bg: '#fff3e0', color: '#f57c00', border: '#ffcc02' };
       case 'completed': return { bg: '#e8f5e8', color: '#2e7d32', border: '#4caf50' };
-      case 'ready': return { bg: '#e3f2fd', color: '#1976d2', border: '#2196f3' };
+      case 'ready': return { bg: '#fff8e1', color: '#f57c00', border: '#ffb300' }; // Orange for started but not completed
       case 'never_trained': return { bg: '#f5f5f5', color: '#666666', border: '#e0e0e0' };
       default: return { bg: '#ffffff', color: '#64748b', border: '#e2e8f0' };
     }
@@ -259,20 +259,27 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
 
   // Helper functions
   const getProjectStatus = (project) => {
-    // Check if training is currently in progress
-    if (project.trainingStatusMessage?.toLowerCase().includes('training') || 
-        project.trainingStatusMessage?.toLowerCase().includes('in progress') ||
-        project.trainingStatusMessage?.toLowerCase().includes('polling for logs')) {
+    // Check if training is currently in progress - be more specific
+    const statusMessage = project.trainingStatusMessage?.toLowerCase() || '';
+    const isCurrentlyTraining = statusMessage.includes('training') && 
+                               (statusMessage.includes('in progress') || 
+                                statusMessage.includes('polling for logs') ||
+                                statusMessage.includes('submitted'));
+    
+    if (isCurrentlyTraining) {
       return 'training';
     }
+    
     // Check if training is completed
-    if (project.weightsUrl || project.trainingStatusMessage?.toLowerCase().includes('complete')) {
+    if (project.weightsUrl || project.trainedModelPath || statusMessage.includes('complete')) {
       return 'completed';
     }
-    // Check if training has been started but not completed
-    if (project.requestId) {
+    
+    // Check if training has been started but not completed (has requestId but no weights)
+    if (project.requestId && !project.weightsUrl && !project.trainedModelPath) {
       return 'ready';
     }
+    
     // Default: project created but never trained
     return 'never_trained';
   };
@@ -281,10 +288,43 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
     switch (status) {
       case 'training': return 'Training';
       case 'completed': return 'Completed';
-      case 'ready': return 'Training Ready';
+      case 'ready': return 'Started';
       case 'never_trained': return 'Never Trained';
       default: return 'Created';
     }
+  };
+
+  const getLastTrainedInfo = (project) => {
+    // If project has weights or trained model path, it has been trained
+    if (project.weightsUrl || project.trainedModelPath) {
+      // Use lastTrainedAt if available, otherwise use createdAt as fallback
+      const trainingTime = project.lastTrainedAt || project.createdAt;
+      if (trainingTime) {
+        const date = trainingTime.seconds ? new Date(trainingTime.seconds * 1000) : new Date(trainingTime);
+        return {
+          text: `Last trained: ${date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          })}`,
+          show: true
+        };
+      }
+    }
+    
+    // If project has requestId but no weights, it was started but may not have completed
+    if (project.requestId && !project.weightsUrl && !project.trainedModelPath) {
+      return {
+        text: "Training started but not completed",
+        show: true
+      };
+    }
+    
+    // If project has never been trained
+    return {
+      text: "Never trained",
+      show: true
+    };
   };
 
   const formatDate = (timestamp) => {
@@ -432,7 +472,7 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#666666' }}>
                       <TimeIcon sx={{ fontSize: '1rem' }} />
                       <Typography variant="caption">
-                        Last trained: {formatDate(project.lastTrainedAt)}
+                        {getLastTrainedInfo(project).text}
                       </Typography>
                     </Box>
                   </CardContent>

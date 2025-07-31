@@ -364,7 +364,8 @@ function ReinforcementTuning({ currentUser }) {
             trainingStatusMessage: latestStatusMessage,
             lossData: lossData,
             rewardData: rewardData,
-            trainingCompleted: true
+            trainingCompleted: true,
+            lastTrainedAt: new Date() // Set the completion time
           });
         }
       }
