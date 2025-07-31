@@ -203,7 +203,9 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
 
   // Delete project handlers
   const handleMenuOpen = (event, project) => {
+    console.log('Menu open clicked for project:', project.displayName);
     event.stopPropagation();
+    event.preventDefault();
     setAnchorEl(event.currentTarget);
     setSelectedProject(project);
   };
@@ -214,17 +216,24 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
   };
 
   const handleDeleteClick = () => {
+    console.log('Delete clicked for project:', selectedProject?.displayName);
     handleMenuClose();
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedProject || !currentUser) return;
+    console.log('Delete confirm clicked for project:', selectedProject?.displayName);
+    if (!selectedProject || !currentUser) {
+      console.log('No selected project or current user');
+      return;
+    }
     
     setDeletingProject(true);
     try {
       const projectRef = doc(db, `users/${currentUser.uid}/projects/${selectedProject.id}`);
+      console.log('Deleting project with ref:', projectRef.path);
       await deleteDoc(projectRef);
+      console.log('Project deleted successfully');
       setDeleteDialogOpen(false);
       setSelectedProject(null);
     } catch (error) {
@@ -363,7 +372,13 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
             const status = getProjectStatus(project);
             return (
               <Grid item xs={12} sm={6} md={4} key={project.id}>
-                <ProjectCard onClick={() => handleProjectSelect(project.id)}>
+                <ProjectCard onClick={(e) => {
+                  // Don't navigate if clicking on the menu button or its children
+                  if (e.target.closest('[data-menu-button]')) {
+                    return;
+                  }
+                  handleProjectSelect(project.id);
+                }}>
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                       <ProjectAvatar>
@@ -374,6 +389,7 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
                           size="small" 
                           sx={{ color: '#666666' }}
                           onClick={(e) => handleMenuOpen(e, project)}
+                          data-menu-button="true"
                         >
                           <MoreIcon />
                         </IconButton>
@@ -458,9 +474,13 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
             minWidth: '180px'
           }
         }}
+        onOpen={() => console.log('Menu opened')}
       >
         <MenuItem 
-          onClick={handleDeleteClick}
+          onClick={(e) => {
+            console.log('Menu item clicked');
+            handleDeleteClick();
+          }}
           sx={{ 
             color: '#d32f2f',
             '&:hover': { backgroundColor: '#ffebee' }
@@ -481,6 +501,7 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
             minWidth: '400px'
           }
         }}
+        onEnter={() => console.log('Delete dialog opened')}
       >
         <DialogTitle sx={{ pb: 1 }}>
           Delete Project
