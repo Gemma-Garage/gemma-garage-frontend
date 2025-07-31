@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { API_BASE_URL, API_INFERENCE_BASE_URL, WS_BASE_URL } from '../api';
-import UploadDataset from '../components/UploadDataset';
+import DatasetUploadTabs from '../components/DatasetUploadTabs';
 import DatasetPreview from '../components/DatasetPreview';
 import HuggingFaceSettings from '../components/HuggingFaceSettings';
 import HuggingFaceUpload from '../components/HuggingFaceUpload';
@@ -218,6 +218,52 @@ function ProjectPage({ currentUser }) {
 
     } catch (error) {
       console.error("Error uploading file", error);
+      setUploadStatus("Error: " + error.message);
+    }
+  };
+
+  const handleHFDatasetImport = async (datasetUrl, split) => {
+    try {
+      setUploadStatus("Importing dataset from Hugging Face...");
+      
+      const response = await fetch(`${API_BASE_URL}/dataset/import-hf-dataset`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dataset_name: datasetUrl,
+          split: split
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Error importing dataset");
+      }
+      
+      const data = await response.json();
+      const fileName = data.file_location.split('/').pop();
+      
+      setUploadStatus(`Dataset imported: ${data.dataset_info.name} (${data.dataset_info.num_examples} examples). Ready for training.`);
+      
+      // Set the trainable dataset name
+      setTrainableDatasetName(fileName);
+      // Clear any old augmented dataset state
+      setAugmentedDatasetFileName(null);
+
+      // HF datasets are typically JSON, so use original
+      setSelectedDatasetChoice('original');
+
+      // Save to Firestore
+      await saveProjectProgress({
+        trainableDatasetName: fileName,
+        augmentedDatasetFileName: null,
+        selectedDatasetChoice: 'original',
+      });
+
+    } catch (error) {
+      console.error("Error importing HF dataset", error);
       setUploadStatus("Error: " + error.message);
     }
   };
@@ -780,12 +826,13 @@ function ProjectPage({ currentUser }) {
               </Typography>
             </div>
             
-            <UploadDataset 
+            <DatasetUploadTabs 
               datasetFile={datasetFile}
               trainableDatasetName={trainableDatasetName}
               onFileChange={handleFileChange}
               uploadStatus={uploadStatus}
               onUpload={handleUpload}
+              onHFDatasetImport={handleHFDatasetImport}
             />
             
             <Box sx={{ mt: 3 }}>
