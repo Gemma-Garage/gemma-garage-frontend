@@ -41,6 +41,17 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
+// Styled TextField component for consistent styling
+const ModernTextField = styled(TextField)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '12px',
+    '&.Mui-focused fieldset': {
+      borderColor: '#2196f3',
+    }
+  }
+}));
+
 const DatasetUploadTabs = ({ 
   datasetFile, 
   trainableDatasetName, 
@@ -94,9 +105,43 @@ const DatasetUploadTabs = ({
       return;
     }
 
+    // Extract dataset name from URL if user enters full URL
+    let datasetName = hfDatasetUrl.trim();
+    
+    // If it's a full URL, extract the dataset name
+    if (datasetName.startsWith('http')) {
+      try {
+        // Handle URLs like https://huggingface.co/datasets/allenai/IF_multi_constraints_upto5
+        const url = new URL(datasetName);
+        const pathParts = url.pathname.split('/');
+        
+        // Find the 'datasets' part and get what comes after
+        const datasetsIndex = pathParts.findIndex(part => part === 'datasets');
+        if (datasetsIndex !== -1 && datasetsIndex + 1 < pathParts.length) {
+          // Get everything after 'datasets' in the path
+          datasetName = pathParts.slice(datasetsIndex + 1).join('/');
+        } else {
+          // If no 'datasets' in path, try to extract from the end
+          datasetName = pathParts.slice(-2).join('/'); // Usually org/dataset-name
+        }
+      } catch (error) {
+        console.error("Error parsing URL:", error);
+        alert("Invalid Hugging Face URL. Please enter a valid dataset URL or just the dataset name (e.g., 'allenai/IF_multi_constraints_upto5')");
+        return;
+      }
+    }
+
+    // Remove any trailing slashes or extra parts
+    datasetName = datasetName.replace(/^\/+|\/+$/g, '');
+
+    if (!datasetName) {
+      alert("Could not extract dataset name from URL. Please enter a valid Hugging Face dataset URL or name.");
+      return;
+    }
+
     setHfLoading(true);
     try {
-      await onHFDatasetImport(hfDatasetUrl, selectedSplit);
+      await onHFDatasetImport(datasetName, selectedSplit);
     } catch (error) {
       console.error("Error importing HF dataset:", error);
     } finally {
@@ -200,17 +245,17 @@ const DatasetUploadTabs = ({
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
           <Alert severity="info" sx={{ width: "100%" }}>
             <AlertTitle>Import from Hugging Face</AlertTitle>
-            Enter a Hugging Face dataset URL (e.g., "microsoft/DialoGPT-medium" or "squad") and select a split
+            Enter a Hugging Face dataset name or URL. You can use just the dataset name (e.g., "squad") or the full URL from the dataset page.
           </Alert>
 
-          <TextField
+          <ModernTextField
             fullWidth
-            label="Hugging Face Dataset URL"
-            placeholder="e.g., microsoft/DialoGPT-medium, squad, or custom/dataset-name"
+            label="Hugging Face Dataset Name or URL"
+            placeholder="e.g., squad, allenai/IF_multi_constraints_upto5, or https://huggingface.co/datasets/microsoft/DialoGPT-medium"
             value={hfDatasetUrl}
             onChange={(e) => setHfDatasetUrl(e.target.value)}
             variant="outlined"
-            sx={{ mb: 2 }}
+            helperText="Enter the dataset name (e.g., 'squad') or paste the full URL from the dataset page"
           />
 
           <FormControl fullWidth sx={{ mb: 2 }}>
