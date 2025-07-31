@@ -242,8 +242,8 @@ const DatasetUploadTabs = ({
 
       {/* Hugging Face Dataset Tab */}
       {activeTab === 1 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <Alert severity="info" sx={{ width: "100%" }}>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+          <Alert severity="info" sx={{ width: "100%", mb: 2 }}>
             <AlertTitle>Import from Hugging Face</AlertTitle>
             Enter a Hugging Face dataset name or URL. You can use just the dataset name (e.g., "squad") or the full URL from the dataset page.
           </Alert>
@@ -258,7 +258,7 @@ const DatasetUploadTabs = ({
             helperText="Enter the dataset name (e.g., 'squad') or paste the full URL from the dataset page"
           />
 
-          <FormControl fullWidth sx={{ mb: 2 }}>
+          <FormControl fullWidth>
             <InputLabel>Dataset Split</InputLabel>
             <Select
               value={selectedSplit}
@@ -273,25 +273,23 @@ const DatasetUploadTabs = ({
             </Select>
           </FormControl>
 
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-            <button
-              className={`modern-btn modern-btn-primary ${hfLoading ? 'modern-btn-loading' : ''}`}
-              onClick={handleHFDatasetImport}
-              disabled={!hfDatasetUrl.trim() || hfLoading}
-            >
-              {hfLoading ? (
-                <>
-                  <CircularProgress size={16} color="inherit" sx={{ marginRight: 1 }} />
-                  Importing...
-                </>
-              ) : (
-                <>
-                  <DatasetIcon sx={{ fontSize: 16, mr: 1 }} />
-                  Import Dataset
-                </>
-              )}
-            </button>
-          </Box>
+          <button
+            className={`modern-btn modern-btn-primary ${hfLoading ? 'modern-btn-loading' : ''}`}
+            onClick={handleHFDatasetImport}
+            disabled={!hfDatasetUrl.trim() || hfLoading}
+          >
+            {hfLoading ? (
+              <>
+                <CircularProgress size={16} color="inherit" sx={{ marginRight: 1 }} />
+                Importing...
+              </>
+            ) : (
+              <>
+                <DatasetIcon sx={{ fontSize: 16, mr: 1 }} />
+                Import Dataset
+              </>
+            )}
+          </button>
 
           <Alert severity="warning" sx={{ width: "100%" }}>
             <AlertTitle>Note</AlertTitle>
