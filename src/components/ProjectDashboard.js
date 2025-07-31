@@ -1,5 +1,5 @@
 // src/components/ProjectDashboard.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase'; // auth removed as currentUser is prop
 import { collection, query, onSnapshot, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { 
@@ -165,6 +165,7 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
   const [selectedProject, setSelectedProject] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
+  const selectedProjectRef = useRef(null);
 
   useEffect(() => {
     if (currentUser && currentUser.uid) {
@@ -208,6 +209,7 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
     event.preventDefault();
     setAnchorEl(event.currentTarget);
     setSelectedProject(project);
+    selectedProjectRef.current = project;
   };
 
   const handleMenuClose = () => {
@@ -217,25 +219,29 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
 
   const handleDeleteClick = () => {
     console.log('Delete clicked for project:', selectedProject?.displayName);
-    handleMenuClose();
+    // Don't close the menu immediately, just hide it
+    setAnchorEl(null);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    console.log('Delete confirm clicked for project:', selectedProject?.displayName);
-    if (!selectedProject || !currentUser) {
+    const projectToDelete = selectedProject || selectedProjectRef.current;
+    console.log('Delete confirm clicked for project:', projectToDelete?.displayName);
+    if (!projectToDelete || !currentUser) {
       console.log('No selected project or current user');
       return;
     }
     
     setDeletingProject(true);
     try {
-      const projectRef = doc(db, `users/${currentUser.uid}/projects/${selectedProject.id}`);
+      const projectRef = doc(db, `users/${currentUser.uid}/projects/${projectToDelete.id}`);
       console.log('Deleting project with ref:', projectRef.path);
       await deleteDoc(projectRef);
       console.log('Project deleted successfully');
       setDeleteDialogOpen(false);
       setSelectedProject(null);
+      selectedProjectRef.current = null;
+      setAnchorEl(null);
     } catch (error) {
       console.error("Error deleting project:", error);
       alert("Failed to delete project: " + error.message);
@@ -247,6 +253,8 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
     setSelectedProject(null);
+    selectedProjectRef.current = null;
+    setAnchorEl(null);
   };
 
   // Helper functions
@@ -501,14 +509,14 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
             minWidth: '400px'
           }
         }}
-        onEnter={() => console.log('Delete dialog opened')}
+        onEnter={() => console.log('Delete dialog opened, selectedProject:', selectedProject?.displayName)}
       >
         <DialogTitle sx={{ pb: 1 }}>
           Delete Project
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{selectedProject?.displayName}"? 
+            Are you sure you want to delete "{(selectedProject || selectedProjectRef.current)?.displayName}"? 
             This action cannot be undone and will permanently remove all project data.
           </DialogContentText>
         </DialogContent>
