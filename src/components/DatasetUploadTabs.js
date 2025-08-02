@@ -43,7 +43,6 @@ const VisuallyHiddenInput = styled("input")({
 
 // Styled TextField component for consistent styling
 const ModernTextField = styled(TextField)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
   '& .MuiOutlinedInput-root': {
     borderRadius: '12px',
     '&.Mui-focused fieldset': {
@@ -242,8 +241,8 @@ const DatasetUploadTabs = ({
 
       {/* Hugging Face Dataset Tab */}
       {activeTab === 1 && (
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-          <Alert severity="info" sx={{ width: "100%", mb: 2 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Alert severity="info" sx={{ width: "100%" }}>
             <AlertTitle>Import from Hugging Face</AlertTitle>
             Enter a Hugging Face dataset name or URL. You can use just the dataset name (e.g., "squad") or the full URL from the dataset page.
           </Alert>
