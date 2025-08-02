@@ -118,17 +118,23 @@ function ProjectPage({ currentUser }) {
           setLearningRate(projectData.learningRate || 0.0002);
           setLoraRank(projectData.loraRank || 4);
           setTrainingStatus(projectData.trainingStatusMessage || "Ready for training.");
-          setLossData(projectData.lossData || []);
+          
+          // Load saved loss data if available, otherwise empty array
+          const savedLossData = projectData.savedLossData || projectData.lossData || [];
+          setLossData(savedLossData);
+          lossDataRef.current = savedLossData;
+          
           setWeightsUrl(projectData.weightsUrl || null);
           setCurrentRequestId(projectData.requestId || null);
           setModelName(projectData.baseModel || "google/gemma-3-1b-pt");
 
           if (projectData.requestId) {
             requestIdRef.current = projectData.requestId;
-            // Only start polling if training is actually in progress
+            // Only start polling if training is actually in progress AND recent enough to have logs
             if (
               !pollingIntervalRef.current &&
-              isTrainingActive(projectData.trainingStatusMessage)
+              isTrainingActive(projectData.trainingStatusMessage) &&
+              isTrainingRecentEnoughForLogs(projectData)
             ) {
               console.log("Restarting polling for existing training job:", projectData.requestId);
               pollingIntervalRef.current = setInterval(() => {
@@ -136,6 +142,8 @@ function ProjectPage({ currentUser }) {
                   pollLogs(requestIdRef.current, lastLogTimestampRef.current);
                 }
               }, 10000); // 10 seconds
+            } else if (!isTrainingRecentEnoughForLogs(projectData)) {
+              console.log("Training is too old for log polling, skipping:", projectData.requestId);
             }
           }
         } else {
@@ -287,10 +295,21 @@ function ProjectPage({ currentUser }) {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: response.statusText }));
         console.error("Error fetching logs:", errorData.detail || response.statusText);
-        setTrainingStatus(`Error fetching logs: ${errorData.detail || response.statusText}`);
+        
         if (response.status === 404) {
             stopPollingLogs();
-            setTrainingStatus("Training ID not found. Stopping log updates.");
+            // For 404 errors, check if this is an old training
+            const now = new Date();
+            const requestAge = requestIdRef.current ? 
+              (now - new Date(requestIdRef.current.split('-')[0] || '0')) / (1000 * 60 * 60 * 24) : 0;
+            
+            if (requestAge > 7) {
+              setTrainingStatus("Training logs expired (older than 7 days). Download model if available.");
+            } else {
+              setTrainingStatus("Training ID not found. Logs may have been cleaned up.");
+            }
+        } else {
+          setTrainingStatus(`Error fetching logs: ${errorData.detail || response.statusText}`);
         }
         return;
       }
@@ -447,18 +466,23 @@ function ProjectPage({ currentUser }) {
         if (newWeightsUrl) {
           setWeightsUrl(newWeightsUrl);
         }
-        // Only save lossData to Firestore when training is completed
+        // Save loss data to Firebase when training is completed
         const lossDataToSave = (lossDataRef.current && lossDataRef.current.length > 100)
           ? lossDataRef.current.slice(lossDataRef.current.length - 100)
           : lossDataRef.current;
+        
         if (newWeightsUrl || trainedModelPath) {
           saveProjectProgress({ 
             weightsUrl: newWeightsUrl,
             trainingStatusMessage: latestStatusMessage,
-            lossData: lossDataToSave,
             trainingCompleted: true,
             lastTrainedAt: new Date() // Set the completion time
           });
+        }
+        
+        // Save loss data separately to preserve it even when logs expire
+        if (lossDataToSave && lossDataToSave.length > 0) {
+          await saveLossDataToFirebase(lossDataToSave);
         }
       }
 
@@ -477,6 +501,28 @@ function ProjectPage({ currentUser }) {
     ) &&
     !status.toLowerCase().includes("complete") &&
     !status.toLowerCase().includes("error");
+
+  // Helper to check if training is recent enough to have logs
+  const isTrainingRecentEnoughForLogs = (projectData) => {
+    // Don't poll logs for trainings older than 7 days
+    const MAX_LOG_AGE_DAYS = 7;
+    const now = new Date();
+    
+    // Check if there's a completion time
+    if (projectData.lastTrainedAt) {
+      const trainedDate = new Date(projectData.lastTrainedAt);
+      const ageInDays = (now - trainedDate) / (1000 * 60 * 60 * 24);
+      return ageInDays <= MAX_LOG_AGE_DAYS;
+    }
+    
+    // For active trainings without completion time, always allow polling
+    if (isTrainingActive(projectData.trainingStatusMessage)) {
+      return true;
+    }
+    
+    // For completed trainings without lastTrainedAt, don't poll
+    return false;
+  };
 
   // Check if fine-tuning is ready
   const getTrainingReadiness = () => {
@@ -680,6 +726,26 @@ function ProjectPage({ currentUser }) {
     }
   };
 
+  // Function to save loss data permanently to Firebase
+  const saveLossDataToFirebase = async (lossData) => {
+    if (currentUser && projectId && lossData && lossData.length > 0) {
+      try {
+        // Save only the last 100 points for storage efficiency
+        const dataToSave = lossData.length > 100 
+          ? lossData.slice(lossData.length - 100) 
+          : lossData;
+        
+        await saveProjectProgress({
+          savedLossData: dataToSave,
+          lossDataSavedAt: new Date().toISOString()
+        });
+        console.log("Loss data saved to Firebase:", dataToSave.length, "points");
+      } catch (error) {
+        console.error("Error saving loss data:", error);
+      }
+    }
+  };
+
   const handleAugmentedDatasetReady = async (augmentedGcsPath) => {
     const augmentedFilename = augmentedGcsPath.split('/').pop();
     setAugmentedDatasetFileName(augmentedFilename);
@@ -876,6 +942,16 @@ function ProjectPage({ currentUser }) {
           
           {/* Training Control */}
           <div className="modern-card">
+            {/* Show warning if training is too old for logs */}
+            {selectedProjectData?.requestId && 
+             !isTrainingActive(trainingStatus) && 
+             !isTrainingRecentEnoughForLogs(selectedProjectData) && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <strong>Training Logs Expired:</strong> This training is older than 7 days. 
+                Logs are no longer available, but you can still download the trained model if available.
+              </Alert>
+            )}
+            
             <FinetuneControl 
               onStart={startFinetuning}
               wsStatus={trainingStatus}
