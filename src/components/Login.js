@@ -99,7 +99,7 @@ const ModernAlert = styled(Alert)(({ theme }) => ({
   }
 }));
 
-const Login = () => {
+const Login = ({ onForgotPassword }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
@@ -197,6 +197,25 @@ const Login = () => {
         >
           {loading ? 'Signing In...' : 'Sign In'}
         </ModernButton>
+        
+        <Box sx={{ textAlign: 'center', mt: 2 }}>
+          <Button
+            variant="text"
+            onClick={onForgotPassword}
+            sx={{ 
+              color: '#2196f3', 
+              fontWeight: 500,
+              textTransform: 'none',
+              fontSize: '0.9rem',
+              '&:hover': {
+                backgroundColor: 'rgba(33, 150, 243, 0.04)',
+                textDecoration: 'underline'
+              }
+            }}
+          >
+            Forgot your password?
+          </Button>
+        </Box>
       </Box>
     </Box>
   );

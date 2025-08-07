@@ -4,6 +4,7 @@ import { Container, Box, Typography, Tab, Tabs, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import Login from './Login';
 import SignUp from './SignUp';
+import ForgotPassword from './ForgotPassword';
 import '../style/auth.css';
 
 // Styled components for modern design
@@ -103,11 +104,21 @@ function TabPanel(props) {
   );
 }
 
-const AuthPage = () => {
+function AuthPage() {
   const [tabValue, setTabValue] = useState(0);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const handleChange = (event, newValue) => {
     setTabValue(newValue);
+    setShowForgotPassword(false); // Reset forgot password view when switching tabs
+  };
+
+  const handleForgotPassword = () => {
+    setShowForgotPassword(true);
+  };
+
+  const handleBackToLogin = () => {
+    setShowForgotPassword(false);
   };
 
   return (
@@ -120,22 +131,30 @@ const AuthPage = () => {
           Fine-tune and deploy AI models with ease
         </SubTitle>
         
-        <ModernTabs 
-          value={tabValue} 
-          onChange={handleChange} 
-          variant="fullWidth"
-          aria-label="login signup tabs"
-        >
-          <Tab label="Login" id="auth-tab-0" aria-controls="auth-tabpanel-0" />
-          <Tab label="Sign Up" id="auth-tab-1" aria-controls="auth-tabpanel-1" />
-        </ModernTabs>
+        {!showForgotPassword && (
+          <ModernTabs 
+            value={tabValue} 
+            onChange={handleChange} 
+            variant="fullWidth"
+            aria-label="login signup tabs"
+          >
+            <Tab label="Login" id="auth-tab-0" aria-controls="auth-tabpanel-0" />
+            <Tab label="Sign Up" id="auth-tab-1" aria-controls="auth-tabpanel-1" />
+          </ModernTabs>
+        )}
         
-        <TabPanel value={tabValue} index={0}>
-          <Login />
-        </TabPanel>
-        <TabPanel value={tabValue} index={1}>
-          <SignUp />
-        </TabPanel>
+        {showForgotPassword ? (
+          <ForgotPassword onBack={handleBackToLogin} />
+        ) : (
+          <>
+            <TabPanel value={tabValue} index={0}>
+              <Login onForgotPassword={handleForgotPassword} />
+            </TabPanel>
+            <TabPanel value={tabValue} index={1}>
+              <SignUp />
+            </TabPanel>
+          </>
+        )}
       </GlassCard>
     </ModernContainer>
   );
