@@ -7,8 +7,9 @@ import DatasetUploadTabs from '../components/DatasetUploadTabs';
 import DatasetPreview from '../components/DatasetPreview';
 import HuggingFaceSettings from '../components/HuggingFaceSettings';
 import HuggingFaceUpload from '../components/HuggingFaceUpload';
-import { Container, Typography, Box, Button, TextField, Paper, Grid, Alert, CircularProgress, LinearProgress, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Container, Typography, Box, Button, TextField, Paper, Grid, Alert, CircularProgress, LinearProgress, FormControl, InputLabel, Select, MenuItem, IconButton } from '@mui/material';
 import GetAppIcon from "@mui/icons-material/GetApp";
+import DashboardIcon from "@mui/icons-material/Dashboard";
 import '../style/modern.css';
 
 // Import components
@@ -834,12 +835,35 @@ function ProjectPage({ currentUser }) {
     <div className="modern-page">
       <div className="modern-page-header">
         <div className="modern-container">
-          <Typography variant="h4" className="modern-title text-center mb-0">
-            {selectedProjectData.displayName}
-          </Typography>
-          <Typography className="modern-text text-center modern-text-muted">
-            Project ID: {projectId}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <IconButton 
+              onClick={() => navigate('/home')}
+              sx={{ 
+                color: '#00d4ff',
+                backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                borderRadius: '12px',
+                padding: '12px',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 212, 255, 0.2)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 12px rgba(0, 212, 255, 0.3)'
+                }
+              }}
+              title="Back to Dashboard"
+            >
+              <DashboardIcon sx={{ fontSize: '1.5rem' }} />
+            </IconButton>
+            <Box sx={{ textAlign: 'center', flex: 1 }}>
+              <Typography variant="h4" className="modern-title mb-0">
+                {selectedProjectData.displayName}
+              </Typography>
+              <Typography className="modern-text modern-text-muted">
+                Project ID: {projectId}
+              </Typography>
+            </Box>
+            <Box sx={{ width: 60 }} /> {/* Spacer for center alignment */}
+          </Box>
         </div>
       </div>
       
