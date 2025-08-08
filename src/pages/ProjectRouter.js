@@ -19,10 +19,14 @@ const ProjectRouter = ({ currentUser }) => {
         if (projectDocSnap.exists()) {
           const projectData = projectDocSnap.data();
           const tuningType = typeof projectData.tuningType === 'number' ? projectData.tuningType : 0;
+          
+          // Preserve query parameters when redirecting
+          const currentSearch = window.location.search;
+          
           if (tuningType === 1) {
-            navigate(`/project/${projectId}/reinforcement`, { replace: true });
+            navigate(`/project/${projectId}/reinforcement${currentSearch}`, { replace: true });
           } else {
-            navigate(`/project/${projectId}/supervised`, { replace: true });
+            navigate(`/project/${projectId}/supervised${currentSearch}`, { replace: true });
           }
         } else {
           navigate('/home');
