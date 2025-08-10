@@ -463,33 +463,129 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     );
   }, []);
   
+  // Chat view for simple QA pairs (question -> user, answer -> model)
+  const renderQAPairsChatView = useCallback((data, isLoading) => {
+    // Flatten common wrappers
+    let displayData = Array.isArray(data) ? data : [];
+    if (!Array.isArray(data) && data && typeof data === 'object') {
+      if (Array.isArray(data.qa_pairs)) displayData = data.qa_pairs;
+      else if (Array.isArray(data.preview)) displayData = data.preview;
+      else displayData = [data];
+    }
+
+    const getQA = (item) => {
+      if (!item || typeof item !== 'object') return { q: '', a: '' };
+      const q = item.question ?? item.prompt ?? '';
+      const a = item.answer ?? item.completion ?? '';
+      return { q, a };
+    };
+
+    if (isLoading) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    if (!displayData || displayData.length === 0) {
+      return (
+        <Box sx={{ textAlign: 'center', p: 4 }}>
+          <Typography variant="body1" color="text.secondary">
+            No QA data available for augmentation preview. Generate augmented data to see a preview.
+          </Typography>
+        </Box>
+      );
+    }
+
+    return (
+      <Box sx={{ maxHeight: 500, overflow: 'auto', p: 2 }}>
+        {displayData.map((item, index) => {
+          const { q, a } = getQA(item);
+          if (!q && !a) {
+            return (
+              <Card key={index} sx={{ mb: 2, backgroundColor: '#f5f5f5' }}>
+                <CardContent>
+                  <Typography variant="body2" color="text.secondary">
+                    No valid QA pair found in item {index + 1}
+                  </Typography>
+                </CardContent>
+              </Card>
+            );
+          }
+
+          return (
+            <Paper 
+              key={index}
+              elevation={2}
+              sx={{ mb: 3, p: 2, backgroundColor: '#fafafa', border: '1px solid #e0e0e0', borderRadius: 2 }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <ChatBubbleOutline sx={{ mr: 1, color: '#1976d2' }} />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  QA Pair {index + 1}
+                </Typography>
+              </Box>
+
+              {q && (
+                <Box sx={{ display: 'flex', mb: 1.5, alignItems: 'flex-start' }}>
+                  <Chip 
+                    icon={<Person />}
+                    label="User"
+                    size="small"
+                    sx={{ mr: 2, backgroundColor: '#e3f2fd', color: '#1976d2', fontWeight: 600, minWidth: 80 }}
+                  />
+                  <Card sx={{ flex: 1, backgroundColor: '#e3f2fd', boxShadow: 1 }}>
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {q}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Box>
+              )}
+
+              {a && (
+                <Box sx={{ display: 'flex', mb: 1.5, alignItems: 'flex-start' }}>
+                  <Chip 
+                    icon={<SmartToy />}
+                    label="Model"
+                    size="small"
+                    sx={{ mr: 2, backgroundColor: '#f3e5f5', color: '#7b1fa2', fontWeight: 600, minWidth: 80 }}
+                  />
+                  <Card sx={{ flex: 1, backgroundColor: '#f3e5f5', boxShadow: 1 }}>
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {a}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Box>
+              )}
+            </Paper>
+          );
+        })}
+      </Box>
+    );
+  }, []);
+
   const renderDataTableInternal = useCallback((data, isLoading, type) => {
-    // For augmented data, use conversation view if it contains Gemma format
+    // For augmented data, use chat views when applicable
     if (type === "augmented") {
       // If data is a JSON string, try to parse it
       let source = data;
       if (typeof source === 'string') {
-        try {
-          source = JSON.parse(source);
-        } catch (e) {
-          // ignore parse error; will fallback
-        }
+        try { source = JSON.parse(source); } catch { /* noop */ }
       }
 
       let displayData = Array.isArray(source) ? source : [];
-      
-      // Handle special case where data might be an object with qa_pairs
       if (!Array.isArray(source) && source && typeof source === 'object') {
-        if (source.qa_pairs && Array.isArray(source.qa_pairs)) {
-          displayData = source.qa_pairs;
-        } else if (source.preview && Array.isArray(source.preview)) {
-          displayData = source.preview;
-        } else {
-          displayData = [source];
-        }
+        if (Array.isArray(source.qa_pairs)) displayData = source.qa_pairs;
+        else if (Array.isArray(source.preview)) displayData = source.preview;
+        else displayData = [source];
       }
-      
-      // Check if any item contains Gemma conversation format
+
+      // Gemma conversation format
       const hasGemmaFormat = displayData.some(item => {
         const itemText = typeof item === 'string' ? item : (item && item.text);
         return (
@@ -498,17 +594,16 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
           itemText.includes('<start_of_turn>model')
         );
       });
-      
-      console.log('Augmented data check:', {
-        type,
-        dataLength: displayData.length,
-        hasGemmaFormat,
-        sampleItem: displayData[0]
+      if (hasGemmaFormat) return renderConversationView(source, isLoading);
+
+      // Simple QA pairs format
+      const looksLikeQAPairs = displayData.length > 0 && displayData.every(it => {
+        if (!it || typeof it !== 'object') return false;
+        const hasQ = ('question' in it) || ('prompt' in it);
+        const hasA = ('answer' in it) || ('completion' in it);
+        return hasQ && hasA;
       });
-      
-      if (hasGemmaFormat) {
-        return renderConversationView(source, isLoading);
-      }
+      if (looksLikeQAPairs) return renderQAPairsChatView(displayData, isLoading);
     }
     
     // For non-JSON files or data without Gemma format, use the original table view
@@ -633,7 +728,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         </Table>
       </TableContainer>
     );
-  }, [renderConversationView]); // Add renderConversationView back to dependencies
+  }, [renderConversationView, renderQAPairsChatView]); // Add renderConversationView and renderQAPairsChatView back to dependencies
   
   // Memoized table renderings to prevent unnecessary re-renders
   const originalDataTable = useMemo(() => 
