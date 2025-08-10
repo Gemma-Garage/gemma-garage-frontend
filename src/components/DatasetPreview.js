@@ -93,108 +93,158 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   }, [dataset_path]); // No dependencies to prevent re-renders
 
   const loadAugmentedDatasetPreview = useCallback(async (augmentedDatasetPath) => {
-    if (!augmentedDatasetPath || augmentedDatasetPath === 'undefined' || augmentedDatasetPath === 'null') return;
+     if (!augmentedDatasetPath || augmentedDatasetPath === 'undefined' || augmentedDatasetPath === 'null') return;
 
-    // Normalize GCS object path: remove bucket prefix and ensure augmented/ prefix when missing
-    const normalizeGcsObjectPath = (p) => {
-      if (!p) return p;
-      let s = String(p).trim();
-      try { s = decodeURIComponent(s); } catch {}
-      // Strip gs://<bucket>/ prefix
-      if (s.startsWith('gs://')) {
-        const withoutScheme = s.slice('gs://'.length);
-        const parts = withoutScheme.split('/');
-        // drop bucket segment
-        s = parts.slice(1).join('/');
-      }
-      // Strip explicit bucket name if provided
-      const bucketPrefix = 'llm-garage-datasets/';
-      if (s.startsWith(bucketPrefix)) {
-        s = s.slice(bucketPrefix.length);
-      }
-      // If no folder prefix, default to augmented/
-      if (!s.includes('/')) {
-        s = `augmented/${s}`;
-      }
-      return s;
-    };
+     // If we already have in-memory preview, skip refetch (helps avoid GCS eventual consistency 404s)
+     if (augmentedDataPreview && augmentedDataPreview.length > 0) {
+       return;
+     }
 
-    const normalizedPath = normalizeGcsObjectPath(augmentedDatasetPath);
+     // Normalize GCS object path: remove bucket prefix and ensure augmented/ prefix when missing
+     const normalizeGcsObjectPath = (p) => {
+       if (!p) return p;
+       let s = String(p).trim();
+       try { s = decodeURIComponent(s); } catch {}
+       // Strip gs://<bucket>/ prefix
+       if (s.startsWith('gs://')) {
+         const withoutScheme = s.slice('gs://'.length);
+         const parts = withoutScheme.split('/');
+         // drop bucket segment
+         s = parts.slice(1).join('/');
+       }
+       // Strip explicit bucket name if provided
+       const bucketPrefix = 'llm-garage-datasets/';
+       if (s.startsWith(bucketPrefix)) {
+         s = s.slice(bucketPrefix.length);
+       }
+       return s;
+     };
 
-    // Ensure tab becomes enabled even if fetch fails
-    setAugmentedDatasetGCSPath(prev => prev || normalizedPath);
-    setAugmentedPreviewError(null);
+     const normalizedPath = normalizeGcsObjectPath(augmentedDatasetPath);
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(normalizedPath)}`);
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Handle different data structures
-        let previewData = [];
-        let fullCount = 0;
-        let summaryText = null;
-        if (data.summary && data.qa_pairs) {
-          summaryText = data.summary;
-          if (typeof data.qa_pairs === 'string') {
-            try {
-              const parsedQAPairs = JSON.parse(data.qa_pairs);
-              if (Array.isArray(parsedQAPairs)) {
-                previewData = parsedQAPairs;
-                fullCount = parsedQAPairs.length;
-              }
-            } catch (e) {
-              console.error("Failed to parse qa_pairs string:", e);
-            }
-          } else if (Array.isArray(data.qa_pairs)) {
-            previewData = data.qa_pairs;
-            fullCount = data.qa_pairs.length;
-          }
-        } else if (data.preview && data.full_count !== undefined) {
-          previewData = data.preview;
-          fullCount = data.full_count;
-          if (previewData.length === 1 && previewData[0].summary && previewData[0].qa_pairs) {
-            const singleItem = previewData[0];
-            summaryText = singleItem.summary;
-            if (typeof singleItem.qa_pairs === 'string') {
-              try {
-                const parsedQAPairs = JSON.parse(singleItem.qa_pairs);
-                if (Array.isArray(parsedQAPairs)) {
-                  previewData = parsedQAPairs;
-                  fullCount = parsedQAPairs.length;
-                }
-              } catch (e) {
-                console.error("Failed to parse qa_pairs string:", e);
-              }
-            } else if (Array.isArray(singleItem.qa_pairs)) {
-              previewData = singleItem.qa_pairs;
-              fullCount = singleItem.qa_pairs.length;
-            }
-          }
-        } else if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
-          previewData = data.qa_pairs;
-          fullCount = data.qa_pairs.length;
-          summaryText = data.summary || null;
-        } else if (Array.isArray(data)) {
-          previewData = data;
-          fullCount = data.length;
-        }
+     // Ensure tab becomes enabled even if fetch fails
+     setAugmentedDatasetGCSPath(prev => prev || normalizedPath);
+     setAugmentedPreviewError(null);
 
-        setAugmentedDataPreview(previewData);
-        setTotalAugmentedEntries(fullCount);
-        setSummary(summaryText);
-        setAugmentedDatasetGCSPath(normalizedPath);
-        setAugmentedPreviewError(null);
-      } else {
-        const errorText = await response.text().catch(() => `HTTP ${response.status}`);
-        console.error("Error loading augmented dataset preview: Server returned", response.status, errorText);
-        setAugmentedPreviewError(`Failed to load augmented preview (${response.status}).`);
-      }
-    } catch (error) {
-      console.error("Error loading augmented dataset preview:", error);
-      setAugmentedPreviewError("Failed to load augmented preview.");
-    }
-  }, []); // No dependencies to prevent re-renders
+     const tryFetch = async (pathToTry) => {
+       const url = `${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(pathToTry)}`;
+       console.log('[Augmented Preview] Trying path:', pathToTry, '->', url);
+       const response = await fetch(url);
+       let errorText = '';
+       if (!response.ok) {
+         errorText = await response.text().catch(() => `HTTP ${response.status}`);
+       }
+       return { response, errorText };
+     };
+
+     // Build fallback candidates (prefer exact gs:// first if provided)
+     const candidates = [];
+     const raw = String(augmentedDatasetPath || '').trim();
+     if (raw.startsWith('gs://')) candidates.push(raw);
+     if (!candidates.includes(normalizedPath)) candidates.push(normalizedPath);
+     const last = normalizedPath.split('/').pop();
+     const hasSlash = normalizedPath.includes('/');
+     if (hasSlash) {
+       // Also try just the file at root
+       if (!candidates.includes(last)) candidates.push(last);
+     } else {
+       // Also try under augmented/ prefix (legacy locations)
+       const augPref = `augmented/${normalizedPath}`;
+       if (!candidates.includes(augPref)) candidates.push(augPref);
+     }
+
+     try {
+       let success = false;
+       let finalData = null;
+       let finalFullCount = 0;
+       let finalSummary = null;
+       let finalPathUsed = null;
+       let lastStatus = 0;
+       let lastError = '';
+
+       for (const candidate of candidates) {
+         const { response, errorText } = await tryFetch(candidate);
+         if (response.ok) {
+           const data = await response.json();
+           // Handle different data structures
+           let previewData = [];
+           let fullCount = 0;
+           let summaryText = null;
+           if (data.summary && data.qa_pairs) {
+             summaryText = data.summary;
+             if (typeof data.qa_pairs === 'string') {
+               try {
+                 const parsedQAPairs = JSON.parse(data.qa_pairs);
+                 if (Array.isArray(parsedQAPairs)) {
+                   previewData = parsedQAPairs;
+                   fullCount = parsedQAPairs.length;
+                 }
+               } catch (e) {
+                 console.error('Failed to parse qa_pairs string:', e);
+               }
+             } else if (Array.isArray(data.qa_pairs)) {
+               previewData = data.qa_pairs;
+               fullCount = data.qa_pairs.length;
+             }
+           } else if (data.preview && data.full_count !== undefined) {
+             previewData = data.preview;
+             fullCount = data.full_count;
+             if (previewData.length === 1 && previewData[0].summary && previewData[0].qa_pairs) {
+               const singleItem = previewData[0];
+               summaryText = singleItem.summary;
+               if (typeof singleItem.qa_pairs === 'string') {
+                 try {
+                   const parsedQAPairs = JSON.parse(singleItem.qa_pairs);
+                   if (Array.isArray(parsedQAPairs)) {
+                     previewData = parsedQAPairs;
+                     fullCount = parsedQAPairs.length;
+                   }
+                 } catch (e) {
+                   console.error('Failed to parse qa_pairs string:', e);
+                 }
+               } else if (Array.isArray(singleItem.qa_pairs)) {
+                 previewData = singleItem.qa_pairs;
+                 fullCount = singleItem.qa_pairs.length;
+               }
+             }
+           } else if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
+             previewData = data.qa_pairs;
+             fullCount = data.qa_pairs.length;
+             summaryText = data.summary || null;
+           } else if (Array.isArray(data)) {
+             previewData = data;
+             fullCount = data.length;
+           }
+
+           finalData = previewData;
+           finalFullCount = fullCount;
+           finalSummary = summaryText;
+           finalPathUsed = candidate;
+           success = true;
+           break;
+         } else {
+           lastStatus = response.status;
+           lastError = errorText;
+           console.warn('[Augmented Preview] Failed for path:', candidate, 'status:', response.status, 'error:', errorText);
+         }
+       }
+
+       if (success) {
+         setAugmentedDataPreview(finalData);
+         setTotalAugmentedEntries(finalFullCount);
+         setSummary(finalSummary);
+         setAugmentedDatasetGCSPath(finalPathUsed);
+         setAugmentedPreviewError(null);
+       } else {
+         const tried = candidates.join(' | ');
+         console.error('Error loading augmented dataset preview. Tried:', tried, 'last status:', lastStatus, 'last error:', lastError);
+         setAugmentedPreviewError(`Failed to load augmented preview (${lastStatus || 'error'}).`);
+       }
+     } catch (error) {
+       console.error('Error loading augmented dataset preview:', error);
+       setAugmentedPreviewError('Failed to load augmented preview.');
+     }
+   }, [augmentedDataPreview, API_BASE_URL]);
 
   // useEffect hooks - simplified to prevent re-render loops
   useEffect(() => {
