@@ -92,12 +92,38 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   const loadAugmentedDatasetPreview = useCallback(async (augmentedDatasetPath) => {
     if (!augmentedDatasetPath || augmentedDatasetPath === 'undefined' || augmentedDatasetPath === 'null') return;
 
+    // Normalize GCS object path: remove bucket prefix and ensure augmented/ prefix when missing
+    const normalizeGcsObjectPath = (p) => {
+      if (!p) return p;
+      let s = String(p).trim();
+      try { s = decodeURIComponent(s); } catch {}
+      // Strip gs://<bucket>/ prefix
+      if (s.startsWith('gs://')) {
+        const withoutScheme = s.slice('gs://'.length);
+        const parts = withoutScheme.split('/');
+        // drop bucket segment
+        s = parts.slice(1).join('/');
+      }
+      // Strip explicit bucket name if provided
+      const bucketPrefix = 'llm-garage-datasets/';
+      if (s.startsWith(bucketPrefix)) {
+        s = s.slice(bucketPrefix.length);
+      }
+      // If no folder prefix, default to augmented/
+      if (!s.includes('/')) {
+        s = `augmented/${s}`;
+      }
+      return s;
+    };
+
+    const normalizedPath = normalizeGcsObjectPath(augmentedDatasetPath);
+
     // Ensure tab becomes enabled even if fetch fails
-    setAugmentedDatasetGCSPath(prev => prev || augmentedDatasetPath);
+    setAugmentedDatasetGCSPath(prev => prev || normalizedPath);
     setAugmentedPreviewError(null);
-    
+
     try {
-      const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(augmentedDatasetPath)}`);
+      const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(normalizedPath)}`);
       if (response.ok) {
         const data = await response.json();
         
@@ -154,19 +180,16 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         setAugmentedDataPreview(previewData);
         setTotalAugmentedEntries(fullCount);
         setSummary(summaryText);
-        setAugmentedDatasetGCSPath(augmentedDatasetPath);
+        setAugmentedDatasetGCSPath(normalizedPath);
         setAugmentedPreviewError(null);
       } else {
         const errorText = await response.text().catch(() => `HTTP ${response.status}`);
         console.error("Error loading augmented dataset preview: Server returned", response.status, errorText);
-        // Preserve any existing preview; just surface the error
         setAugmentedPreviewError(`Failed to load augmented preview (${response.status}).`);
-        // Do not clear augmentedDataPreview here
       }
     } catch (error) {
       console.error("Error loading augmented dataset preview:", error);
       setAugmentedPreviewError("Failed to load augmented preview.");
-      // Do not clear augmentedDataPreview here
     }
   }, []); // No dependencies to prevent re-renders
 
