@@ -259,16 +259,26 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   
   // New function to render conversation view for JSON augmented data
   const renderConversationView = useCallback((data, isLoading) => {
-    let displayData = Array.isArray(data) ? data : [];
+    // If data is a JSON string, try to parse it
+    let source = data;
+    if (typeof source === 'string') {
+      try {
+        source = JSON.parse(source);
+      } catch (e) {
+        // ignore parse error; will fallback gracefully
+      }
+    }
+
+    let displayData = Array.isArray(source) ? source : [];
     
     // Handle special case where data might be an object with qa_pairs
-    if (!Array.isArray(data) && data && typeof data === 'object') {
-      if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
-        displayData = data.qa_pairs;
-      } else if (data.preview && Array.isArray(data.preview)) {
-        displayData = data.preview;
+    if (!Array.isArray(source) && source && typeof source === 'object') {
+      if (source.qa_pairs && Array.isArray(source.qa_pairs)) {
+        displayData = source.qa_pairs;
+      } else if (source.preview && Array.isArray(source.preview)) {
+        displayData = source.preview;
       } else {
-        displayData = [data];
+        displayData = [source];
       }
     }
 
@@ -324,7 +334,8 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     return (
       <Box sx={{ maxHeight: 500, overflow: 'auto', p: 2 }}>
         {displayData.map((item, index) => {
-          const conversations = parseConversationFromText(item.text || '');
+          const text = typeof item === 'string' ? item : ((item && typeof item === 'object') ? (item.text || '') : '');
+          const conversations = parseConversationFromText(text);
           
           if (conversations.length === 0) {
             return (
@@ -433,31 +444,42 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   }, []);
   
   const renderDataTableInternal = useCallback((data, isLoading, type) => {
-    // For augmented data from JSON files, use conversation view if it contains Gemma format
-    if (type === "augmented" && isJsonFile) {
-      let displayData = Array.isArray(data) ? data : [];
+    // For augmented data, use conversation view if it contains Gemma format
+    if (type === "augmented") {
+      // If data is a JSON string, try to parse it
+      let source = data;
+      if (typeof source === 'string') {
+        try {
+          source = JSON.parse(source);
+        } catch (e) {
+          // ignore parse error; will fallback
+        }
+      }
+
+      let displayData = Array.isArray(source) ? source : [];
       
       // Handle special case where data might be an object with qa_pairs
-      if (!Array.isArray(data) && data && typeof data === 'object') {
-        if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
-          displayData = data.qa_pairs;
-        } else if (data.preview && Array.isArray(data.preview)) {
-          displayData = data.preview;
+      if (!Array.isArray(source) && source && typeof source === 'object') {
+        if (source.qa_pairs && Array.isArray(source.qa_pairs)) {
+          displayData = source.qa_pairs;
+        } else if (source.preview && Array.isArray(source.preview)) {
+          displayData = source.preview;
         } else {
-          displayData = [data];
+          displayData = [source];
         }
       }
       
       // Check if any item contains Gemma conversation format
-      const hasGemmaFormat = displayData.some(item => 
-        item.text && 
-        typeof item.text === 'string' && 
-        item.text.includes('<start_of_turn>user') && 
-        item.text.includes('<start_of_turn>model')
-      );
+      const hasGemmaFormat = displayData.some(item => {
+        const itemText = typeof item === 'string' ? item : (item && item.text);
+        return (
+          typeof itemText === 'string' &&
+          itemText.includes('<start_of_turn>user') &&
+          itemText.includes('<start_of_turn>model')
+        );
+      });
       
       console.log('Augmented data check:', {
-        isJsonFile,
         type,
         dataLength: displayData.length,
         hasGemmaFormat,
@@ -465,7 +487,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       });
       
       if (hasGemmaFormat) {
-        return renderConversationView(data, isLoading);
+        return renderConversationView(source, isLoading);
       }
     }
     
@@ -591,7 +613,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         </Table>
       </TableContainer>
     );
-  }, [renderConversationView, isJsonFile]); // Add isJsonFile back to dependencies
+  }, [renderConversationView]); // Add renderConversationView back to dependencies
   
   // Memoized table renderings to prevent unnecessary re-renders
   const originalDataTable = useMemo(() => 
