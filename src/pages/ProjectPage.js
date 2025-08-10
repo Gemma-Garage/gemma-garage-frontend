@@ -91,7 +91,9 @@ function ProjectPage({ currentUser }) {
 
           // Load project settings - sanitize to ensure only filenames are used
           setTrainableDatasetName(projectData.trainableDatasetName ? projectData.trainableDatasetName.split('/').pop() : null);
-          setAugmentedDatasetFileName(projectData.augmentedDatasetFileName ? projectData.augmentedDatasetFileName.split('/').pop() : null);
+          // Prefer storing and reusing the full augmented GCS path if available; fallback to filename
+          const augmentedPath = projectData.augmentedDatasetGCSPath || projectData.augmentedDatasetFileName || null;
+          setAugmentedDatasetFileName(augmentedPath);
           setTrainedModelPath(projectData.trainedModelPath || null);
           
           // Smart dataset choice logic: prefer augmented if original is not JSON and augmented exists
@@ -633,7 +635,7 @@ function ProjectPage({ currentUser }) {
         epochs: epochs,
         learningRate: learningRate,
         loraRank: loraRank,
-        datasetChoice: selectedDatasetChoice
+        selectedDatasetChoice: selectedDatasetChoice
       });
 
       // Start polling
@@ -749,13 +751,15 @@ function ProjectPage({ currentUser }) {
 
   const handleAugmentedDatasetReady = async (augmentedGcsPath) => {
     const augmentedFilename = augmentedGcsPath.split('/').pop();
-    setAugmentedDatasetFileName(augmentedFilename);
+    // Store full path in state so preview normalization can use exact key
+    setAugmentedDatasetFileName(augmentedGcsPath);
     
     // When augmented dataset is ready, automatically switch to using it
     setSelectedDatasetChoice("augmented");
     
     await saveProjectProgress({
-      augmentedDatasetFileName: augmentedFilename,
+      augmentedDatasetFileName: augmentedFilename, // keep for legacy UI usage
+      augmentedDatasetGCSPath: augmentedGcsPath,   // full path for reliable reload/preview
       selectedDatasetChoice: "augmented" // Save the choice to use augmented
     });
   };

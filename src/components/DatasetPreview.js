@@ -45,8 +45,11 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   const [qaPairsNbr, setQaPairsNbr] = useState(100);
   const [augmentedPreviewError, setAugmentedPreviewError] = useState(null);
 
-  // Helper: is JSON file
-  const isJsonFile = datasetFile && datasetFile.name && datasetFile.name.split('.').pop().toLowerCase() === 'json';
+  // Helper: is JSON file (fall back to dataset_path on refresh when datasetFile is null)
+  const isJsonFile = (() => {
+    const name = (datasetFile?.name || dataset_path || '').toLowerCase();
+    return name.endsWith('.json');
+  })();
 
   // Define functions first before they're used in useEffect
   const loadOriginalDatasetPreview = useCallback(async () => {
@@ -87,7 +90,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
       setTotalEntries(0);
     }
     setLoadingPreview(false);
-  }, []); // No dependencies to prevent re-renders
+  }, [dataset_path]); // No dependencies to prevent re-renders
 
   const loadAugmentedDatasetPreview = useCallback(async (augmentedDatasetPath) => {
     if (!augmentedDatasetPath || augmentedDatasetPath === 'undefined' || augmentedDatasetPath === 'null') return;
@@ -260,6 +263,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         setTotalAugmentedEntries(data.preview_augmented_data.full_count || (data.preview_augmented_data.preview || []).length);
         setAugmentedDatasetGCSPath(data.augmented_dataset_gcs_path);
         setSummary(data.summary || null);
+        setAugmentedPreviewError(null); // clear any stale preview error since we have data
         
         // Notify parent
         if (onAugmentedDatasetReady) {
@@ -895,7 +899,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                       <strong>Summary:</strong> {summary}
                     </Alert>
                   )}
-                  {augmentedPreviewError && (
+                  {augmentedPreviewError && augmentedDataPreview.length === 0 && (
                     <Alert severity="error" sx={{ mb: 2 }}>
                       {augmentedPreviewError}
                     </Alert>
