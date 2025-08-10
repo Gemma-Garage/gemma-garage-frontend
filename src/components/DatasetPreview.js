@@ -44,6 +44,9 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   const [datasetChoice, setDatasetChoice] = useState("original"); // 'original' or 'augmented'
   const [qaPairsNbr, setQaPairsNbr] = useState(100);
 
+  // Helper: is JSON file
+  const isJsonFile = datasetFile && datasetFile.name && datasetFile.name.split('.').pop().toLowerCase() === 'json';
+
   // Define functions first before they're used in useEffect
   const loadOriginalDatasetPreview = useCallback(async () => {
     if (!dataset_path || dataset_path === 'undefined' || dataset_path === 'null') return;
@@ -453,6 +456,14 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         item.text.includes('<start_of_turn>model')
       );
       
+      console.log('Augmented data check:', {
+        isJsonFile,
+        type,
+        dataLength: displayData.length,
+        hasGemmaFormat,
+        sampleItem: displayData[0]
+      });
+      
       if (hasGemmaFormat) {
         return renderConversationView(data, isLoading);
       }
@@ -526,7 +537,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     };
 
     return (
-      <TableContainer sx={{ maxHeight: 400, overflow: 'auto' }}>
+      <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
          <Table size="small">
           <TableHead>
             <TableRow>
@@ -580,8 +591,8 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         </Table>
       </TableContainer>
     );
-  }, [isJsonFile, renderConversationView]); // Add dependencies for JSON detection and conversation view
-
+  }, [renderConversationView, isJsonFile]); // Add isJsonFile back to dependencies
+  
   // Memoized table renderings to prevent unnecessary re-renders
   const originalDataTable = useMemo(() => 
     renderDataTableInternal(previewData, loadingPreview, 'original'), 
@@ -592,9 +603,6 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     renderDataTableInternal(augmentedDataPreview, isAugmenting, 'augmented'), 
     [renderDataTableInternal, augmentedDataPreview, isAugmenting]
   );
-
-  // Helper: is JSON file
-  const isJsonFile = datasetFile && datasetFile.name && datasetFile.name.split('.').pop().toLowerCase() === 'json';
 
   // Simple handlers for parent communication - no useEffect needed
   const handleDatasetChoiceChange = (newChoice) => {
@@ -753,9 +761,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                   <Typography variant="subtitle1" gutterBottom>
                     Augmented Dataset Preview {augmentedDatasetGCSPath && `(from ${augmentedDatasetGCSPath})`}
                   </Typography>
-                  <TableContainer sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                    {augmentedDataTable}
-                  </TableContainer>
+                  {augmentedDataTable}
                 </>
               )}
             </Box>
