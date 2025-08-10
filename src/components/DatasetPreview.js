@@ -18,7 +18,12 @@ import {
   FormControlLabel,
   Radio,
   Slider,
+  Card,
+  CardContent,
+  Chip,
+  Paper,
 } from "@mui/material";
+import { ChatBubbleOutline, SmartToy, Person } from "@mui/icons-material";
 import { API_BASE_URL } from "../api";
 import "../style/modern.css";
 
@@ -249,7 +254,211 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
     setIsAugmenting(false);
   };
   
+  // New function to render conversation view for JSON augmented data
+  const renderConversationView = useCallback((data, isLoading) => {
+    let displayData = Array.isArray(data) ? data : [];
+    
+    // Handle special case where data might be an object with qa_pairs
+    if (!Array.isArray(data) && data && typeof data === 'object') {
+      if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
+        displayData = data.qa_pairs;
+      } else if (data.preview && Array.isArray(data.preview)) {
+        displayData = data.preview;
+      } else {
+        displayData = [data];
+      }
+    }
+
+    // Parse conversation data from text field
+    const parseConversationFromText = (text) => {
+      if (!text) return [];
+      
+      const conversations = [];
+      const turns = text.split(/<start_of_turn>/);
+      
+      for (let i = 1; i < turns.length; i++) {
+        const turn = turns[i];
+        if (turn.includes('user\n')) {
+          const userContent = turn.split('user\n')[1]?.split('<end_of_turn>')[0]?.trim();
+          if (userContent) {
+            conversations.push({
+              role: 'user',
+              content: userContent
+            });
+          }
+        } else if (turn.includes('model\n')) {
+          const modelContent = turn.split('model\n')[1]?.split('<end_of_turn>')[0]?.trim();
+          if (modelContent) {
+            conversations.push({
+              role: 'model',
+              content: modelContent
+            });
+          }
+        }
+      }
+      
+      return conversations;
+    };
+
+    if (isLoading) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    if (displayData.length === 0) {
+      return (
+        <Box sx={{ textAlign: 'center', p: 4 }}>
+          <Typography variant="body1" color="text.secondary">
+            No conversation data available for augmentation preview. Generate augmented data to see a preview.
+          </Typography>
+        </Box>
+      );
+    }
+
+    return (
+      <Box sx={{ maxHeight: 500, overflow: 'auto', p: 2 }}>
+        {displayData.map((item, index) => {
+          const conversations = parseConversationFromText(item.text || '');
+          
+          if (conversations.length === 0) {
+            return (
+              <Card key={index} sx={{ mb: 2, backgroundColor: '#f5f5f5' }}>
+                <CardContent>
+                  <Typography variant="body2" color="text.secondary">
+                    No valid conversation found in item {index + 1}
+                  </Typography>
+                </CardContent>
+              </Card>
+            );
+          }
+
+          return (
+            <Paper 
+              key={index} 
+              elevation={2} 
+              sx={{ 
+                mb: 3, 
+                p: 2, 
+                backgroundColor: '#fafafa',
+                border: '1px solid #e0e0e0',
+                borderRadius: 2
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <ChatBubbleOutline sx={{ mr: 1, color: '#1976d2' }} />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Conversation {index + 1}
+                </Typography>
+              </Box>
+              
+              {conversations.map((turn, turnIndex) => (
+                <Box 
+                  key={turnIndex}
+                  sx={{ 
+                    display: 'flex', 
+                    mb: 1.5,
+                    alignItems: 'flex-start'
+                  }}
+                >
+                  {turn.role === 'user' ? (
+                    <>
+                      <Chip 
+                        icon={<Person />}
+                        label="User"
+                        size="small"
+                        sx={{ 
+                          mr: 2, 
+                          backgroundColor: '#e3f2fd',
+                          color: '#1976d2',
+                          fontWeight: 600,
+                          minWidth: 80
+                        }}
+                      />
+                      <Card 
+                        sx={{ 
+                          flex: 1, 
+                          backgroundColor: '#e3f2fd',
+                          boxShadow: 1
+                        }}
+                      >
+                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {turn.content}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </>
+                  ) : (
+                    <>
+                      <Chip 
+                        icon={<SmartToy />}
+                        label="Model"
+                        size="small"
+                        sx={{ 
+                          mr: 2, 
+                          backgroundColor: '#f3e5f5',
+                          color: '#7b1fa2',
+                          fontWeight: 600,
+                          minWidth: 80
+                        }}
+                      />
+                      <Card 
+                        sx={{ 
+                          flex: 1, 
+                          backgroundColor: '#f3e5f5',
+                          boxShadow: 1
+                        }}
+                      >
+                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {turn.content}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </>
+                  )}
+                </Box>
+              ))}
+            </Paper>
+          );
+        })}
+      </Box>
+    );
+  }, []);
+  
   const renderDataTableInternal = useCallback((data, isLoading, type) => {
+    // For augmented data from JSON files, use conversation view if it contains Gemma format
+    if (type === "augmented" && isJsonFile) {
+      let displayData = Array.isArray(data) ? data : [];
+      
+      // Handle special case where data might be an object with qa_pairs
+      if (!Array.isArray(data) && data && typeof data === 'object') {
+        if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
+          displayData = data.qa_pairs;
+        } else if (data.preview && Array.isArray(data.preview)) {
+          displayData = data.preview;
+        } else {
+          displayData = [data];
+        }
+      }
+      
+      // Check if any item contains Gemma conversation format
+      const hasGemmaFormat = displayData.some(item => 
+        item.text && 
+        typeof item.text === 'string' && 
+        item.text.includes('<start_of_turn>user') && 
+        item.text.includes('<start_of_turn>model')
+      );
+      
+      if (hasGemmaFormat) {
+        return renderConversationView(data, isLoading);
+      }
+    }
+    
+    // For non-JSON files or data without Gemma format, use the original table view
     let displayData = Array.isArray(data) ? data : [];
     
     // Handle special case where data might be an object with qa_pairs
@@ -371,7 +580,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         </Table>
       </TableContainer>
     );
-  }, []); // No dependencies needed since function is now pure
+  }, [isJsonFile, renderConversationView]); // Add dependencies for JSON detection and conversation view
 
   // Memoized table renderings to prevent unnecessary re-renders
   const originalDataTable = useMemo(() => 
