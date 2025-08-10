@@ -43,6 +43,7 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
   const [summary, setSummary] = useState(null); // New state for summary
   const [datasetChoice, setDatasetChoice] = useState("original"); // 'original' or 'augmented'
   const [qaPairsNbr, setQaPairsNbr] = useState(100);
+  const [augmentedPreviewError, setAugmentedPreviewError] = useState(null);
 
   // Helper: is JSON file
   const isJsonFile = datasetFile && datasetFile.name && datasetFile.name.split('.').pop().toLowerCase() === 'json';
@@ -90,6 +91,10 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
 
   const loadAugmentedDatasetPreview = useCallback(async (augmentedDatasetPath) => {
     if (!augmentedDatasetPath || augmentedDatasetPath === 'undefined' || augmentedDatasetPath === 'null') return;
+
+    // Ensure tab becomes enabled even if fetch fails
+    setAugmentedDatasetGCSPath(prev => prev || augmentedDatasetPath);
+    setAugmentedPreviewError(null);
     
     try {
       const response = await fetch(`${API_BASE_URL}/dataset/preview?path=${encodeURIComponent(augmentedDatasetPath)}`);
@@ -100,11 +105,8 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
         let previewData = [];
         let fullCount = 0;
         let summaryText = null;
-        
-        // Priority 1: Canonical structure - root level summary and qa_pairs
         if (data.summary && data.qa_pairs) {
           summaryText = data.summary;
-          
           if (typeof data.qa_pairs === 'string') {
             try {
               const parsedQAPairs = JSON.parse(data.qa_pairs);
@@ -119,13 +121,9 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
             previewData = data.qa_pairs;
             fullCount = data.qa_pairs.length;
           }
-        }
-        // Priority 2: Standard preview format (backend wraps data)
-        else if (data.preview && data.full_count !== undefined) {
+        } else if (data.preview && data.full_count !== undefined) {
           previewData = data.preview;
           fullCount = data.full_count;
-          
-          // Check if the preview data contains a single object with summary and qa_pairs
           if (previewData.length === 1 && previewData[0].summary && previewData[0].qa_pairs) {
             const singleItem = previewData[0];
             summaryText = singleItem.summary;
@@ -144,32 +142,31 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
               fullCount = singleItem.qa_pairs.length;
             }
           }
-        }
-        // Priority 3: Direct qa_pairs array with optional summary
-        else if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
+        } else if (data.qa_pairs && Array.isArray(data.qa_pairs)) {
           previewData = data.qa_pairs;
           fullCount = data.qa_pairs.length;
           summaryText = data.summary || null;
-        }
-        // Priority 4: Direct array format (fallback)
-        else if (Array.isArray(data)) {
+        } else if (Array.isArray(data)) {
           previewData = data;
           fullCount = data.length;
         }
-        
+
         setAugmentedDataPreview(previewData);
         setTotalAugmentedEntries(fullCount);
         setSummary(summaryText);
         setAugmentedDatasetGCSPath(augmentedDatasetPath);
+        setAugmentedPreviewError(null);
       } else {
-        console.error("Error loading augmented dataset preview: Server returned", response.status);
-        setAugmentedDataPreview([]);
-        setTotalAugmentedEntries(0);
+        const errorText = await response.text().catch(() => `HTTP ${response.status}`);
+        console.error("Error loading augmented dataset preview: Server returned", response.status, errorText);
+        // Preserve any existing preview; just surface the error
+        setAugmentedPreviewError(`Failed to load augmented preview (${response.status}).`);
+        // Do not clear augmentedDataPreview here
       }
     } catch (error) {
       console.error("Error loading augmented dataset preview:", error);
-      setAugmentedDataPreview([]);
-      setTotalAugmentedEntries(0);
+      setAugmentedPreviewError("Failed to load augmented preview.");
+      // Do not clear augmentedDataPreview here
     }
   }, []); // No dependencies to prevent re-renders
 
@@ -778,6 +775,11 @@ const DatasetPreview = ({ datasetFile, dataset_path, onDatasetChoiceChange, sele
                   {summary && (
                     <Alert severity="info" sx={{ mb: 2 }}>
                       <strong>Summary:</strong> {summary}
+                    </Alert>
+                  )}
+                  {augmentedPreviewError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                      {augmentedPreviewError}
                     </Alert>
                   )}
                   <Typography variant="subtitle1" gutterBottom>
