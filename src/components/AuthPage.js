@@ -103,7 +103,8 @@ function TabPanel(props) {
     </div>
   );
 }
-//new auth
+
+//new Firebase auth class 
 function AuthPage() {
   const [tabValue, setTabValue] = useState(0);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
