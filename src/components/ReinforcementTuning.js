@@ -80,9 +80,10 @@ function ReinforcementTuning({ currentUser }) {
           const projectData = { id: projectDocSnap.id, ...projectDocSnap.data() };
           setSelectedProjectData(projectData);
 
-          // Load project settings
+          // Load project settings - prefer full GCS path for augmented data
           setTrainableDatasetName(projectData.trainableDatasetName ? projectData.trainableDatasetName.split('/').pop() : null);
-          setAugmentedDatasetFileName(projectData.augmentedDatasetFileName ? projectData.augmentedDatasetFileName.split('/').pop() : null);
+          const augmentedPath = projectData.augmentedDatasetGCSPath || projectData.augmentedDatasetFileName || null;
+          setAugmentedDatasetFileName(augmentedPath);
           setTrainedModelPath(projectData.trainedModelPath || null);
           setCustomRubric(projectData.customRubric || "");
           
@@ -430,7 +431,16 @@ function ReinforcementTuning({ currentUser }) {
     let datasetPathForTraining;
 
     if (selectedDatasetChoice === "augmented") {
-        datasetPathForTraining = augmentedDatasetFileName;
+        // Extract just the filename from the full GCS path for training
+        if (augmentedDatasetFileName) {
+          if (augmentedDatasetFileName.startsWith('gs://')) {
+            // Remove gs://bucket/ prefix and get just the blob path
+            const pathParts = augmentedDatasetFileName.replace('gs://', '').split('/');
+            datasetPathForTraining = pathParts.slice(1).join('/'); // Remove bucket name, keep path
+          } else {
+            datasetPathForTraining = augmentedDatasetFileName;
+          }
+        }
     } else {
         datasetPathForTraining = trainableDatasetName;
     }
@@ -572,11 +582,13 @@ function ReinforcementTuning({ currentUser }) {
 
   const handleAugmentedDatasetReady = async (augmentedGcsPath) => {
     const augmentedFilename = augmentedGcsPath.split('/').pop();
-    setAugmentedDatasetFileName(augmentedFilename);
+    // Store full path in state so preview normalization can use exact key
+    setAugmentedDatasetFileName(augmentedGcsPath);
     setSelectedDatasetChoice("augmented");
     
     await saveProjectProgress({
-      augmentedDatasetFileName: augmentedFilename,
+      augmentedDatasetFileName: augmentedFilename, // keep for legacy UI usage
+      augmentedDatasetGCSPath: augmentedGcsPath,   // full path for reliable reload
       selectedDatasetChoice: "augmented"
     });
   };

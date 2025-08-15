@@ -578,7 +578,16 @@ function ProjectPage({ currentUser }) {
     let datasetPathForTraining;
 
     if (selectedDatasetChoice === "augmented") {
-        datasetPathForTraining = augmentedDatasetFileName;
+        // Extract just the filename from the full GCS path for training
+        if (augmentedDatasetFileName) {
+          if (augmentedDatasetFileName.startsWith('gs://')) {
+            // Remove gs://bucket/ prefix and get just the blob path
+            const pathParts = augmentedDatasetFileName.replace('gs://', '').split('/');
+            datasetPathForTraining = pathParts.slice(1).join('/'); // Remove bucket name, keep path
+          } else {
+            datasetPathForTraining = augmentedDatasetFileName;
+          }
+        }
     } else {
         datasetPathForTraining = trainableDatasetName;
     }
@@ -596,7 +605,7 @@ function ProjectPage({ currentUser }) {
 
     const payload = {
       model_name: modelName,
-      dataset_path: datasetPathForTraining, // Use the extracted/stored filename
+      dataset_path: datasetPathForTraining, // Use the bucket-relative path
       epochs: epochs,
       learning_rate: learningRate,
       lora_rank: loraRank,
