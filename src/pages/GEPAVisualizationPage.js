@@ -47,31 +47,79 @@ function computeCharDiff(a, b) {
 	return segments;
 }
 
-const DiffView = ({ base, compare, onClose, title }) => {
-	const segments = useMemo(() => computeCharDiff(base || '', compare || ''), [base, compare]);
-	return (
-		<Dialog open onClose={onClose} maxWidth="md" fullWidth>
-			<DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-				{title || 'Prompt Diff'}
-				<IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
-			</DialogTitle>
-			<DialogContent>
-				<Typography variant="subtitle2" gutterBottom>Base Length: {(base||'').length} | Compare Length: {(compare||'').length} | Delta: {(compare||'').length - (base||'').length}</Typography>
-				<Paper variant="outlined" sx={{ p:1, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
-					{segments.map((s, idx) => {
-						let color; let bg; let deco;
-						if (s.type === 'add') { color = 'green'; bg = 'rgba(0,200,0,0.08)'; }
-						else if (s.type === 'del') { color = 'red'; bg = 'rgba(255,0,0,0.08)'; deco='line-through'; }
-						else { color = 'inherit'; }
-						return <span key={idx} style={{ color, background: bg, textDecoration: deco }}>{s.text}</span>;
-					})}
-				</Paper>
-			</DialogContent>
-		</Dialog>
-	);
-};
-
-// Expected JSON shape example:
+const ComparisonView = ({ base, compare, onClose, title }) => {
+  const [viewMode, setViewMode] = useState('diff'); // 'diff' or 'sidebyside'
+  const segments = useMemo(() => computeCharDiff(base || '', compare || ''), [base, compare]);
+  
+  return (
+    <Dialog open onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {title || 'Prompt Comparison'}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Tabs value={viewMode} onChange={(_, v) => setViewMode(v)} size="small">
+            <Tab label="Diff" value="diff" />
+            <Tab label="Side by Side" value="sidebyside" />
+          </Tabs>
+          <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="subtitle2" gutterBottom>
+          Base Length: {(base||'').length} | Compare Length: {(compare||'').length} | Delta: {(compare||'').length - (base||'').length}
+        </Typography>
+        
+        {viewMode === 'diff' && (
+          <Paper variant="outlined" sx={{ p:1, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+            {segments.map((s, idx) => {
+              let color; let bg; let deco;
+              if (s.type === 'add') { color = 'green'; bg = 'rgba(0,200,0,0.08)'; }
+              else if (s.type === 'del') { color = 'red'; bg = 'rgba(255,0,0,0.08)'; deco='line-through'; }
+              else { color = 'inherit'; }
+              return <span key={idx} style={{ color, background: bg, textDecoration: deco }}>{s.text}</span>;
+            })}
+          </Paper>
+        )}
+        
+        {viewMode === 'sidebyside' && (
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                Base ({(base||'').length} chars)
+              </Typography>
+              <Paper variant="outlined" sx={{ 
+                p: 1, 
+                fontFamily: 'monospace', 
+                whiteSpace: 'pre-wrap', 
+                lineHeight: 1.4,
+                maxHeight: '60vh',
+                overflow: 'auto',
+                backgroundColor: '#fafafa'
+              }}>
+                {base || ''}
+              </Paper>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                Compare ({(compare||'').length} chars)
+              </Typography>
+              <Paper variant="outlined" sx={{ 
+                p: 1, 
+                fontFamily: 'monospace', 
+                whiteSpace: 'pre-wrap', 
+                lineHeight: 1.4,
+                maxHeight: '60vh',
+                overflow: 'auto',
+                backgroundColor: '#fafafa'
+              }}>
+                {compare || ''}
+              </Paper>
+            </Grid>
+          </Grid>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};// Expected JSON shape example:
 // {
 //   "candidate_data": [
 //      {"id": "c1", "prompt": "...", "parent_idx": [0], ... },
@@ -205,9 +253,9 @@ function GEPAVisualizationPage() {
                   </TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={1}>
-                      <Button size="small" onClick={(e)=>{ e.stopPropagation(); const prevIdx = c.__index - 1; if (prevIdx >=0) { const prev = candidates[prevIdx]; setDiffState({ base: prev.__prompt, compare: c.__prompt, title: `Candidate ${c.__index} vs ${prevIdx}`}); } }} disabled={c.__index===0}>Diff Prev</Button>
+                      <Button size="small" onClick={(e)=>{ e.stopPropagation(); const prevIdx = c.__index - 1; if (prevIdx >=0) { const prev = candidates[prevIdx]; setDiffState({ base: prev.__prompt, compare: c.__prompt, title: `Candidate ${c.__index} vs ${prevIdx}`}); } }} disabled={c.__index===0}>Compare Prev</Button>
                       {c.__parent !== null && (
-                        <Button size="small" onClick={(e)=>{ e.stopPropagation(); const parent = candidates[c.__parent]; if (parent) setDiffState({ base: parent.__prompt, compare: c.__prompt, title: `Candidate ${c.__index} vs Parent ${c.__parent}`}); }}>Diff Parent</Button>
+                        <Button size="small" onClick={(e)=>{ e.stopPropagation(); const parent = candidates[c.__parent]; if (parent) setDiffState({ base: parent.__prompt, compare: c.__prompt, title: `Candidate ${c.__index} vs Parent ${c.__parent}`}); }}>Compare Parent</Button>
                       )}
                     </Stack>
                   </TableCell>
@@ -252,7 +300,7 @@ function GEPAVisualizationPage() {
 												});
 											}}
 										>
-											Diff vs Parent
+											Compare vs Parent
 										</Button>
 									</Stack>
 									
@@ -309,8 +357,8 @@ function GEPAVisualizationPage() {
 													<Chip size="small" label={`v${idx}`} />
 													<Chip size="small" label={`len ${v.length}`} />
 													{idx>0 && <Chip size="small" label={`Δ ${delta}`} color={delta>0? 'success': delta<0? 'error':'default'} />}
-													{idx>0 && <Button size="small" onClick={()=> setDiffState({ base: prev, compare: v, title: `Mutation v${idx} vs v${idx-1}` })}>Diff Prev</Button>}
-													<Button size="small" onClick={()=> setDiffState({ base: selectedCandidate.__versions[0], compare: v, title: `Mutation v${idx} vs v0` })} disabled={idx===0}>Diff v0</Button>
+													{idx>0 && <Button size="small" onClick={()=> setDiffState({ base: prev, compare: v, title: `Mutation v${idx} vs v${idx-1}` })}>Compare Prev</Button>}
+													<Button size="small" onClick={()=> setDiffState({ base: selectedCandidate.__versions[0], compare: v, title: `Mutation v${idx} vs v0` })} disabled={idx===0}>Compare v0</Button>
 												</Stack>
 												<Paper variant="outlined" sx={{ p:1, fontFamily:'monospace', whiteSpace:'pre-wrap' }}>{v}</Paper>
 											</Paper>
@@ -326,7 +374,7 @@ function GEPAVisualizationPage() {
 				</Paper>
 			)}
 
-			{diffState && <DiffView {...diffState} onClose={()=>setDiffState(null)} />}
+			{diffState && <ComparisonView {...diffState} onClose={()=>setDiffState(null)} />}
 		</Box>
 	);
 }
