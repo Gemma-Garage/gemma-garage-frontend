@@ -26,6 +26,7 @@ import HomePage from "./pages/HomePage";
 import ProjectPage from "./pages/ProjectPage";
 import ProjectRouter from "./pages/ProjectRouter";
 import HuggingFaceTestPage from "./pages/HuggingFaceTestPage";
+import GEPAVisualizationPage from "./pages/GEPAVisualizationPage";
 
 import "./style/App.css";
 
@@ -49,6 +50,14 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/huggingface-test" element={<HuggingFaceTestPage />} />
+          <Route 
+            path="/gepa" 
+            element={
+              <ProtectedRoute>
+                <GEPAVisualizationPage />
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/home" 
             element={
