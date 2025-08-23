@@ -290,7 +290,11 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
           sx={{ 
             backgroundColor: isConnected ? "#FF6B35" : "#e0e0e0",
             "&:hover": { backgroundColor: isConnected ? "#E55A2B" : "#e0e0e0" },
-            "&:disabled": { backgroundColor: "#e0e0e0" }
+            "&:disabled": { backgroundColor: "#e0e0e0" },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center'
           }}
         >
           {loading ? (
