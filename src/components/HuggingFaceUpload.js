@@ -322,45 +322,49 @@ const HuggingFaceUpload = ({ currentRequestId, trainingStatus, modelName, traine
             <TextField
               fullWidth
               label="Model Name"
+              size="small"
+              variant="filled"
+              InputProps={{ disableUnderline: true }}
+              sx={{ mb: 2, backgroundColor: '#fafafa', borderRadius: 1 }}
               value={uploadForm.modelName}
               onChange={(e) => setUploadForm({ ...uploadForm, modelName: e.target.value })}
-              sx={{ mb: 2 }}
               helperText="This will be the repository name on Hugging Face"
               error={!!validateModelName(uploadForm.modelName)}
-              FormHelperTextProps={{
-                error: !!validateModelName(uploadForm.modelName)
-              }}
+              FormHelperTextProps={{ error: !!validateModelName(uploadForm.modelName) }}
             />
             <TextField
               fullWidth
               label="Request ID"
+              size="small"
+              variant="filled"
+              InputProps={{ disableUnderline: true, readOnly: true }}
+              sx={{ mb: 2, backgroundColor: '#fafafa', borderRadius: 1 }}
               value={uploadForm.requestId}
               onChange={(e) => setUploadForm({ ...uploadForm, requestId: e.target.value })}
-              sx={{ mb: 2 }}
               helperText="The fine-tuning request ID containing your model"
-              InputProps={{
-                readOnly: true,
-              }}
             />
             <TextField
               fullWidth
               label="Base Model"
+              size="small"
+              variant="filled"
+              InputProps={{ disableUnderline: true, readOnly: true }}
+              sx={{ mb: 2, backgroundColor: '#fafafa', borderRadius: 1 }}
               value={uploadForm.baseModel}
               onChange={(e) => setUploadForm({ ...uploadForm, baseModel: e.target.value })}
-              sx={{ mb: 2 }}
               helperText="The base model that was fine-tuned"
-              InputProps={{
-                readOnly: true,
-              }}
             />
             <TextField
               fullWidth
               multiline
               rows={3}
               label="Description"
+              size="small"
+              variant="filled"
+              InputProps={{ disableUnderline: true }}
+              sx={{ mb: 2, backgroundColor: '#fafafa', borderRadius: 1 }}
               value={uploadForm.description}
               onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-              sx={{ mb: 2 }}
             />
             <FormControlLabel
               control={
