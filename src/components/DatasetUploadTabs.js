@@ -48,6 +48,21 @@ const ModernTextField = styled(TextField)(({ theme }) => ({
     '&.Mui-focused fieldset': {
       borderColor: '#2196f3',
     }
+  },
+  '& .MuiOutlinedInput-input': {
+    textAlign: 'left',
+    paddingLeft: '14px',
+    paddingRight: '14px',
+    direction: 'ltr',
+  },
+  '& .MuiInputLabel-root': {
+    textAlign: 'left',
+    direction: 'ltr',
+  },
+  '& .MuiFormHelperText-root': {
+    textAlign: 'left',
+    marginLeft: 0,
+    direction: 'ltr',
   }
 }));
 

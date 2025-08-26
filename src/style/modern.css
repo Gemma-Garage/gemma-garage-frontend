@@ -602,3 +602,45 @@ body {
 }
 
 /* Pure light theme - no dark mode */
+
+/* Material-UI TextField text alignment fixes */
+.MuiOutlinedInput-input {
+  text-align: left !important;
+  direction: ltr !important;
+}
+
+.MuiInputLabel-root {
+  text-align: left !important;
+  direction: ltr !important;
+}
+
+.MuiFormHelperText-root {
+  text-align: left !important;
+  margin-left: 0 !important;
+  direction: ltr !important;
+}
+
+/* Ensure proper alignment for all text inputs */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+input[type="url"], 
+textarea {
+  text-align: left !important;
+  direction: ltr !important;
+}
+
+/* Fix any potential RTL issues */
+* {
+  direction: ltr;
+}
+
+/* Specific fix for Hugging Face dataset input */
+.MuiTextField-root {
+  direction: ltr !important;
+}
+
+.MuiTextField-root input {
+  text-align: left !important;
+  direction: ltr !important;
+}
