@@ -1,70 +1,114 @@
-# Getting Started with Create React App
+# Gemma Garage Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React web application for the Gemma Garage platform, providing a user interface for dataset management, model fine-tuning, and deployment.
 
-## Available Scripts
+## Overview
 
-In the project directory, you can run:
+The frontend is a single-page application built with React 19 and Material-UI. It uses Firebase for authentication and Firestore for storing user projects and training history.
 
-### `npm start`
+## Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- User authentication (email/password)
+- Project management dashboard
+- Dataset upload and preview
+- HuggingFace dataset import
+- Training parameter configuration
+- Real-time training progress with loss visualization
+- Model download and HuggingFace upload
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Architecture
 
-### `npm test`
+```
+React App (Firebase Hosting)
+      |
+      +--> Firebase Auth (Authentication)
+      +--> Firestore (Projects, Training History)
+      +--> Backend API (Training, Datasets)
+      +--> HuggingFace (OAuth, Model Upload)
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Project Structure
 
-### `npm run build`
+```
+src/
+  ├── components/       # Reusable UI components
+  ├── pages/           # Page-level components
+  ├── context/         # React Context (AuthContext)
+  ├── utils/           # Utility functions
+  ├── style/           # CSS files
+  ├── firebase.js      # Firebase configuration
+  └── api.js           # API base URLs
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Key Components
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+| Component | Purpose |
+|-----------|---------|
+| `AuthContext` | Manages authentication state |
+| `ProjectDashboard` | Lists user projects with status |
+| `ProjectPage` | Main fine-tuning interface |
+| `DatasetUploadTabs` | File upload and HF import |
+| `TrainingParameters` | Model, epochs, LR, LoRA rank |
+| `LossGraph` | Training loss visualization |
+| `HuggingFaceSettings` | OAuth connection management |
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Training Flow
 
-### `npm run eject`
+1. User creates a project (supervised or RL)
+2. Uploads dataset or imports from HuggingFace
+3. Configures training parameters
+4. Starts fine-tuning job
+5. Frontend polls for training logs every 10 seconds
+6. Loss graph updates in real-time
+7. User downloads model or uploads to HuggingFace
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Local Development
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+# Install dependencies
+npm install
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+# Set environment variables (create .env.local)
+REACT_APP_FIREBASE_API_KEY=your_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your_domain
+REACT_APP_FIREBASE_PROJECT_ID=your_project
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+# Start development server
+npm start
+```
 
-## Learn More
+## Deployment
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Deployed to Firebase Hosting via the Firebase CLI:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm run build
+firebase deploy --only hosting
+```
 
-### Code Splitting
+## Testing
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```bash
+npm test
+```
 
-### Analyzing the Bundle Size
+## Tech Stack
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- **Framework**: React 19
+- **UI Library**: Material-UI 6
+- **Routing**: React Router 7
+- **Charts**: Chart.js / react-chartjs-2
+- **Authentication**: Firebase Auth
+- **Database**: Cloud Firestore
+- **Hosting**: Firebase Hosting
 
-### Making a Progressive Web App
+## Environment Variables
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+| Variable | Description |
+|----------|-------------|
+| `REACT_APP_FIREBASE_API_KEY` | Firebase API key |
+| `REACT_APP_FIREBASE_AUTH_DOMAIN` | Firebase auth domain |
+| `REACT_APP_FIREBASE_PROJECT_ID` | Firebase project ID |
+| `REACT_APP_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket |
+| `REACT_APP_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging ID |
+| `REACT_APP_FIREBASE_APP_ID` | Firebase app ID |
