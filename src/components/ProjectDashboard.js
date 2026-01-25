@@ -189,15 +189,13 @@ const ProjectDashboard = ({ handleCreateProjectOpen, handleProjectSelect, curren
 
       return () => unsubscribe();
     } else {
-      // This block handles cases where currentUser is not valid for fetching projects
-      setProjects([]); // Clear projects if user/UID is not valid
-      setLoading(false); // Stop loading indicator
+      setProjects([]);
+      setLoading(false);
 
       if (!currentUser) {
         setError("No user logged in. Cannot display projects.");
-      } else { // currentUser exists, but uid is missing (should be rare for Firebase auth user objects)
+      } else {
         setError("User data is incomplete (missing UID). Cannot display projects.");
-        console.warn("ProjectDashboard: currentUser prop is present but UID is missing.", currentUser);
       }
     }
   }, [currentUser]); // Re-run when currentUser changes

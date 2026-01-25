@@ -22,9 +22,7 @@ const FinetuneControl = ({ onStart, wsStatus, progress, allLogs }) => {
 
   const handleStartFineTuning = () => {
     setLoading(true);
-    onStart(); // Reverted: Pass epochs to onStart
-    // We don't set loading to false here because training is asynchronous
-    // and progress is shown through wsStatus
+    onStart();
   };
 
   // Reset loading state when fine-tuning completes
