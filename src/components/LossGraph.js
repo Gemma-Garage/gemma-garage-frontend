@@ -1,12 +1,12 @@
+/** Loss graph - training progress visualization */
+
 import React, { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 import { Paper, Typography, Box, FormControlLabel, Switch, useMediaQuery } from "@mui/material";
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import InfoIcon from '@mui/icons-material/Info';
+import { createTheme } from '@mui/material/styles';
 import "../style/assets.css";
 import "../style/modern.css";
 
-// Custom theme to match the color scheme
 const theme = createTheme({
   palette: {
     primary: {

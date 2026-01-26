@@ -1,3 +1,5 @@
+/** Home page - project list and creation */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProjectDashboard from '../components/ProjectDashboard';

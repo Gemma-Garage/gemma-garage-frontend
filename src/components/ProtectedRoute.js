@@ -1,3 +1,5 @@
+/** Protected route - redirects to login if not authenticated */
+
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';

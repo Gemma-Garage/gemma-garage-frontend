@@ -1,8 +1,8 @@
+/** Header - navigation bar with auth state */
 
-// Header.js
 import React from "react";
-import { AppBar, Toolbar, Typography, Link, Button, Box, useMediaQuery, IconButton } from "@mui/material";
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { AppBar, Toolbar, Typography, Button, Box, useMediaQuery, IconButton } from "@mui/material";
+import { createTheme } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import DiamondIcon from '@mui/icons-material/Diamond';

@@ -1,13 +1,7 @@
+/** Unified inference - compare fine-tuned vs base model outputs */
+
 import React, { useState, useEffect } from 'react';
-import {
-  Typography,
-  TextField,
-  Button,
-  Box,
-  Alert,
-  CircularProgress,
-  Grid
-} from '@mui/material';
+import { Typography, TextField, Button, Box, Alert, CircularProgress, Grid } from '@mui/material';
 import '../style/modern.css';
 import { API_BASE_URL, API_INFERENCE_BASE_URL } from '../api';
 

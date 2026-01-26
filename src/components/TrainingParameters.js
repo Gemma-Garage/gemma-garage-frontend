@@ -1,22 +1,12 @@
+/** Training parameters - epochs, learning rate, LoRA rank, model selection */
+
 import React from "react";
-import { 
-  TextField, 
-  Box, 
-  Typography, 
-  Paper,
-  FormControl,
-  FormLabel,
-  Slider,
-  InputAdornment,
-  MenuItem,
-  Select as MuiSelect
-} from "@mui/material";
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { TextField, Box, Typography, Paper, FormControl, FormLabel, Slider, InputAdornment, MenuItem, Select as MuiSelect } from "@mui/material";
+import { createTheme } from '@mui/material/styles';
 import Select from "react-select";
 import "../style/assets.css";
 import "../style/modern.css";
 
-// Custom theme to match the color scheme
 const theme = createTheme({
   palette: {
     primary: {

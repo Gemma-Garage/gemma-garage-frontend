@@ -1,15 +1,11 @@
+/** Data augmentation component (placeholder) */
+
 import React from 'react';
-import { Box, Typography, Button } from '@mui/material';
 import '../style/modern.css';
 
 function DataAugmentation({ selectedProjectData }) {
-  // Placeholder for data augmentation logic
-  // You can add state and functions here to handle data augmentation tasks
-
   const handleAugmentData = () => {
-    // Placeholder function
-    alert('Data augmentation process started for project: ' + selectedProjectData?.displayName);
-    // Implement actual data augmentation logic here
+    alert(`Data augmentation started for: ${selectedProjectData?.displayName}`);
   };
 
   if (!selectedProjectData) {

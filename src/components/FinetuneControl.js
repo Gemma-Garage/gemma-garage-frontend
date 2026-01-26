@@ -1,15 +1,7 @@
+/** Fine-tune control - start button and training progress */
+
 import React, { useState } from "react";
-import {
-  Button,
-  Box,
-  Typography,
-  Paper,
-  CircularProgress,
-  Alert,
-  AlertTitle,
-  LinearProgress // Import LinearProgress
-  // TextField import removed
-} from "@mui/material";
+import { Button, Box, Typography, Paper, CircularProgress, Alert, AlertTitle, LinearProgress } from "@mui/material";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PretrainStepProgress from "./PretrainStepProgress";
 import { extractPretrainLogs } from "../utils/pretrainLogUtils";
